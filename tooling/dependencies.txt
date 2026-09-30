@@ -1,0 +1,14 @@
+Brotli==1.1.0
+certifi==2024.8.30
+charset-normalizer==3.3.2
+ffmpeg-python==0.2.0
+ffprobe==0.5
+ffprobe-python==1.0.3
+future==1.0.0
+idna==3.10
+mutagen==1.47.0
+pycryptodomex==3.20.0
+requests==2.32.3
+urllib3==2.2.3
+websockets==13.0.1
+yt-dlp==2024.8.6

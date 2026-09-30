@@ -1,0 +1,11 @@
+{
+  "include": ["*.config.ts", "*.setup.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "outDir": "./dist/configs",
+    "rootDir": "./",
+    "composite": true,
+    "sourceMap": true,
+    "mapRoot": "esnext"
+  }
+}

@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`this component renders correctly 1`] = `
+<DocumentFragment>
+  <ul
+    class="row g-4"
+  >
+    <li>
+      video 1 test
+    </li>
+    <li>
+      video 2 test
+    </li>
+  </ul>
+</DocumentFragment>
+`;

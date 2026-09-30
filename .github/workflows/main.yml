@@ -1,0 +1,69 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Run frontend tests with coverage
+        working-directory: frontend
+        run: npm run test -- --coverage --watchAll=false --ci
+
+      - name: Set up Java for backend
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Install Maven Wrapper
+        working-directory: backend
+        run: mvn -N io.takari:maven:wrapper
+
+      - name: Build and test backend with coverage
+        working-directory: backend
+        run: |
+          ./mvnw clean verify -Pcoverage
+
+      - name: Run frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      # Upload Frontend Coverage
+      - name: Upload Frontend Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          if-no-files-found: error
+
+      # Upload Backend Coverage
+      - name: Upload Backend Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: error

@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="d87e4e50-05fd-42ac-af3d-d5118959e068" name="Changes" comment="Improve initial setup project">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/VideoPlayer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/VideoPlayer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tooling/videoGrabber/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/tooling/videoGrabber/main.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="KubernetesApiProvider"><![CDATA[{
+  "contexts": [
+    {
+      "name": "minikube",
+      "originalNamespace": "default"
+    }
+  ],
+  "isMigrated": true
+}]]></component>
+  <component name="KubernetesSettings">
+    <option name="contextName" value="minikube" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="workOffline" value="true" />
+      </MavenGeneralSettings>
+    </option>
+    <option name="enabledProfiles">
+      <list>
+        <option value="prod" />
+        <option value="dev" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="2mPsQ73yy4eZQ54yJI7RPmfXf8G" />
+  <component name="ProjectViewState">
+    <option name="autoscrollFromSource" value="true" />
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.ProtubeBackApplication [DEV].executor": "Run",
+    "Application.ProtubeBackApplication [PROD].executor": "Run",
+    "Application.ProtubeBackApplication.executor": "Debug",
+    "Application.Unnamed.executor": "Debug",
+    "Maven.protube-back [DEV].executor": "Debug",
+    "Maven.protube-back [spring-boot:run].executor": "Run",
+    "Python.main.executor": "Run",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "Spring Boot.ProtubeBackApplication.executor": "Run",
+    "git-widget-placeholder": "improve-init",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_interpreter_path": "/Users/jordi.lopez/.nvm/versions/node/v20.15.1/bin/node",
+    "nodejs_package_manager_path": "npm",
+    "npm.dev.executor": "Run",
+    "project.structure.last.edited": "SDKs",
+    "project.structure.proportion": "0.15337889",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "settings.nodejs",
+    "ts.external.directory.path": "/Users/jordi.lopez/code/protube/frontend/node_modules/typescript/lib",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="Python.main">
+    <configuration name="ProtubeBackApplication [DEV]" type="Application" factoryName="Application">
+      <option name="ALTERNATIVE_JRE_PATH" value="corretto-21" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <envs>
+        <env name="ENV_PROTUBE_DB" value="protube-dev" />
+        <env name="ENV_PROTUBE_DB_PWD" value="secret" />
+        <env name="ENV_PROTUBE_DB_USER" value="root" />
+        <env name="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
+      </envs>
+      <option name="MAIN_CLASS_NAME" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
+      <module name="protube-back" />
+      <option name="PROGRAM_PARAMETERS" value="main -Dspring.profiles.active=dev" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ProtubeBackApplication [PROD]" type="Application" factoryName="Application">
+      <option name="ALTERNATIVE_JRE_PATH" value="corretto-21" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <envs>
+        <env name="ENV_PROTUBE_DB" value="protube-dev" />
+        <env name="ENV_PROTUBE_DB_PWD" value="secret" />
+        <env name="ENV_PROTUBE_DB_USER" value="root" />
+        <env name="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
+      </envs>
+      <option name="MAIN_CLASS_NAME" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
+      <module name="protube-back" />
+      <option name="PROGRAM_PARAMETERS" value="main -Dspring.profiles.active=prod" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="protube-back [DEV]" type="MavenRunConfiguration" factoryName="Maven">
+      <MavenSettings>
+        <option name="myGeneralSettings" />
+        <option name="myRunnerSettings">
+          <MavenRunnerSettings>
+            <option name="delegateBuildToMaven" value="false" />
+            <option name="environmentProperties">
+              <map>
+                <entry key="ENV_PROTUBE_DB" value="protube-dev" />
+                <entry key="ENV_PROTUBE_DB_PWD" value="secret" />
+                <entry key="ENV_PROTUBE_DB_USER" value="root" />
+                <entry key="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
+              </map>
+            </option>
+            <option name="jreName" value="#USE_PROJECT_JDK" />
+            <option name="mavenProperties">
+              <map />
+            </option>
+            <option name="passParentEnv" value="true" />
+            <option name="runMavenInBackground" value="true" />
+            <option name="skipTests" value="false" />
+            <option name="vmOptions" value="" />
+          </MavenRunnerSettings>
+        </option>
+        <option name="myRunnerParameters">
+          <MavenRunnerParameters>
+            <option name="cmdOptions" />
+            <option name="profiles">
+              <set />
+            </option>
+            <option name="goals">
+              <list>
+                <option value="spring-boot:run" />
+              </list>
+            </option>
+            <option name="multimoduleDir" />
+            <option name="pomFileName" />
+            <option name="profilesMap">
+              <map>
+                <entry key="dev" value="true" />
+              </map>
+            </option>
+            <option name="projectsCmdOptionValues">
+              <list />
+            </option>
+            <option name="resolveToWorkspace" value="false" />
+            <option name="workingDirPath" value="$PROJECT_DIR$/backend" />
+          </MavenRunnerParameters>
+        </option>
+      </MavenSettings>
+      <method v="2" />
+    </configuration>
+    <configuration name="protube-back [spring-boot:run]" type="MavenRunConfiguration" factoryName="Maven" nameIsGenerated="true">
+      <MavenSettings>
+        <option name="myGeneralSettings" />
+        <option name="myRunnerSettings">
+          <MavenRunnerSettings>
+            <option name="delegateBuildToMaven" value="false" />
+            <option name="environmentProperties">
+              <map>
+                <entry key="ENV_PROTUBE_DB" value="protube-dev" />
+                <entry key="ENV_PROTUBE_DB_PWD" value="secret" />
+                <entry key="ENV_PROTUBE_DB_USER" value="root" />
+                <entry key="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
+              </map>
+            </option>
+            <option name="jreName" value="#USE_PROJECT_JDK" />
+            <option name="mavenProperties">
+              <map />
+            </option>
+            <option name="passParentEnv" value="true" />
+            <option name="runMavenInBackground" value="true" />
+            <option name="skipTests" value="false" />
+            <option name="vmOptions" value="" />
+          </MavenRunnerSettings>
+        </option>
+        <option name="myRunnerParameters">
+          <MavenRunnerParameters>
+            <option name="cmdOptions" />
+            <option name="profiles">
+              <set />
+            </option>
+            <option name="goals">
+              <list>
+                <option value="spring-boot:run" />
+              </list>
+            </option>
+            <option name="multimoduleDir" />
+            <option name="pomFileName" />
+            <option name="profilesMap">
+              <map>
+                <entry key="prod" value="true" />
+              </map>
+            </option>
+            <option name="projectsCmdOptionValues">
+              <list />
+            </option>
+            <option name="resolveToWorkspace" value="false" />
+            <option name="workingDirPath" value="$PROJECT_DIR$/backend" />
+          </MavenRunnerParameters>
+        </option>
+      </MavenSettings>
+      <method v="2" />
+    </configuration>
+    <configuration name="ProtubeBackApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="ACTIVE_PROFILES" value="prod" />
+      <envs>
+        <env name="ENV_PROTUBE_DB" value="protube-dev" />
+        <env name="ENV_PROTUBE_DB_PWD" value="secret" />
+        <env name="ENV_PROTUBE_DB_USER" value="root" />
+        <env name="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
+      </envs>
+      <module name="protube-back" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="dev" type="js.build_tools.npm" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/frontend/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.ProtubeBackApplication [DEV]" />
+      <item itemvalue="Application.ProtubeBackApplication [PROD]" />
+      <item itemvalue="Maven.protube-back [spring-boot:run]" />
+      <item itemvalue="Maven.protube-back [DEV]" />
+      <item itemvalue="npm.dev" />
+      <item itemvalue="Python.main" />
+      <item itemvalue="Spring Boot.ProtubeBackApplication" />
+    </list>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="jdk-17.0.9-corretto-17.0.9-4caba194b151-92e50af3" />
+        <option value="jdk-21.0.2-corretto-21.0.2-4caba194b151-221dcadf" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d87e4e50-05fd-42ac-af3d-d5118959e068" name="Changes" comment="" />
+      <created>1726989526883</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1726989526883</updated>
+      <workItem from="1726989528378" duration="86000" />
+      <workItem from="1726989618351" duration="13481000" />
+      <workItem from="1727028376031" duration="56000" />
+      <workItem from="1727028435638" duration="31000" />
+    </task>
+    <task id="LOCAL-00001" summary="Improve initial setup project">
+      <option name="closed" value="true" />
+      <created>1726995792140</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1726995792140</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Improve initial setup project">
+      <option name="closed" value="true" />
+      <created>1727026518490</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1727026518490</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Improve initial setup project">
+      <option name="closed" value="true" />
+      <created>1727028426853</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1727028426853</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
+    <option name="CHECK_NEW_TODO" value="false" />
+    <MESSAGE value="Improve initial setup project" />
+    <option name="LAST_COMMIT_MESSAGE" value="Improve initial setup project" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$APPLICATION_PLUGINS_DIR$/python/helpers/pydev/_pydev_imps/_pydev_execfile.py</url>
+          <line>2</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/backend/src/main/java/com/tecnocampus/LS2/protube_back/AppStartupRunner.java</url>
+          <line>56</line>
+          <option name="timeStamp" value="43" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/backend/src/main/java/com/tecnocampus/LS2/protube_back/controller/UserController.java</url>
+          <line>29</line>
+          <option name="timeStamp" value="44" />
+        </line-breakpoint>
+      </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/LS2_PronounTube$main.coverage" NAME="main Coverage Results" MODIFIED="1726990064735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
+  </component>
+</project>
