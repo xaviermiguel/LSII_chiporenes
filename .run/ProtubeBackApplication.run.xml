@@ -3,7 +3,7 @@
     <envs>
       <env name="ENV_PROTUBE_GOOGLE_CLIENT_ID" value="" />
       <env name="ENV_PROTUBE_GOOGLE_CLIENT_SECRET" value="" />
-      <env name="ENV_PROTUBE_STORE_DIR" value="D:\code\videos" />
+      <env name="ENV_PROTUBE_STORE_DIR" value="C:\Protube\videos" />
     </envs>
     <module name="protube-back" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
