@@ -1,6 +1,10 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Repository instructions for AI coding agents working on ProTube.
+
+- Use the task description and `REQUIREMENT.md` as references.
+  Ask for clarification when acceptance criteria are missing or conflicting.
+- Modify only files needed for the task and preserve unrelated local changes.
 
 ## Project overview
 
@@ -78,3 +82,9 @@ and committed to the repo (this file), and every prompt used to generate code/ar
 in the `prompts/` folder at the repo root — reuse an existing approved prompt for a task type it already covers
 instead of writing an ad hoc one, and add new prompts there (with team approval) rather than only running them
 locally.
+
+## Git workflow
+
+- Commit each completed AI-generated change using the `commit-ai-change`
+  skill in `.agents/skills/commit-ai-change/SKILL.md`.
+- Never run destructive Git operations without explicit authorization.
