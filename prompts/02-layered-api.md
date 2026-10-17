@@ -37,3 +37,10 @@ Phase 2 reuses the approved DTO/mapper scope, limited to UserResponse and UserMa
 User instruction: "perfecto, para la segunda fase podrias hacer las clases y los minimos, pero con #TODO para hacer ?"
 Provide the minimal public profile mapping and TODO comments for pending mapping
 and serialization tests. Do not add services or controllers. Wait for review.
+
+PostgreSQL verification reuses the approved User repository testing scope.
+User instruction: "Perfecto, podriamos hacer la prueba en User repository ?"
+Add an opt-in integration test against the configured PostgreSQL database,
+validate the existing schema without changing it, and roll back test inserts.
+Keep the isolated H2 test and unrelated local changes. This verifies repository
+read/write behavior, not committed persistence across application restarts.
