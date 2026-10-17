@@ -44,3 +44,7 @@ Add an opt-in integration test against the configured PostgreSQL database,
 validate the existing schema without changing it, and roll back test inserts.
 Keep the isolated H2 test and unrelated local changes. This verifies repository
 read/write behavior, not committed persistence across application restarts.
+
+Follow-up instruction: "que tengo que hacer en este test ? pudes poner TODOS ?"
+Add TODO comments explaining the manual PostgreSQL test setup, execution and
+expected result; preserve the implemented test behavior and credential privacy.
