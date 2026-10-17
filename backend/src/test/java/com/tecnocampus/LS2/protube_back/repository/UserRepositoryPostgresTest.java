@@ -16,8 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Uses an existing PostgreSQL schema; the test transaction is rolled back. */
 // TODO 1: Arrancar PostgreSQL y comprobar que existen la base y la tabla public.users.
+// DONE
+
 // TODO 2: En IntelliJ, crear/editar la configuracion JUnit de ESTA clase (Java 21).
 //         Las variables del arranque del backend no se copian automaticamente al test.
+
+
 // TODO 3: En Environment variables de esa configuracion, definir con tus valores:
 //         ENV_PROTUBE_DB_HOST=localhost (o el servidor que uses)
 //         ENV_PROTUBE_DB=nombre_de_tu_base
@@ -25,13 +29,21 @@ import static org.junit.jupiter.api.Assertions.*;
 //         ENV_PROTUBE_DB_PASS=tu_contrasena
 //         RUN_POSTGRES_TESTS=true
 //         No escribir credenciales reales en este archivo ni subirlas a Git.
+
+
+
 // TODO 4: Confirmar el puerto: esta prueba usa 5432; adaptar la URL si usas otro.
+
+
+
 // TODO 5: Ejecutar savesAndReadsUserFromPostgres con el boton verde de IntelliJ.
 //         Resultado esperado: 1 test correcto, sin errores y sin estar omitido.
 //         Si aparece skipped/ignored, revisar RUN_POSTGRES_TESTS=true.
 //         Si falla validate, revisar la tabla frente a User; no usar create-drop.
 // TODO 6: Tras ejecutarlo, confirmar que el usuario temporal no queda en users:
 //         @DataJpaTest revierte la insercion al finalizar. No esperes verlo despues.
+
+
 // TODO 7: Verificar aparte la persistencia tras reiniciar el backend usando un dato
 //         confirmado fuera de esta transaccion. Este test no demuestra ese requisito.
 // La preparacion, el guardado y las comprobaciones de abajo ya estan implementados.
