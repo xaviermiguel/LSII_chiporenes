@@ -48,3 +48,9 @@ read/write behavior, not committed persistence across application restarts.
 Follow-up instruction: "que tengo que hacer en este test ? pudes poner TODOS ?"
 Add TODO comments explaining the manual PostgreSQL test setup, execution and
 expected result; preserve the implemented test behavior and credential privacy.
+
+Mapper verification reuses the approved phase 2 DTO/mapper testing scope.
+User instruction: "podrias hacer el test ?"
+Complete UserMapperTest to check public profile fields, a null avatar and
+serialization without email or password hash. Run backend verification and
+coverage without changing thresholds or accessing live PostgreSQL.
