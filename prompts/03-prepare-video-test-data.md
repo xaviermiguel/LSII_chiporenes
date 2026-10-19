@@ -234,3 +234,66 @@ ahora si he pulleado la tarea 3. el prompt esta aprobado
 ## Implemented scope
 
 Repository inspection found SQL exports for videos/comments but only User persistence in Java. Prepared a standalone, deterministic manifest and tests while clarification about the missing catalog dependency is pending. No database import or schema changes. Validation: seven Python unittest tests passed; real store preparation produced 21 videos and 154 comments with source ID 0 empty only in the generated manifest. No original media or JSON modified.
+
+## Follow-up: implement the importer (2026-10-19)
+
+The user confirms catalog persistence is on codex/catalog-persistence at 11e4d81,
+with real PostgreSQL validation still pending, and explicitly excludes all Docker
+Compose, Dockerfile and task 11 work. Reuse the approved task 4 prompt above and
+its existing entities/repositories. Implement a repeatable JSON importer of the
+existing C:\ProTube\videos store, preserve originals, prevent duplicates, guarantee
+an empty-comments case, use configurable paths, add automated tests and Windows
+instructions. Check Git before editing and remain on the persistence branch.
+Use local PostgreSQL if available; otherwise document unverified integration
+criteria. Do not implement or advance task 11.
+
+### User request (verbatim)
+
+Vamos a continuar con la tarea 4 del Sprint 1 de ProTuve.
+
+Aclaración importante: la preparación del arranque mediante Docker Compose corresponde a la tarea 11, por lo que NO debemos implementarla ni adelantarla.
+
+La persistencia del catálogo está implementada en la rama `codex/catalog-persistence`, commit `11e4d81`, aunque las pruebas reales con PostgreSQL todavía están pendientes.
+
+Mi objetivo ahora es completar exclusivamente la tarea 4: «Preparar los vídeos y los datos de prueba».
+
+Los archivos de videoGrabber están en:
+
+`C:\ProTube\videos`
+
+Cada vídeo dispone de `.mp4`, `.webp` y `.json`. Los comentarios se encuentran en `meta.comments`.
+
+Quiero que:
+
+1. Reutilices las entidades y repositorios de vídeos y comentarios ya implementados.
+2. Crees un importador reproducible de los archivos JSON.
+3. Guardes los metadatos y comentarios en PostgreSQL utilizando el esquema existente.
+4. Evites duplicados si la importación se ejecuta varias veces.
+5. Garantices un caso de prueba de vídeo sin comentarios.
+6. Configures el directorio de vídeos mediante propiedades o variables de entorno, sin rutas absolutas en el código.
+7. Añadas pruebas automatizadas para la importación.
+8. Documentes cómo ejecutar el importador desde Windows.
+9. Mantengas los vídeos y miniaturas originales sin modificaciones.
+
+No implementes Docker Compose, Dockerfiles ni la tarea 11.
+
+Puedes utilizar PostgreSQL instalado localmente para realizar pruebas de integración si está disponible. Si no lo está, completa las partes independientes y documenta qué validaciones quedan pendientes.
+
+Antes de modificar código, comprueba el estado de Git y asegúrate de trabajar sobre la rama que contiene la persistencia del catálogo.
+
+Al terminar, indícame qué criterios de aceptación de la tarea 4 están cumplidos y cuáles requieren una comprobación con PostgreSQL real.
+
+### Implemented follow-up and validation
+
+Reused the catalog entities and repositories on codex/catalog-persistence.
+Added the opt-in transactional Java importer, relative media paths, a stable
+comment identity, a cooperative PostgreSQL advisory lock, and a controlled
+no-comments case without deleting existing data or modifying source files.
+Updated Windows execution/verification instructions without task 11 infrastructure.
+
+Java 21 `mvn clean verify` with RUN_LOCAL_VIDEO_READER_TEST=true passed:
+37 tests reported, 28 passed, 9 PostgreSQL tests skipped, all coverage checks met.
+Read-only verification of the original store found 21 videos and 154 selected
+comments with source ID 0 empty in the import plan; original JSON content unchanged.
+PostgreSQL localhost:5432 was unavailable and no local binaries were found.
+No real PostgreSQL import, concurrent-load or restart verification was performed.
