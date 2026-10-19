@@ -234,4 +234,3 @@ ahora si he pulleado la tarea 3. el prompt esta aprobado
 ## Implemented scope
 
 Repository inspection found SQL exports for videos/comments but only User persistence in Java. Prepared a standalone, deterministic manifest and tests while clarification about the missing catalog dependency is pending. No database import or schema changes. Validation: seven Python unittest tests passed; real store preparation produced 21 videos and 154 comments with source ID 0 empty only in the generated manifest. No original media or JSON modified.
-
