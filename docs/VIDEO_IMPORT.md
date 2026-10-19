@@ -2,11 +2,10 @@
 
 ## Estado y dependencia
 
-El checkout incluye `User` y `UserRepository`, pero no entidades ni repositorios
-Java de vídeos o comentarios. `VideoService` sigue devolviendo dos cadenas fijas.
-Los esquemas documentados sí existen en `docs/db_schema/videos.sql` y
-`comments.sql`. No son migraciones ordenadas ni prueban que las tablas estén
-instaladas en la base en ejecución.
+La integración Java de vídeos y comentarios y la migración del esquema están
+preparadas; véase [Persistencia del catálogo](CATALOG_PERSISTENCE.md). La aceptación
+en PostgreSQL y la conservación tras reiniciar siguen pendientes de ejecutar las
+pruebas opcionales con un servidor disponible.
 
 El preparador permite avanzar sin esa dependencia. **No importa en PostgreSQL**,
 no modifica tablas ni archivos originales, no ejecuta videoGrabber y no descarga.
@@ -91,8 +90,8 @@ No se ha implementado el servicio backend ni comprobado reinicios.
 Configurar en la sesión, con valores locales, `ENV_PROTUBE_DB_HOST`,
 `ENV_PROTUBE_DB`, `ENV_PROTUBE_DB_USER` y `ENV_PROTUBE_DB_PASS`. No guardar sus
 valores en Git. El perfil `prod` del backend usa esas variables; `dev` usa H2.
-La importación no tiene todavía comando ejecutable: depende de los componentes
-Java de vídeos y comentarios.
+La importación no tiene todavía comando ejecutable: falta conectar este preparador
+con los repositorios del catálogo. No se ha implementado como parte de la tarea 3.
 
 En una conexión PostgreSQL configurada por el usuario, estas consultas son de
 solo lectura y permiten comprobar el esquema y, después de implementar la carga,
