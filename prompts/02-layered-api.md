@@ -54,3 +54,71 @@ User instruction: "podrias hacer el test ?"
 Complete UserMapperTest to check public profile fields, a null avatar and
 serialization without email or password hash. Run backend verification and
 coverage without changing thresholds or accessing live PostgreSQL.
+
+
+## Catalog integration follow-up (2026-10-19)
+
+Reuse the approved JPA/repository/service scope. The user now explicitly authorizes
+completing the pending Sprint 1 task 3 integration on a separate branch, preserving
+all existing data and the documented SQL schema. Add Video and Comment mappings,
+repositories, database-backed catalog reads without expanding the API, migrations,
+environment-based PostgreSQL configuration and persistence/restart tests. Remove
+versioned credentials, update setup/test documentation and run available checks.
+Do not change frontend files, merge into main or implement task 4 import. Do not
+claim PostgreSQL or restart verification if the database is unavailable.
+
+User request:
+Vamos a completar la integración pendiente de la tarea 3 del Sprint 1 de ProTuve
+para poder continuar con mi tarea 4.
+
+Objetivo: conseguir que Spring Boot pueda guardar y recuperar vídeos y comentarios
+en PostgreSQL utilizando el esquema SQL ya existente.
+
+Instrucciones del usuario (continuación literal):
+
+### Instrucciones
+
+1. Revisa el esquema SQL documentado y reutiliza sus tablas, columnas, claves y relaciones.
+2. Implementa las entidades JPA necesarias para vídeos y comentarios, respetando los nombres y tipos del esquema.
+3. Crea los repositorios Spring Data JPA correspondientes.
+4. Integra la lectura del catálogo con los repositorios existentes, sin ampliar innecesariamente el alcance de la API.
+5. Configura las migraciones del esquema existente, si todavía no están preparadas, utilizando las herramientas y convenciones del proyecto.
+6. Sustituye las credenciales versionadas por variables de entorno. No incluyas contraseñas reales ni valores sensibles en el repositorio.
+7. Configura la conexión con PostgreSQL.
+8. Añade pruebas para verificar el guardado y recuperación de vídeos y comentarios.
+9. Comprueba la persistencia después de reiniciar la aplicación.
+10. Actualiza la documentación para explicar cómo preparar PostgreSQL y ejecutar las pruebas.
+
+### Restricciones
+
+- No crees un esquema de base de datos paralelo.
+- No elimines tablas ni datos existentes.
+- No sobrescribas funcionalidades de otros compañeros.
+- No modifiques el frontend.
+- No implementes todavía la importación de la tarea 4.
+- No realices cambios destructivos.
+- Trabaja en una rama propia y no fusiones directamente en main.
+
+### Verificación
+
+Ejecuta las pruebas que permita el entorno y comprueba que:
+
+- Spring Boot compila.
+- Las entidades corresponden al esquema SQL existente.
+- PostgreSQL acepta los registros.
+- Los datos se recuperan correctamente.
+- Los registros sobreviven a un reinicio.
+- Las credenciales no están versionadas.
+
+Si no tienes PostgreSQL disponible, no afirmes que la persistencia funciona: indica qué verificaciones quedan pendientes.
+
+Al terminar, muéstrame los archivos modificados, los resultados de las pruebas y cualquier problema pendiente.
+
+**Después de completar esta integración, continuaremos con la tarea 4 utilizando los archivos de `C:\ProTube\videos`.**
+
+Validation of this follow-up: Java 21.0.9, `mvn clean verify` passed, 22 tests
+reported (14 passed, 8 PostgreSQL tests skipped), all coverage checks passed.
+No PostgreSQL server was reachable and Docker was unavailable; PostgreSQL
+migration, committed writes and application restart tests remain unverified.
+No frontend or task 4 import implementation. Shared IDE credential values removed;
+prior Git history is preserved and any previously valid password needs owner rotation.
