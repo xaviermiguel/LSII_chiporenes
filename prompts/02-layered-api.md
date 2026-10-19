@@ -1,0 +1,56 @@
+# Layered API and PostgreSQL entities
+
+**Approved on:** 2026-10-14
+**Approved by:** Xavier and Joan, confirmed by Xavier in the previous conversation.
+**Used for:** Create the agreed layered API foundation and JPA model, in separately reviewed phases.
+
+## Prompt
+
+perfecto, podrias crear estas clases ?
+
+Approved scope: create JPA entities for the agreed model, repositories, DTO,
+mappers, services, controllers and error handling; connect the video listing to
+PostgreSQL, adapt its frontend consumer and verify the changes with tests.
+
+Context: database protube-chiporenes, schema public, PostgreSQL 18. Tables:
+users, videos, categories, tags, video_tags, comments, comment_likes, video_views.
+Each video has zero or one category and multiple tags through video_tags.
+Comments support replies through parent_id. Duplicate video/tag assignments
+and duplicate likes by the same user on a comment must be prevented.
+Video and thumbnail files stay in the configured store; the database stores paths.
+Preserve existing tables, data, credentials and unrelated local changes.
+
+Approval response:
+Si, yo Xavier y Joan lo confirmamos, puedes registrarlo
+
+## Notes
+
+This restores the previously approved prompt record deleted with the broad implementation.
+Current phase: User, UserRepository and an isolated persistence test only.
+The user's current instruction is: "podrias hacer ahora solo una fase de las que mencionamos?"
+Reuse the previous User mapping; do not implement other entities or API layers.
+Preserve .run configuration, AGENTS.md and skills. Wait for review before the next phase.
+No live database schema changes. H2 is used only for the isolated test;
+PostgreSQL compatibility and persistent storage across restarts remain to be verified.
+
+Phase 2 reuses the approved DTO/mapper scope, limited to UserResponse and UserMapper.
+User instruction: "perfecto, para la segunda fase podrias hacer las clases y los minimos, pero con #TODO para hacer ?"
+Provide the minimal public profile mapping and TODO comments for pending mapping
+and serialization tests. Do not add services or controllers. Wait for review.
+
+PostgreSQL verification reuses the approved User repository testing scope.
+User instruction: "Perfecto, podriamos hacer la prueba en User repository ?"
+Add an opt-in integration test against the configured PostgreSQL database,
+validate the existing schema without changing it, and roll back test inserts.
+Keep the isolated H2 test and unrelated local changes. This verifies repository
+read/write behavior, not committed persistence across application restarts.
+
+Follow-up instruction: "que tengo que hacer en este test ? pudes poner TODOS ?"
+Add TODO comments explaining the manual PostgreSQL test setup, execution and
+expected result; preserve the implemented test behavior and credential privacy.
+
+Mapper verification reuses the approved phase 2 DTO/mapper testing scope.
+User instruction: "podrias hacer el test ?"
+Complete UserMapperTest to check public profile fields, a null avatar and
+serialization without email or password hash. Run backend verification and
+coverage without changing thresholds or accessing live PostgreSQL.
