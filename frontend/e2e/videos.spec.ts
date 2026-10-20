@@ -34,18 +34,43 @@ test('real API handles invalid pagination and unavailable videos', async ({ requ
   }
 });
 
-// The current UI still expects string[]. Its backend now returns VideoPage.
-// Browser checks deliberately stub that old contract until the UI task integrates it.
-test('browser displays a list using the current UI contract (mock API)', async ({ page }) => {
-  await page.route('**/api/videos', (route) => route.fulfill({ json: ['Browser fixture'] }));
+test('anonymous browser displays the real catalog and opens the persisted detail', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('listitem')).toHaveText(['Browser fixture']);
+  await expect(page.getByRole('listitem')).toHaveText(['E2E first video', 'E2E second video', 'E2E unavailable file']);
+  await expect(page.getByRole('status')).toHaveText('No hay más vídeos.');
   await expect(page.getByRole('img', { name: 'logo' })).toBeVisible();
+  const video = page.getByRole('button', { name: 'E2E first video' });
+  await expect(video.locator('img')).toHaveAttribute('src', `${api}/media/fixture.webp`);
+  const detail = page.waitForResponse(`${api}/api/videos/101`);
+  await video.click();
+  expect((await detail).ok()).toBeTruthy();
+  await expect(page.getByRole('heading', { name: 'E2E first video' })).toBeVisible();
+});
+
+test('browser appends real API pages and stops at the end', async ({ page }) => {
+  // Three isolated fixtures: request two per page without changing application
+  // defaults or backend data. Every response still comes from the real API.
+  const pages: string[] = [];
+  await page.route('**/api/videos?*', async (route) => {
+    const url = new URL(route.request().url());
+    pages.push(url.searchParams.get('page')!);
+    url.searchParams.set('size', '2');
+    await route.continue({ url: url.href });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('listitem')).toHaveText(['E2E first video', 'E2E second video']);
+  await page.getByRole('button', { name: 'Cargar más' }).click();
+  await expect(page.getByRole('listitem')).toHaveText(['E2E first video', 'E2E second video', 'E2E unavailable file']);
+  await expect(page.getByRole('status')).toHaveText('No hay más vídeos.');
+  await expect(page.getByRole('button', { name: 'Cargar más' })).toHaveCount(0);
+  // StrictMode can restart the initial request; subsequent pages are requested once.
+  expect(pages.filter((number) => number === '1')).toHaveLength(1);
+  expect(pages.every((number) => number === '0' || number === '1')).toBeTruthy();
 });
 
 test('browser displays a controlled request failure (mock API)', async ({ page }) => {
-  await page.route('**/api/videos', (route) => route.fulfill({ status: 503, json: { message: 'Unavailable' } }));
+  await page.route('**/api/videos?*', (route) => route.fulfill({ status: 503, json: { message: 'Unavailable' } }));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Error', exact: true })).toBeVisible();
-  await expect(page.getByText(/Error fetching videos:/)).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('Error al cargar los vídeos');
+  await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible();
 });

@@ -35,9 +35,22 @@ El backend actual no incluye Spring Security ni filtros de autenticación. El GE
 se consulta sin sesión ni cabeceras de autorización; no se modifica la seguridad
 de ninguna otra ruta.
 
-Este contrato sustituye el antiguo array de títulos. El consumidor frontend actual
-necesitará adaptarse en su tarea correspondiente; aquí no se modifica el frontend.
-La implementación del detalle y el servicio de archivos permanecen disponibles.
+Este contrato sustituye el antiguo array de títulos. El listado de React utiliza
+`useAllVideos` para consultar la API real y mostrar título y miniatura. Resuelve
+las URLs contra el dominio de medios de `Env.ts`, también cuando ese dominio es
+relativo en producción. Solicita la página 0 con size=12 y permite cargar las
+siguientes con «Cargar más», conservando los resultados y deduplicando por ID.
+Bloquea peticiones simultáneas y cancela la petición pendiente al salir del listado.
+
+Se muestran los estados de carga inicial, catálogo vacío y error. Un error de
+carga adicional conserva los vídeos visibles y permite reintentar la misma página.
+Al recibir hasNext=false se retira el botón y se indica «No hay más vídeos»;
+si el catálogo está vacío se muestra «No hay vídeos disponibles».
+
+La selección abre el componente `VideoDetail` con el ID persistido, reutilizando
+la navegación por estado de `App`. No hay router ni cambio de URL; «Volver al
+catálogo» regresa al listado. El catálogo no exige sesión. La implementación del
+detalle y el servicio de archivos permanecen disponibles.
 
 ## Validación
 

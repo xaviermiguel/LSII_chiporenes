@@ -14,7 +14,7 @@ export const videoListFixture: VideoListResponse = {
       title: 'Second video',
       user: 'Author 2',
       duration: 120,
-      thumbnailUrl: 'media/1.webp',
+      thumbnailUrl: '/media/1.webp',
     },
   ],
   page: 0,
@@ -26,10 +26,14 @@ export const videoDetailsFixture: VideoDetail[] = [
     ...videoListFixture.items[0],
     description: 'Description first video',
     videoUrl: '/media/0.mp4',
+    tags: [],
+    comments: [],
   },
   {
     ...videoListFixture.items[1],
     description: 'Description second video',
     videoUrl: '/media/1.mp4',
+    tags: [],
+    comments: [],
   },
 ];

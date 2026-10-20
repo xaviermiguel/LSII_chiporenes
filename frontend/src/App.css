@@ -47,6 +47,27 @@
   text-align: left;
 }
 
+.video-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px;
+  padding: 0;
+  list-style: none;
+}
+
+.video-catalog button {
+  width: 100%;
+}
+
+.video-catalog img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
 .video-detail h1 {
   margin: 24px 0 12px;
   font-size: 28px;
