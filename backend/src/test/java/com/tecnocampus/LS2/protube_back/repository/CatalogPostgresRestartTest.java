@@ -58,13 +58,16 @@ class CatalogPostgresRestartTest {
                     assertEquals(videoId, comment.getVideo().getId());
                     assertEquals("Committed before restart", comment.getText());
                     assertEquals(3, comment.getSourceMetadata().get("like_count"));
-                    assertTrue(second.getBean(VideoService.class)
-                            .getVideos()
-                            .stream()
-                            .anyMatch(item ->
-                                    videoId.equals(item.id())
-                                            && video.getTitle().equals(item.title())
-                            ));
+                    var service = second.getBean(VideoService.class);
+                    int page = 0;
+                    boolean found = false;
+                    com.tecnocampus.LS2.protube_back.dto.video.VideoPage result;
+                    do {
+                        result = service.getVideos(page++, 12);
+                        found = result.items().stream().anyMatch(item -> item.id().equals(videoId)
+                                && item.title().equals(video.getTitle()));
+                    } while (!found && result.hasNext());
+                    assertTrue(found);
                 });
             } finally {
                 // Only records inserted by this test; never truncate, drop, or delete another user's data.

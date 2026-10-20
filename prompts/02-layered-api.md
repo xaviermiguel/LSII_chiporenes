@@ -1,5 +1,39 @@
 # Layered API and PostgreSQL entities
 
+## Task 10 merge integration checkpoint (2026-10-20)
+
+Reuses the approved API/service/DTO and frontend-consumer scope recorded below.
+User implemented the changes incrementally with AI review and examples.
+
+User prompts for this checkpoint included:
+
+> entonces como puedo arreglar estos errores del test ?
+> bien no generes codigo, y vayamos paso a paso
+> he hecho las modificaciones, puedes ver errores, haz un repaso
+> escribeme el codigo porfavor
+> no entiendo, como ha de quedar este metodo
+> esto, no veo nada en localhost:5173
+> como quedaria el codigo ?
+> hecho puedes revisarlo
+> haz un pull request
+> priemro haz un commit
+
+Result: integrate main's paginated catalog, encoded media URLs, registered
+authors, missing-file checks and JSON 404 handling while preserving detail tags.
+Align comment DTO and React consumer with user, ISO createdAt and parentId.
+Adapt unit/integration/restart tests and remove unused VideoSummaryResponse.
+The catalog consumer reads items from the first page only.
+
+Validation: user supplied IntelliJ Maven verify output ending BUILD SUCCESS
+at 18:48:21: 59 tests, zero failures/errors, 10 skipped; all JaCoCo checks met.
+User confirmed catalog rendering and real comment text/dates in the browser.
+Frontend build TypeScript stage completed, but Vite build and Jest could not
+complete in the agent sandbox (spawn EPERM); escalation attempt was interrupted
+when the user requested the commit first. Frontend lint has formatting failures.
+Dedicated detail UI-state tests, further-page loading and full frontend checks
+remain pending. This is a checkpoint, not completion of all task 10 criteria.
+Commit only at this step; push and draft PR deferred to the next step.
+
 ## Backend playback checkpoint (2026-10-20)
 
 Reuse the approved DTO, service, controller and catalog-consumer scope for

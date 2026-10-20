@@ -111,9 +111,9 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
         <ul className="video-comments">
           {video.comments.map((comment) => (
             <li key={comment.id}>
-              <strong>{comment.author}</strong>
+              <strong>{comment.user}</strong>
               <p>{comment.text}</p>
-              <small>{new Date(comment.createdAt * 1000).toLocaleString()}</small>
+              <small>{new Date(comment.createdAt).toLocaleString()}</small>
             </li>
           ))}
         </ul>

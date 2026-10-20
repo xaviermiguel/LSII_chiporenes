@@ -20,7 +20,8 @@ export type VideoDetail = VideoSummary & {
 
 export type VideoComment = {
   id: number;
-  author: string;
+  user: string;
   text: string;
-  createdAt: number;
+  createdAt: string;
+  parentId: number | null;
 };

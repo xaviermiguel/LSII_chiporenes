@@ -1,17 +1,16 @@
 package com.tecnocampus.LS2.protube_back.controller;
 
+import com.tecnocampus.LS2.protube_back.services.VideoNotFoundException;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.tecnocampus.LS2.protube_back.dto.video.VideoSummaryResponse;
+
 import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
 import com.tecnocampus.LS2.protube_back.dto.video.CommentResponse;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import java.time.Instant;
 
 import java.util.List;
@@ -33,16 +32,9 @@ class VideosControllerTest {
 
     @Test
     void getVideos() {
-        var videos = List.of (
-                new VideoSummaryResponse(
-                        1L, "video1", "Author1",null,"0.webp"
-                ),
-                new VideoSummaryResponse(
-                        2L,"video2", "Auhor 2", null,  "1.webp"
-                )
-        );
-        when (videoService.getVideos()).thenReturn(videos);
-        assertEquals(videos, videosController.getVideos().getBody());
+        var response = new com.tecnocampus.LS2.protube_back.dto.video.VideoPage(List.of(), 0, 12, false);
+        when(videoService.getVideos(0, 12)).thenReturn(response);
+        assertEquals(response, videosController.getVideos(0, 12).getBody());
     }
 
     @Test
@@ -50,7 +42,7 @@ class VideosControllerTest {
         var detail = new VideoDetailResponse(
                 45L, "Video", "Author", null, "1.webp",
                 "Description", "1.mp4", List.of("music"),
-                List.of(new CommentResponse(349L, "Reader", "Comment", Instant.EPOCH)));
+                List.of(new CommentResponse(349L, "Comment", "Reader", Instant.EPOCH,null)));
         when(videoService.getVideoById(45L)).thenReturn(detail);
 
         MockMvcBuilders.standaloneSetup(videosController).build()
@@ -65,7 +57,7 @@ class VideosControllerTest {
     @Test
     void detailEndpointReturns404ForMissingVideo() throws Exception {
         when(videoService.getVideoById(999L))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .thenThrow(new VideoNotFoundException());
 
         MockMvcBuilders.standaloneSetup(videosController).build()
                 .perform(get("/api/videos/999"))

@@ -2,16 +2,19 @@ package com.tecnocampus.LS2.protube_back.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import com.tecnocampus.LS2.protube_back.model.Comment;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -20,48 +23,46 @@ class VideoServiceTest {
 
     VideoRepository repository = mock(VideoRepository.class);
     CommentRepository commentRepository = mock(CommentRepository.class);
-
+    @TempDir Path store;
     VideoService videoService;
 
     @BeforeEach
     void setUp() {
-        videoService = new VideoService(
-                repository,
-                commentRepository);
+        videoService = new VideoService(repository, commentRepository,store.toString());
+
     }
 
     @Test
-    void returnsStoredVideoSummaries() {
+    void readsStoredSummariesUsingDatabasePagination() {
         var first = new Video();
         first.setTitle("First video");
         first.setId(10L);
         first.setThumbnailPath("covers/first #1.webp");
-
         var second = new Video();
         second.setTitle("Second video");
-        second.setThumbnailPath("covers/second.webp");
-
-        when(repository.findAllByOrderByIdAsc())
-                .thenReturn(List.of(first, second));
-
-        var result = videoService.getVideos();
-
-        assertEquals(2, result.size());
-        assertEquals("First video", result.get(0).title());
-        assertEquals("Second video", result.get(1).title());
-
-        verify(repository).findAllByOrderByIdAsc();
+        second.setThumbnailPath("second.webp");
+        var page = org.springframework.data.domain.PageRequest.of(0, 2);
+        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
+                new org.springframework.data.domain.SliceImpl<>(List.of(first, second), page, true));
+        var result = videoService.getVideos(0, 2);
+        assertEquals(List.of("First video", "Second video"), result.items().stream().map(
+                com.tecnocampus.LS2.protube_back.dto.video.VideoSummary::title).toList());
+        assertEquals(10L, result.items().getFirst().id());
+        assertEquals("/media/covers/first%20%231.webp", result.items().getFirst().thumbnailUrl());
+        org.junit.jupiter.api.Assertions.assertTrue(result.hasNext());
+        verify(repository).findAllByOrderByIdAsc(page);
     }
 
     @Test
     void returnsEmptyCatalogWithoutInventingData() {
-        when(repository.findAllByOrderByIdAsc())
-                .thenReturn(List.of());
-
-        var result = videoService.getVideos();
-
-        assertEquals(List.of(), result);
+        var page = org.springframework.data.domain.PageRequest.of(0, 12);
+        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
+                new org.springframework.data.domain.SliceImpl<>(List.of(), page, false));
+        var result = videoService.getVideos(0, 12);
+        assertEquals(List.of(), result.items());
+        org.junit.jupiter.api.Assertions.assertFalse(result.hasNext());
     }
+
 
     @Test
     void rejectsMissingVideoBeforeReadingComments() {
@@ -69,14 +70,16 @@ class VideoServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                ResponseStatusException.class,
+                VideoNotFoundException.class,
                 () -> videoService.getVideoById(42L));
 
         verifyNoInteractions(commentRepository);
     }
 
     @Test
-    void returnsDetailWithImportedTagsAndComments() {
+    void returnsDetailWithImportedTagsAndComments() throws Exception {
+        Files.write(store.resolve("1.mp4"), new byte[]{1, 2, 3});
+
         var video = new Video();
         video.setId(45L);
         video.setTitle("Stored video");
@@ -84,8 +87,7 @@ class VideoServiceTest {
         video.setVideoPath("1.mp4");
         video.setThumbnailPath("1.webp");
         video.setSourceMetadata(Map.of(
-                "tags",
-                List.of("music", 42, "live")));
+                "tags", List.of("music", 42, "live")));
 
         var comment = new Comment();
         comment.setId(349L);
@@ -102,24 +104,21 @@ class VideoServiceTest {
 
         assertEquals(45L, detail.id());
         assertEquals("Original description", detail.description());
-        assertEquals("1.mp4", detail.videoUrl());
+        assertEquals("/media/1.mp4", detail.videoUrl());
         assertEquals(List.of("music", "live"), detail.tags());
         assertEquals(1, detail.comments().size());
-        assertEquals(
-                "External author",
-                detail.comments().getFirst().author());
-        assertEquals(
-                "Original comment",
-                detail.comments().getFirst().text());
-        assertEquals(
-                comment.getCreatedAt(),
-                detail.comments().getFirst().createdAt());
+        assertEquals("External author", detail.comments().getFirst().user());
+        assertEquals("Original comment", detail.comments().getFirst().text());
+        assertEquals(comment.getCreatedAt(), detail.comments().getFirst().createdAt());
     }
-
     @Test
-    void returnsEmptyTagsAndCommentsWhenAbsent() {
+    void returnsEmptyTagsAndCommentsWhenAbsent() throws Exception {
+        Files.write(store.resolve("1.mp4"), new byte[]{1, 2, 3});
+
         var video = new Video();
         video.setId(1L);
+        video.setVideoPath("1.mp4");
+        video.setThumbnailPath("1.webp");
         video.setSourceMetadata(Map.of());
 
         when(repository.findById(1L))
@@ -139,11 +138,10 @@ class VideoServiceTest {
         when(repository.findById(999L))
                 .thenReturn(Optional.empty());
 
-        var exception = assertThrows(
-                ResponseStatusException.class,
+        assertThrows(
+                VideoNotFoundException.class,
                 () -> videoService.getVideoById(999L));
 
-        assertEquals(404, exception.getStatusCode().value());
         verifyNoInteractions(commentRepository);
     }
 }

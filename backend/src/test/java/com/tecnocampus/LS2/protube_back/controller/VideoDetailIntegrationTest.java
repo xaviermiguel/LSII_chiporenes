@@ -116,7 +116,9 @@ class VideoDetailIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         var json = objectMapper.readTree(response);
-        assertEquals(Set.of("id", "title", "user", "duration", "description", "thumbnailUrl", "videoUrl", "comments"),
+        assertEquals(
+                Set.of("id", "title", "user", "duration", "description",
+                        "thumbnailUrl", "videoUrl", "tags", "comments"),
                 fieldNames(json));
         for (var comment : json.path("comments")) {
             assertEquals(Set.of("id", "text", "user", "createdAt", "parentId"), fieldNames(comment));

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getEnv } from './utils/Env';
-import type { VideoSummary } from './types/Video';
+import type { VideoSummary, VideoListResponse } from './types/Video';
 
 type LoadingState = 'loading' | 'success' | 'error';
 
@@ -15,13 +15,13 @@ export function useAllVideos() {
 
     async function getVideos() {
       try {
-        const response = await axios.get<VideoSummary[]>(`${getEnv().API_BASE_URL}/videos`, {
+        const response = await axios.get<VideoListResponse>(`${getEnv().API_BASE_URL}/videos`, {
           signal: controller.signal,
         });
 
         if (controller.signal.aborted) return;
 
-        setValue(response.data);
+        setValue(response.data.items);
         setLoading('success');
       } catch (error: unknown) {
         if (controller.signal.aborted) return;
