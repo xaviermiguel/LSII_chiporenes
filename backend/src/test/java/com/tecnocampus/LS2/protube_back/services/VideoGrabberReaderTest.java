@@ -96,6 +96,23 @@ class VideoGrabberReaderTest {
     }
 
     @Test
+    void missingNullAndBlankDescriptionsUseNonemptyFallback() throws IOException {
+        for (String value : new String[]{null, "", "   "}) {
+            var data = data(1);
+            ((ObjectNode) data.get("meta")).put("description", value);
+            write(store, 1, data);
+            assertEquals("Sin descripci\u00f3n", reader.read(store, 2, null).get(1).video().getDescription());
+        }
+        var data = data(1);
+        ((ObjectNode) data.get("meta")).remove("description");
+        write(store, 1, data);
+        assertEquals("Sin descripci\u00f3n", reader.read(store, 2, null).get(1).video().getDescription());
+        ((ObjectNode) data.get("meta")).put("description", 42);
+        write(store, 1, data);
+        assertThrows(IOException.class, () -> reader.read(store, 2, null));
+    }
+
+    @Test
     void requiresMoreThanOnePageAndSomeComments() throws IOException {
         assertThrows(IllegalArgumentException.class, () -> reader.read(store, 0, null));
         assertThrows(IllegalArgumentException.class, () -> reader.read(store, 3, null));

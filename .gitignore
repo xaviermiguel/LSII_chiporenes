@@ -1,2 +1,4 @@
 .vscode/
 .idea/
+# Private Spring Boot run configuration
+.run/protube-local.properties

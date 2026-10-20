@@ -58,7 +58,13 @@ class CatalogPostgresRestartTest {
                     assertEquals(videoId, comment.getVideo().getId());
                     assertEquals("Committed before restart", comment.getText());
                     assertEquals(3, comment.getSourceMetadata().get("like_count"));
-                    assertTrue(second.getBean(VideoService.class).getVideos().contains(video.getTitle()));
+                    assertTrue(second.getBean(VideoService.class)
+                            .getVideos()
+                            .stream()
+                            .anyMatch(item ->
+                                    videoId.equals(item.id())
+                                            && video.getTitle().equals(item.title())
+                            ));
                 });
             } finally {
                 // Only records inserted by this test; never truncate, drop, or delete another user's data.

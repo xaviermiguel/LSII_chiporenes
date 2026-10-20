@@ -1,5 +1,34 @@
 # Layered API and PostgreSQL entities
 
+## Backend playback checkpoint (2026-10-20)
+
+Reuse the approved DTO, service, controller and catalog-consumer scope for
+Sprint 1 playback details. This checkpoint contains only backend changes;
+frontend integration remains pending.
+
+User prompts used in this incremental, user-written implementation:
+
+> puedes revisar videoService.java ?
+> bien , enonces como empiezo ?
+> puedes revisar y decirme que deberia escribir ?
+> perfecto como puedo hacer eso ?
+> puedes revisar, dice que tengo realted problems con los tests
+> okay antes de tocar front end quiero hacer un commit, y puedes guardar bien esta vez el run edit configurations, no se porque cada vez que hago commit lo pierdo
+
+Result: catalog summary DTOs, video detail with imported tags and comments,
+404 for a missing video, updated contract tests and a nonempty description
+fallback for imported metadata. Preserve the existing database schema.
+Keep the IntelliJ run configuration versioned while storing private values in
+an ignored local properties file. No frontend changes or push requested.
+
+The user confirmed a successful PostgreSQL import, catalog response and detail
+response with tags and comments. Validation: `mvn clean verify` passed with
+43 tests (33 passed, 10 skipped) and all default JaCoCo checks met. The documented
+`coverage` profile does not exist in this POM; JaCoCo runs in the default build.
+A temporary Spring configuration probe confirmed that the private properties
+resolve the database URL/password and disable import, without connecting to the
+database or printing credentials. Opt-in integration tests remain skipped.
+
 **Approved on:** 2026-10-14
 **Approved by:** Xavier and Joan, confirmed by Xavier in the previous conversation.
 **Used for:** Create the agreed layered API foundation and JPA model, in separately reviewed phases.
