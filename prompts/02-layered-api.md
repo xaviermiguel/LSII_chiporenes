@@ -29,6 +29,31 @@ A temporary Spring configuration probe confirmed that the private properties
 resolve the database URL/password and disable import, without connecting to the
 database or printing credentials. Opt-in integration tests remain skipped.
 
+## Frontend catalog and detail follow-up (2026-10-20)
+
+Reuse the approved frontend-consumer scope above for the existing playback
+prototype documented in `04-frontend-playback-prototype.md`.
+
+User prompts:
+
+> bien, ahora quiero preseguir con el frontend
+> si , tengo el listado de muchas canciones
+> si pero sale todo junto :
+> no puedes ahcer lso cambios de VideoDetail.tsx ?
+
+The user applied the incremental examples: fetch the catalog and detail through
+Env.ts, cancel abandoned requests, display loading/error/empty states, imported
+tags/comments and playback failures. The user confirmed the real detail data
+in React, then added CSS for description blocks, tag chips and comment cards.
+Apply the matching class names in VideoDetail.tsx and preserve those edits.
+
+Validation: production build passed; the existing 11 tests and one snapshot
+passed before the final CSS-class-only edit. ESLint passed for the four changed
+TypeScript files and again for VideoDetail.tsx after that edit. Repository-wide
+lint still reports formatting errors in other files. Existing tests do not
+establish dedicated coverage of the new catalog/detail request states.
+No backend, private run configuration or push changes requested.
+
 **Approved on:** 2026-10-14
 **Approved by:** Xavier and Joan, confirmed by Xavier in the previous conversation.
 **Used for:** Create the agreed layered API foundation and JPA model, in separately reviewed phases.

@@ -14,4 +14,13 @@ export type VideoListResponse = {
 export type VideoDetail = VideoSummary & {
   description: string;
   videoUrl: string;
+  tags: string[];
+  comments: VideoComment[];
+};
+
+export type VideoComment = {
+  id: number;
+  author: string;
+  text: string;
+  createdAt: number;
 };

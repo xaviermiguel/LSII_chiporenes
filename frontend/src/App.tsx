@@ -1,5 +1,5 @@
 import './App.css';
-import { videoListFixture } from './fixtures/videos.ts';
+import { useAllVideos } from './useAllVideos.ts';
 import { useState } from 'react';
 import { VideoDetail } from './components/VideoDetail.tsx';
 
@@ -24,11 +24,25 @@ type ContentAppProps = {
 };
 
 function ContentApp({ onSelectedVideo }: ContentAppProps) {
+  const { value: videos, message, loading } = useAllVideos();
+
+  if (loading === 'loading') {
+    return <p>Cargando vídeos...</p>;
+  }
+
+  if (loading === 'error') {
+    return <p role="alert">{message}</p>;
+  }
+
+  if (videos.length === 0) {
+    return <p>No hay vídeos disponibles.</p>;
+  }
+
   return (
     <>
-      <strong> Avaible videos: </strong>
+      <strong>Vídeos disponibles:</strong>
       <ul>
-        {videoListFixture.items.map((video) => (
+        {videos.map((video) => (
           <li key={video.id}>
             <button onClick={() => onSelectedVideo(video.id)}>{video.title}</button>
           </li>
