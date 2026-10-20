@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import org.springframework.data.domain.PageRequest;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoPage;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoSummary;
+import java.util.List;
 
 @Service
 public class VideoService {
