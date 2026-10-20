@@ -7,8 +7,8 @@ Acordar la comunicación entre frontend y backend para listar vídeos, consultar
 Este documento es una propuesta pendiente de aprobación por el equipo. Las rutas de medios deberán confirmarse con la configuración del backend.
 
 Estado de la tarea 9: el detalle y `/media/**` están implementados como se describe
-abajo. El listado paginado sigue siendo una propuesta: `GET /api/videos` conserva
-su respuesta actual `List<String>` con títulos ordenados por ID.
+abajo. El listado paginado está implementado con el contrato `items/page/size/hasNext`
+descrito aquí. Véase [VIDEO_CATALOG.md](VIDEO_CATALOG.md) para validación y límites.
 
 ## Listado de vídeos
 

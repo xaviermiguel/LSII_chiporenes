@@ -15,10 +15,9 @@ primero el vídeo y el padre. La FK compuesta original impide respuestas entre
 vídeos distintos. No se añaden cascadas de borrado. Las restricciones CHECK y los
 índices especiales los conserva la migración, no la generación DDL de Hibernate.
 
-`GET /api/videos` conserva su contrato `List<String>`: devuelve títulos reales,
-ordenados por ID. Con catálogo vacío devuelve `[]`. No se añade detalle, paginación,
-escritura HTTP, ni la importación de videoGrabber. Las entidades no se serializan
-directamente por la API.
+En la tarea 3, `GET /api/videos` devolvía títulos reales ordenados por ID.
+El contrato actual incorpora paginación y resúmenes públicos, documentados en
+[VIDEO_CATALOG.md](VIDEO_CATALOG.md). Las entidades no se serializan directamente.
 
 ## Preparar PostgreSQL
 

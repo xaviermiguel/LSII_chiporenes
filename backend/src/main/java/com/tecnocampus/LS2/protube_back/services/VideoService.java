@@ -16,7 +16,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import com.tecnocampus.LS2.protube_back.dto.video.VideoPage;
+import com.tecnocampus.LS2.protube_back.dto.video.VideoSummary;
 
 @Service
 public class VideoService {
@@ -32,8 +34,12 @@ public class VideoService {
     }
 
     @Transactional(readOnly = true)
-    public List<String> getVideos() {
-        return videoRepository.findAllByOrderByIdAsc().stream().map(Video::getTitle).toList();
+    public VideoPage getVideos(int page, int size) {
+        var videos = videoRepository.findAllByOrderByIdAsc(PageRequest.of(page, size));
+        var items = videos.map(video -> new VideoSummary(video.getId(), video.getTitle(),
+                video.getOwner() == null ? video.getExternalAuthor() : video.getOwner().getDisplayName(),
+                video.getDurationSeconds(), mediaUrl(video.getThumbnailPath()))).getContent();
+        return new VideoPage(items, page, size, videos.hasNext());
     }
 
     @Transactional(readOnly = true)

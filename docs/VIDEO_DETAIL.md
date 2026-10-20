@@ -2,7 +2,8 @@
 
 `GET /api/videos/{id}` devuelve el DTO documentado en
 [sprint1-api.md](sprint1-api.md), con datos y comentarios persistidos. No requiere
-sesión. El listado actual `GET /api/videos` sigue devolviendo títulos.
+sesión. El listado `GET /api/videos` devuelve ahora el catálogo paginado descrito
+en [VIDEO_CATALOG.md](VIDEO_CATALOG.md).
 
 El servicio reutiliza `VideoRepository`, la consulta ordenada de
 `CommentRepository` y `/media/**` de `MvcConfig`. Las URLs se generan con las rutas
