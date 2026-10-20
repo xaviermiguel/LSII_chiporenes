@@ -1,5 +1,93 @@
 # Layered API and PostgreSQL entities
 
+## Task 10 merge integration checkpoint (2026-10-20)
+
+Reuses the approved API/service/DTO and frontend-consumer scope recorded below.
+User implemented the changes incrementally with AI review and examples.
+
+User prompts for this checkpoint included:
+
+> entonces como puedo arreglar estos errores del test ?
+> bien no generes codigo, y vayamos paso a paso
+> he hecho las modificaciones, puedes ver errores, haz un repaso
+> escribeme el codigo porfavor
+> no entiendo, como ha de quedar este metodo
+> esto, no veo nada en localhost:5173
+> como quedaria el codigo ?
+> hecho puedes revisarlo
+> haz un pull request
+> priemro haz un commit
+
+Result: integrate main's paginated catalog, encoded media URLs, registered
+authors, missing-file checks and JSON 404 handling while preserving detail tags.
+Align comment DTO and React consumer with user, ISO createdAt and parentId.
+Adapt unit/integration/restart tests and remove unused VideoSummaryResponse.
+The catalog consumer reads items from the first page only.
+
+Validation: user supplied IntelliJ Maven verify output ending BUILD SUCCESS
+at 18:48:21: 59 tests, zero failures/errors, 10 skipped; all JaCoCo checks met.
+User confirmed catalog rendering and real comment text/dates in the browser.
+Frontend build TypeScript stage completed, but Vite build and Jest could not
+complete in the agent sandbox (spawn EPERM); escalation attempt was interrupted
+when the user requested the commit first. Frontend lint has formatting failures.
+Dedicated detail UI-state tests, further-page loading and full frontend checks
+remain pending. This is a checkpoint, not completion of all task 10 criteria.
+Commit only at this step; push and draft PR deferred to the next step.
+
+## Backend playback checkpoint (2026-10-20)
+
+Reuse the approved DTO, service, controller and catalog-consumer scope for
+Sprint 1 playback details. This checkpoint contains only backend changes;
+frontend integration remains pending.
+
+User prompts used in this incremental, user-written implementation:
+
+> puedes revisar videoService.java ?
+> bien , enonces como empiezo ?
+> puedes revisar y decirme que deberia escribir ?
+> perfecto como puedo hacer eso ?
+> puedes revisar, dice que tengo realted problems con los tests
+> okay antes de tocar front end quiero hacer un commit, y puedes guardar bien esta vez el run edit configurations, no se porque cada vez que hago commit lo pierdo
+
+Result: catalog summary DTOs, video detail with imported tags and comments,
+404 for a missing video, updated contract tests and a nonempty description
+fallback for imported metadata. Preserve the existing database schema.
+Keep the IntelliJ run configuration versioned while storing private values in
+an ignored local properties file. No frontend changes or push requested.
+
+The user confirmed a successful PostgreSQL import, catalog response and detail
+response with tags and comments. Validation: `mvn clean verify` passed with
+43 tests (33 passed, 10 skipped) and all default JaCoCo checks met. The documented
+`coverage` profile does not exist in this POM; JaCoCo runs in the default build.
+A temporary Spring configuration probe confirmed that the private properties
+resolve the database URL/password and disable import, without connecting to the
+database or printing credentials. Opt-in integration tests remain skipped.
+
+## Frontend catalog and detail follow-up (2026-10-20)
+
+Reuse the approved frontend-consumer scope above for the existing playback
+prototype documented in `04-frontend-playback-prototype.md`.
+
+User prompts:
+
+> bien, ahora quiero preseguir con el frontend
+> si , tengo el listado de muchas canciones
+> si pero sale todo junto :
+> no puedes ahcer lso cambios de VideoDetail.tsx ?
+
+The user applied the incremental examples: fetch the catalog and detail through
+Env.ts, cancel abandoned requests, display loading/error/empty states, imported
+tags/comments and playback failures. The user confirmed the real detail data
+in React, then added CSS for description blocks, tag chips and comment cards.
+Apply the matching class names in VideoDetail.tsx and preserve those edits.
+
+Validation: production build passed; the existing 11 tests and one snapshot
+passed before the final CSS-class-only edit. ESLint passed for the four changed
+TypeScript files and again for VideoDetail.tsx after that edit. Repository-wide
+lint still reports formatting errors in other files. Existing tests do not
+establish dedicated coverage of the new catalog/detail request states.
+No backend, private run configuration or push changes requested.
+
 **Approved on:** 2026-10-14
 **Approved by:** Xavier and Joan, confirmed by Xavier in the previous conversation.
 **Used for:** Create the agreed layered API foundation and JPA model, in separately reviewed phases.

@@ -2,14 +2,11 @@ package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.video.CommentResponse;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
-import com.tecnocampus.LS2.protube_back.model.Comment;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
-import com.tecnocampus.LS2.protube_back.model.Video;
-import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +16,9 @@ import java.nio.file.Path;
 import org.springframework.data.domain.PageRequest;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoPage;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoSummary;
+import org.springframework.web.util.UriUtils;
+
+import java.util.List;
 
 @Service
 public class VideoService {
@@ -27,7 +27,7 @@ public class VideoService {
     private final Path store;
 
     public VideoService(VideoRepository videoRepository, CommentRepository commentRepository,
-                        @Value("${pro_tube.store.dir}") String storeDirectory) {
+                       @Value("${pro_tube.store.dir}") String storeDirectory) {
         this.videoRepository = videoRepository;
         this.commentRepository = commentRepository;
         this.store = Path.of(storeDirectory).toAbsolutePath().normalize();
@@ -42,29 +42,49 @@ public class VideoService {
         return new VideoPage(items, page, size, videos.hasNext());
     }
 
-    @Transactional(readOnly = true)
-    public VideoDetailResponse getVideo(Long id) {
-        Video video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
-        requireVideoFile(video.getVideoPath());
-        var comments = commentRepository.findByVideoIdOrderByCreatedAtAscIdAsc(video.getId())
-                .stream().map(this::commentResponse).toList();
-        return new VideoDetailResponse(video.getId(), video.getTitle(),
-                video.getOwner() == null ? video.getExternalAuthor() : video.getOwner().getDisplayName(),
-                video.getDurationSeconds(), video.getDescription(), mediaUrl(video.getThumbnailPath()),
-                mediaUrl(video.getVideoPath()), comments);
-    }
-
-    private CommentResponse commentResponse(Comment comment) {
-        return new CommentResponse(comment.getId(), comment.getText(),
-                comment.getAuthor() == null ? comment.getExternalAuthor() : comment.getAuthor().getDisplayName(),
-                comment.getCreatedAt(), comment.getParentId());
-    }
-
     private String mediaUrl(String relativePath) {
         // Encode the stored filename as a URL path, never derive it from the database ID.
         return UriUtils.encodePath("/media/" + relativePath.replace('\\', '/'), StandardCharsets.UTF_8);
     }
+    @Transactional(readOnly = true)
+    public VideoDetailResponse getVideoById(Long id) {
+        var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
+        requireVideoFile(video.getVideoPath());
+        Object sourceTags = video.getSourceMetadata().get("tags");
 
+        List<String> tags = sourceTags instanceof List<?> values
+                ? values.stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .toList()
+                : List.of();
+
+        List<CommentResponse> comments = commentRepository
+                .findByVideoIdOrderByCreatedAtAscIdAsc(id)
+                .stream()
+                .map(comment -> new CommentResponse(
+                        comment.getId(),
+                        comment.getText(),
+                        comment.getAuthor() == null
+                                ? comment.getExternalAuthor()
+                                : comment.getAuthor().getDisplayName(),
+                        comment.getCreatedAt(),
+                        comment.getParentId()
+                ))
+                .toList();
+
+        return new VideoDetailResponse(
+                video.getId(),
+                video.getTitle(),
+                video.getOwner() == null ? video.getExternalAuthor() : video.getOwner().getDisplayName(),
+                video.getDurationSeconds(),
+                mediaUrl(video.getThumbnailPath()),
+                video.getDescription(),
+                mediaUrl(video.getVideoPath()),
+                tags,
+                comments
+        );
+    }
     private void requireVideoFile(String relativePath) {
         try {
             Path storedPath = Path.of(relativePath);
@@ -78,5 +98,7 @@ public class VideoService {
         }
         throw new VideoNotFoundException("El archivo del vídeo no está disponible.");
     }
+
+
 }
 

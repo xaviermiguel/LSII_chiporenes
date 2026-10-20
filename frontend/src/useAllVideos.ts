@@ -1,30 +1,41 @@
 import { useEffect, useState } from 'react';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { getEnv } from './utils/Env';
+import type { VideoSummary, VideoListResponse } from './types/Video';
 
-type LoadingState = 'loading' | 'success' | 'error' | 'idle';
+type LoadingState = 'loading' | 'success' | 'error';
 
-const ALL_VIDEOS_URL = `${getEnv().API_BASE_URL}/videos`;
 export function useAllVideos() {
-  const [value, setValue] = useState<string[]>([]);
-  const [message, setMessage] = useState<string>('Loading...');
-  const [loading, setLoading] = useState<LoadingState>('idle');
+  const [value, setValue] = useState<VideoSummary[]>([]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState<LoadingState>('loading');
 
   useEffect(() => {
-    const getVideos = async () => {
+    const controller = new AbortController();
+
+    async function getVideos() {
       try {
-        setLoading('loading');
-        const response = await axios.get<string[]>(ALL_VIDEOS_URL);
-        if (response.status === 200) {
-          setValue(response.data);
-        }
+        const response = await axios.get<VideoListResponse>(`${getEnv().API_BASE_URL}/videos`, {
+          signal: controller.signal,
+        });
+
+        if (controller.signal.aborted) return;
+
+        setValue(response.data.items);
         setLoading('success');
       } catch (error: unknown) {
+        if (controller.signal.aborted) return;
+
+        setMessage(
+          axios.isAxiosError(error) ? `Error al cargar los vídeos: ${error.message}` : 'Error al cargar los vídeos'
+        );
         setLoading('error');
-        setMessage('Error fetching videos: ' + (error as AxiosError).message);
       }
-    };
-    getVideos().then();
+    }
+
+    void getVideos();
+
+    return () => controller.abort();
   }, []);
 
   return { value, message, loading };

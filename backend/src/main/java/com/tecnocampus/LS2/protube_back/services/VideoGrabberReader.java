@@ -72,7 +72,19 @@ public class VideoGrabberReader {
         if (video.getTitle().codePointCount(0, video.getTitle().length()) > 255) {
             throw new IllegalArgumentException("Title exceeds SQL limit of 255 characters");
         }
-        video.setDescription(text(meta, "description"));
+        JsonNode description = meta.path("description");
+
+        if (description.isMissingNode() || description.isNull()) {
+            video.setDescription("Sin descripción");
+        } else if (description.isTextual()) {
+            String value = description.textValue();
+            video.setDescription(
+                    value.isBlank() ? "Sin descripción" : value
+            );
+        } else {
+            throw new IllegalArgumentException("description must be text");
+        }
+
         video.setExternalAuthor(text(data, "user"));
         video.setVideoPath(id + ".mp4");
         video.setThumbnailPath(id + ".webp");

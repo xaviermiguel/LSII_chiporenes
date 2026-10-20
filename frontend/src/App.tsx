@@ -1,41 +1,55 @@
 import './App.css';
-import { useAllVideos } from './useAllVideos';
+import { useAllVideos } from './useAllVideos.ts';
+import { useState } from 'react';
+import { VideoDetail } from './components/VideoDetail.tsx';
 
 function App() {
+  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+
   return (
     <div className="App">
       <header className="App-header">
         <img src="/protube-logo-removebg-preview.png" className="App-logo" alt="logo" />
-        <ContentApp />
+        {selectedVideoId === null ? (
+          <ContentApp onSelectedVideo={setSelectedVideoId} />
+        ) : (
+          <VideoDetail videoId={selectedVideoId} onBack={() => setSelectedVideoId(null)} />
+        )}
       </header>
     </div>
   );
 }
+type ContentAppProps = {
+  onSelectedVideo: (id: number) => void;
+};
 
-function ContentApp() {
-  const { loading, message, value } = useAllVideos();
-  switch (loading) {
-    case 'loading':
-      return <div>Loading...</div>;
-    case 'error':
-      return (
-        <div>
-          <h3>Error</h3> <p>{message}</p>
-        </div>
-      );
-    case 'success':
-      return (
-        <>
-          <strong>Videos availables:</strong>
-          <ul>
-            {value.map((item) => (
-              <li>{item}</li>
-            ))}
-          </ul>
-        </>
-      );
+function ContentApp({ onSelectedVideo }: ContentAppProps) {
+  const { value: videos, message, loading } = useAllVideos();
+
+  if (loading === 'loading') {
+    return <p>Cargando vídeos...</p>;
   }
-  return <div>Idle...</div>;
+
+  if (loading === 'error') {
+    return <p role="alert">{message}</p>;
+  }
+
+  if (videos.length === 0) {
+    return <p>No hay vídeos disponibles.</p>;
+  }
+
+  return (
+    <>
+      <strong>Vídeos disponibles:</strong>
+      <ul>
+        {videos.map((video) => (
+          <li key={video.id}>
+            <button onClick={() => onSelectedVideo(video.id)}>{video.title}</button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 }
 
 export default App;
