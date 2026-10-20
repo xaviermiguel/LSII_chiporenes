@@ -330,3 +330,7 @@ The command will generate 3 files for every video listed in `resources/video_lis
 * *.webp: The thumbnail
 * *.json: Metadata info about the video
 
+
+## Pruebas y cobertura
+
+Consulta [la guia de pruebas](docs/TESTING.md) para ejecutar Jest, JUnit/JaCoCo y Playwright, comprobar los umbrales y localizar los informes.
