@@ -31,7 +31,7 @@ jobs:
 
       - name: Run frontend tests with coverage
         working-directory: frontend
-        run: npm run test -- --coverage --watchAll=false --ci
+        run: npm run test:ci
 
       - name: Set up Java for backend
         uses: actions/setup-java@v5
@@ -39,14 +39,27 @@ jobs:
           distribution: 'corretto'
           java-version: '21'
 
-      - name: Install Maven Wrapper
-        working-directory: backend
-        run: mvn -N io.takari:maven:wrapper
-
       - name: Build and test backend with coverage
         working-directory: backend
         run: |
-          ./mvnw clean verify -Pcoverage
+          mvn clean verify
+
+      - name: Install E2E browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
 
       - name: Run frontend lint
         working-directory: frontend
@@ -54,16 +67,22 @@ jobs:
 
       # Upload Frontend Coverage
       - name: Upload Frontend Coverage Report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
-          path: frontend/coverage/
+          path: |
+            frontend/coverage/
+            frontend/test-results/unit.json
           if-no-files-found: error
 
       # Upload Backend Coverage
       - name: Upload Backend Coverage Report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-report
-          path: backend/target/site/jacoco/
+          path: |
+            backend/target/site/jacoco/
+            backend/target/surefire-reports/
           if-no-files-found: error

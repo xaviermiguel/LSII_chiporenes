@@ -29,7 +29,7 @@ function ContentApp() {
           <strong>Videos availables:</strong>
           <ul>
             {value.map((item) => (
-              <li>{item}</li>
+              <li key={item}>{item}</li>
             ))}
           </ul>
         </>
