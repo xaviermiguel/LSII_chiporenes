@@ -26,7 +26,7 @@ public class VideosController {
     @GetMapping("")
     public ResponseEntity<List<VideoSummaryResponse>> getVideos() {
         return ResponseEntity.ok(videoService.getVideos());
-
+    }
     @ExceptionHandler(VideoNotFoundException.class)
     public ResponseEntity<ApiError> videoNotFound(VideoNotFoundException exception) {
         return ResponseEntity.status(404).body(new ApiError("VIDEO_NOT_FOUND", exception.getMessage()));
