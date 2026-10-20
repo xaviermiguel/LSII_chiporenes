@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestController
 @RequestMapping("/api/videos")
@@ -22,9 +23,25 @@ public class VideosController {
     VideoService videoService;
 
     @GetMapping("")
-    public ResponseEntity<List<String>> getVideos() {
-        return ResponseEntity.ok().body(videoService.getVideos());
+    public ResponseEntity<?> getVideos(@RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "12") int size) {
+        if (page < 0 || size < 1 || size == Integer.MAX_VALUE) {
+            return invalidPagination();
+        }
+        return ResponseEntity.ok(videoService.getVideos(page, size));
+    }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> invalidPaginationType(MethodArgumentTypeMismatchException exception) {
+        if (!"page".equals(exception.getName()) && !"size".equals(exception.getName())) {
+            throw exception;
+        }
+        return invalidPagination();
+    }
+
+    private ResponseEntity<ApiError> invalidPagination() {
+        return ResponseEntity.badRequest().body(new ApiError("INVALID_PAGINATION",
+                "page must be a nonnegative integer and size a positive integer below 2147483647."));
     }
 
     @GetMapping("/{id}")

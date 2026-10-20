@@ -26,7 +26,8 @@ class VideosControllerTest {
 
     @Test
     void getVideos() {
-        when(videoService.getVideos()).thenReturn(List.of("video 1", "video 2"));
-        assertEquals(List.of("video 1", "video 2"), videosController.getVideos().getBody());
+        var response = new com.tecnocampus.LS2.protube_back.dto.video.VideoPage(List.of(), 0, 12, false);
+        when(videoService.getVideos(0, 12)).thenReturn(response);
+        assertEquals(response, videosController.getVideos(0, 12).getBody());
     }
 }

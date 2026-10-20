@@ -29,20 +29,34 @@ class VideoServiceTest {
     }
 
     @Test
-    void readsStoredTitlesWithoutChangingTheApiContract() {
+    void readsStoredSummariesUsingDatabasePagination() {
         var first = new Video();
         first.setTitle("First video");
+        first.setId(10L);
+        first.setThumbnailPath("covers/first #1.webp");
         var second = new Video();
         second.setTitle("Second video");
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(first, second));
-        assertEquals(List.of("First video", "Second video"), videoService.getVideos());
-        verify(repository).findAllByOrderByIdAsc();
+        second.setThumbnailPath("second.webp");
+        var page = org.springframework.data.domain.PageRequest.of(0, 2);
+        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
+                new org.springframework.data.domain.SliceImpl<>(List.of(first, second), page, true));
+        var result = videoService.getVideos(0, 2);
+        assertEquals(List.of("First video", "Second video"), result.items().stream().map(
+                com.tecnocampus.LS2.protube_back.dto.video.VideoSummary::title).toList());
+        assertEquals(10L, result.items().getFirst().id());
+        assertEquals("/media/covers/first%20%231.webp", result.items().getFirst().thumbnailUrl());
+        org.junit.jupiter.api.Assertions.assertTrue(result.hasNext());
+        verify(repository).findAllByOrderByIdAsc(page);
     }
 
     @Test
     void returnsEmptyCatalogWithoutInventingData() {
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of());
-        assertEquals(List.of(), videoService.getVideos());
+        var page = org.springframework.data.domain.PageRequest.of(0, 12);
+        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
+                new org.springframework.data.domain.SliceImpl<>(List.of(), page, false));
+        var result = videoService.getVideos(0, 12);
+        assertEquals(List.of(), result.items());
+        org.junit.jupiter.api.Assertions.assertFalse(result.hasNext());
     }
 
     @Test

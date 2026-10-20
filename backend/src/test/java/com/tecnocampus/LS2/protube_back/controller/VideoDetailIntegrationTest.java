@@ -206,14 +206,77 @@ class VideoDetailIntegrationTest {
     }
 
     @Test
-    void keepsTheOriginalTitleListOrderedByPersistedId() throws Exception {
-        videos.saveAndFlush(video("first-list-video.mp4", "Z title saved first"));
+    void listsPersistedPublicSummariesOrderedByIdWithoutAuthentication() throws Exception {
+        var first = videos.saveAndFlush(video("first-list-video.mp4", "Z title saved first"));
+        first.setOwner(user("catalog-owner@example.test", "Catalog owner"));
+        videos.saveAndFlush(first);
         videos.saveAndFlush(video("second-list-video.mp4", "A title saved second"));
         entityManager.clear();
 
         mvc.perform(get("/api/videos"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[\"Z title saved first\",\"A title saved second\"]", true));
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(12))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items[0].id").value(first.getId().intValue()))
+                .andExpect(jsonPath("$.items[0].title").value("Z title saved first"))
+                .andExpect(jsonPath("$.items[1].title").value("A title saved second"))
+                .andExpect(jsonPath("$.items[0].thumbnailUrl").value(THUMBNAIL_URL))
+                .andExpect(jsonPath("$.items[0].user").value("Catalog owner"))
+                .andExpect(jsonPath("$.items[1].user").value("Imported channel"))
+                .andExpect(jsonPath("$.items[0].duration").value(72.25))
+                .andExpect(jsonPath("$.items[0].description").doesNotExist())
+                .andExpect(jsonPath("$.items[0].videoPath").doesNotExist())
+                .andExpect(jsonPath("$.items[0].sourceMetadata").doesNotExist())
+                .andExpect(jsonPath("$.items[0].owner").doesNotExist());
+    }
+
+    @Test
+    void emptyCatalogReturnsAnEmptyPage() throws Exception {
+        mvc.perform(get("/api/videos"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("""
+                        {"items":[],"page":0,"size":12,"hasNext":false}
+                        """, true));
+    }
+
+    @Test
+    void loadsAllPagesInIdOrderWithoutDuplicatesAndStopsAtTheEnd() throws Exception {
+        var expected = new java.util.ArrayList<Long>();
+        for (int i = 0; i < 5; i++) {
+            expected.add(videos.saveAndFlush(video("page-" + i + ".mp4", "Same title")).getId());
+        }
+        entityManager.clear();
+        var actual = new java.util.ArrayList<Long>();
+        for (int page = 0; page < 4; page++) {
+            var response = mvc.perform(get("/api/videos").param("page", "" + page).param("size", "2"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.page").value(page))
+                    .andExpect(jsonPath("$.size").value(2))
+                    .andExpect(jsonPath("$.hasNext").value(page < 2))
+                    .andExpect(jsonPath("$.items.length()").value(page < 2 ? 2 : page == 2 ? 1 : 0))
+                    .andReturn().getResponse().getContentAsString();
+            objectMapper.readTree(response).path("items").forEach(item -> actual.add(item.path("id").asLong()));
+        }
+        assertEquals(expected, actual);
+        assertEquals(actual.size(), new HashSet<>(actual).size());
+    }
+
+    @Test
+    void rejectsInvalidPaginationWithTheApiErrorFormat() throws Exception {
+        for (String[] input : new String[][]{{"-1", "12"}, {"0", "0"}, {"0", "-1"},
+                {"abc", "12"}, {"0", "abc"}, {"2147483648", "12"}, {"0", "2147483647"}}) {
+            mvc.perform(get("/api/videos").param("page", input[0]).param("size", input[1]))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_PAGINATION"))
+                    .andExpect(jsonPath("$.message").isString());
+        }
+    }
+
+    @Test
+    void nonnumericDetailIdStillReturnsBadRequest() throws Exception {
+        mvc.perform(get("/api/videos/not-an-id")).andExpect(status().isBadRequest());
     }
 
     private User user(String email, String displayName) {
