@@ -122,3 +122,105 @@ No PostgreSQL server was reachable and Docker was unavailable; PostgreSQL
 migration, committed writes and application restart tests remain unverified.
 No frontend or task 4 import implementation. Shared IDE credential values removed;
 prior Git history is preserved and any previously valid password needs owner rotation.
+
+## Video detail follow-up (2026-10-19, task 9)
+
+Reuses the approved DTO/repository/service/controller and error handling scope.
+The user explicitly authorized committing the next implementation using the
+project rules. Preserve the exact task below as the record of this follow-up;
+the existing team approval above is not a new approval of the resulting change.
+Keep unrelated local IDE and frontend lockfile changes out of the commit.
+
+User request:
+
+Implementa la tarea 9: completar la API de detalle de vídeos y el acceso
+a sus archivos.
+
+OBJETIVO
+Obtener la información y los comentarios existentes de un vídeo y permitir
+acceder al archivo para reproducirlo, sin necesidad de iniciar sesión.
+
+CONTEXTO
+Lee las instrucciones del repositorio, REQUIREMENT.md y la documentación
+existente de la API, persistencia e importación de vídeos.
+
+Inspecciona el código antes de modificarlo. Reutiliza los modelos,
+repositorios, servicios, importador y configuración de medios existentes.
+Modifica únicamente lo necesario y preserva los cambios locales ajenos.
+
+IMPLEMENTACIÓN
+1. Completa GET /api/videos/{id}, siguiendo la API existente, para devolver
+   el título, la descripción, los comentarios y los datos necesarios
+   para acceder al archivo de vídeo.
+
+2. Obtén únicamente los comentarios asociados al vídeo solicitado,
+   utilizando su ID persistido y manteniendo un orden estable.
+
+3. Devuelve comments: [] cuando el vídeo no tenga comentarios.
+
+4. Utiliza DTOs para las respuestas y evita serializar directamente
+   las entidades JPA.
+
+5. Construye las URLs de medios a partir de las rutas persistidas.
+   El ID del vídeo en PostgreSQL puede ser distinto del nombre del archivo.
+
+6. Reutiliza la configuración de /media/** para servir los archivos.
+   Comprueba que permite peticiones parciales HTTP Range para reproducción.
+
+7. Permite consultar el detalle y los archivos sin iniciar sesión.
+
+8. Cuando el vídeo no exista, devuelve 404 con el formato de error definido
+   en la API existente.
+
+9. Cuando el archivo no esté disponible, devuelve una respuesta HTTP
+   controlada, sin errores internos inesperados.
+
+10. Conserva el comportamiento actual del listado GET /api/videos.
+
+No implementes frontend, subida de vídeos, creación de comentarios
+ni paginación.
+
+ENTORNO Y DATOS
+- Utiliza ENV_PROTUBE_STORE_DIR y las variables ENV_PROTUBE_DB_*.
+- No hardcodees rutas ni credenciales.
+- No descargues vídeos, importes datos ni arranques infraestructura.
+- No borres ni reinicialices bases, tablas, volúmenes o archivos.
+- Usa datos y archivos temporales para las pruebas.
+- Las pruebas que escriban en PostgreSQL deben utilizar una base
+  exclusiva de pruebas.
+
+PRUEBAS
+Reutiliza y amplía las pruebas existentes para verificar:
+- Título, descripción y datos correctos del vídeo solicitado.
+- Comentarios asociados al vídeo correcto, sin incluir los de otro.
+- Lista vacía cuando no existan comentarios.
+- Respuesta controlada para un vídeo inexistente.
+- Acceso al detalle sin iniciar sesión.
+- Acceso público al archivo y entrega de su contenido correcto.
+- Tipo de contenido del vídeo y soporte de HTTP Range.
+- Respuesta controlada para un archivo inexistente, incluyendo
+  un vídeo registrado cuyo archivo físico falte.
+
+Ejecuta las comprobaciones del backend indicadas por el repositorio.
+No consideres superadas las pruebas omitidas o las verificaciones
+que no hayas podido ejecutar.
+
+ENTREGA
+Deja la implementación terminada y preparada para revisión.
+
+Explica al finalizar:
+- Qué has implementado.
+- Qué archivos has modificado.
+- Qué pruebas has ejecutado y sus resultados.
+- Qué verificaciones han quedado pendientes y por qué.
+- Cómo comprobar manualmente el detalle y el acceso al vídeo.
+
+Task 9 validation: Java 21.0.12.1, Maven 3.9.6, `mvn clean verify -Pcoverage`
+passed (51 reported, 41 passed, 9 PostgreSQL and 1 local-store tests skipped;
+no failures/errors). JaCoCo checks passed, 236/240 lines covered. The named
+coverage profile does not exist; the existing lifecycle still runs report/check.
+An initial test exposed numeric Instant serialization in the MVC configuration;
+the comment DTO now explicitly serializes createdAt as an ISO string and the
+full suite passed after the fix. Tests use isolated H2 and temporary synthetic
+files. PostgreSQL compatibility and real browser playback remain unverified.
+No original media, live data, infrastructure or unrelated local changes touched.
