@@ -46,7 +46,7 @@ python3 main.py --store=/absolute/path/to/videos --id=10 --videos=../../resource
 | `ENV_PROTUBE_GOOGLE_CLIENT_ID`     | Google OAuth login      | Google OAuth client id                                                                           |
 | `ENV_PROTUBE_GOOGLE_CLIENT_SECRET` | Google OAuth login      | Google OAuth client secret                                                                       |
 | `ENV_PROTUBE_DB_USER`              | `prod` profile          | Database user (use `sa` with the default H2 datasource)                                          |
-| `ENV_PROTUBE_DB_PASS`               | `prod` profile          | Database password (empty with the default H2 datasource)                                         |
+| `ENV_PROTUBE_DB_PWD`               | `prod` profile          | Database password (empty with the default H2 datasource)                                         |
 | `ENV_PROTUBE_DB`                   | `prod` + PostgreSQL     | PostgreSQL database name (see [Using PostgreSQL](#using-postgresql))                              |
 
 Never commit real secrets. Set them in your shell, your OS, or your (local, uncommitted) IDE run configuration.
@@ -166,19 +166,20 @@ java -jar target/protube-back-0.0.1-SNAPSHOT.jar
 ```
 
 (IntelliJ: the **Create jar** run configuration runs `package` with the `prod` profile.) Remember that
-`ENV_PROTUBE_STORE_DIR`, `ENV_PROTUBE_DB_USER` and `ENV_PROTUBE_DB_PASS` must be set in the environment where the jar
+`ENV_PROTUBE_STORE_DIR`, `ENV_PROTUBE_DB_USER` and `ENV_PROTUBE_DB_PWD` must be set in the environment where the jar
 runs.
 
 To only preview the production frontend bundle, without the backend: `cd frontend && npm run build:prod && npm run preview`.
 
 ### Using PostgreSQL
 
-The Spring `prod` profile uses PostgreSQL through `ENV_PROTUBE_DB_HOST`,
-`ENV_PROTUBE_DB_PORT` (default 5432), `ENV_PROTUBE_DB`, `ENV_PROTUBE_DB_USER`
-and `ENV_PROTUBE_DB_PASS`. The `dev` profile uses temporary H2 only.
-See [Catalog persistence](docs/CATALOG_PERSISTENCE.md) for fresh database
-migrations, safe adoption of existing schemas, startup and PostgreSQL/restart tests.
-Do not put credentials in shared IDE run configurations.
+The `prod` profile still points to an in-memory H2 database, which is only a placeholder — the MVP requires a real
+database (NFR-01 in [REQUIREMENT.md](./REQUIREMENT.md)). The PostgreSQL driver is already a dependency. To switch:
+
+1. Start a PostgreSQL server (e.g. `docker run -d --name protube-db -p 5432:5432 -e POSTGRES_PASSWORD=secret -e POSTGRES_DB=protube postgres:16`).
+2. In `backend/src/main/resources/application.properties`, in the `prod` section, uncomment the PostgreSQL
+   `spring.datasource.url` line and remove the H2 one.
+3. Set `ENV_PROTUBE_DB` (e.g. `protube`), `ENV_PROTUBE_DB_USER` (e.g. `postgres`) and `ENV_PROTUBE_DB_PWD`.
 
 ## 6. Workflow reminders
 

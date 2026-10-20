@@ -45,8 +45,6 @@ services:
       ENV_PROTUBE_DB_USER: ${ENV_PROTUBE_DB_USER:-protube_user}
       ENV_PROTUBE_DB_PASS_FILE: /run/protube-secrets/db_password
       ENV_PROTUBE_STORE_DIR: /store
-      ENV_PROTUBE_IMPORT_ENABLED: "true"
-    command: ["--pro_tube.import.no-comments-id=${PROTUBE_NO_COMMENTS_ID:-0}"]
     ports:
       - "${PROTUBE_BIND_ADDRESS:-127.0.0.1}:${PROTUBE_HTTP_PORT:-8080}:8080"
     volumes:
@@ -58,7 +56,7 @@ services:
         bind:
           create_host_path: false
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/videos | grep -q '\"'"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/videos > /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 30

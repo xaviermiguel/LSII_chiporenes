@@ -1,154 +1,119 @@
-# Tarea 11: arranque integrado con Docker Compose
+# Tarea 11: preparación genérica de Docker Compose
 
-## Entrega y primer arranque
+## Estado y alcance
 
-Requisitos: Docker con motor de contenedores Linux y Docker Compose, el repositorio
-y la carpeta de vídeos de la tarea 4 entregada junto al proyecto. No se necesitan
-Java, Maven, Node, PostgreSQL ni credenciales de Google instalados en el host.
-Reservar varios GiB libres para imágenes, cachés y volúmenes (al menos 3–5 GiB
-como margen inicial). Comprobar también la unidad donde Docker Desktop guarda sus
-datos si es distinta de la unidad del proyecto.
+La implementación está pendiente de integrar el backend y el frontend del equipo.
+Se conserva únicamente la infraestructura: PostgreSQL 16 con volumen persistente,
+credenciales iniciales automáticas, construcción de producción con frontend
+incluido en el JAR y montaje de los vídeos en solo lectura.
 
-La entrega debe contener `compose.yaml`, `Dockerfile`, `deploy/`, `backend/`,
-`frontend/` y `videos/`. En `videos/` deben estar las triples JSON/MP4/WebP de la
-tarea 4, con más de 12 vídeos y comentarios. Los vídeos no se versionan en Git.
+No se implementan entidades, repositorios, servicios, migraciones, importadores ni
+funcionalidades del frontend. Las implementaciones provisionales del catálogo y
+la importación se han retirado del código actual para evitar solapamientos. El
+historial de Git conserva esos cambios; no se han reescrito commits anteriores.
 
-Desde la raíz de esa entrega:
+El arranque completo, la carga de datos y las funciones integradas **no están
+validados ni se consideran terminados**. Se retomarán después de incorporar los
+cambios de los compañeros mediante pull.
+
+## Entrega y construcción prevista
+
+Requisitos: Docker con contenedores Linux, Docker Compose y la carpeta `videos/`
+de la tarea 4 entregada junto al proyecto. Los vídeos no se versionan en Git.
+El primer build requiere Internet y varios GiB libres en la unidad de Docker.
+
+El Dockerfile compila el frontend existente con Node y el backend con Java 21 y
+Maven, utilizando el perfil de producción que ya ofrece el proyecto. El resultado
+es un único JAR con los recursos del frontend. No modifica código de ninguna app.
+Los dominios Vite se dejan vacíos para utilizar el mismo origen que el backend.
+
+Después de integrar y revisar las dependencias del equipo, el comando previsto es:
 
 ```sh
 docker compose up --build -d --wait --wait-timeout 300
 ```
 
-Abrir http://localhost:8080. El primer build descarga imágenes y dependencias;
-requiere acceso a Internet. La aplicación sirve el frontend compilado y su API
-desde el mismo origen. No hay un servidor Node en ejecución ni direcciones de
-contenedores compiladas en el JavaScript del navegador.
-
-Si se utilizan los archivos ya descargados en Windows en lugar de `./videos`:
+En Windows, para usar la carpeta externa ya entregada:
 
 ```powershell
 $env:PROTUBE_VIDEO_DIR = 'C:/ProTube/videos'
 docker compose up --build -d --wait --wait-timeout 300
 ```
 
-El bind mount es de solo lectura y rechaza una carpeta inexistente. No se vuelve
-a descargar ni copiar el contenido de los vídeos dentro de la imagen.
+La aplicación se publicaría en http://localhost:8080. El montaje de `/store` es de
+solo lectura y rechaza una carpeta inexistente. No copia ni modifica originales.
 
-## Preparación automática y conservación
+## Infraestructura conservada
 
-1. `init-secrets` genera una contraseña aleatoria de 256 bits en `db_credentials`,
-   si todavía no existe. No imprime su valor. Si se proporciona
-   `ENV_PROTUBE_DB_PASS`, la utiliza solo al crear ese archivo.
-2. PostgreSQL 16 inicializa `protube_db` y `protube_user` en `postgres_data`.
-   El puerto de PostgreSQL no se publica en el host, evitando conflictos con una
-   instalación local en 5432. La aplicación se conecta por la red interna a `db`.
-3. El backend espera el healthcheck de la base. Arranca con perfil `prod`, aplica
-   Flyway, valida las entidades e importa el almacén mediante la tarea 4.
-4. El healthcheck HTTP espera un catálogo no vacío, visible tras la transacción
-   de importación. `--wait` devuelve error si el incremento no llega a estar listo.
+- `init-secrets` genera una contraseña aleatoria si no existe en `db_credentials`.
+  Puede recibir `ENV_PROTUBE_DB_PASS` en la primera inicialización. Una contraseña
+  distinta a la ya guardada produce error sin modificar el archivo existente.
+- PostgreSQL inicializa la base y el usuario en `postgres_data`. Su puerto solo
+  está disponible en la red interna; no ocupa el 5432 del host.
+- La aplicación espera el healthcheck de PostgreSQL, utiliza el perfil `prod` y
+  recibe las variables de conexión y la ruta `/store`. El entrypoint lee la
+  contraseña desde el volumen y ejecuta el JAR con UID 10001.
+- El healthcheck de la aplicación solo comprueba la respuesta de `/api/videos`,
+  una ruta ya existente. No presupone datos importados, tablas ni contratos nuevos.
 
-La contraseña se lee desde el volumen por el entrypoint, sin guardarla en el JAR,
-el Dockerfile, Git ni un `.env` obligatorio. La aplicación se ejecuta con UID 10001.
-El script de inicialización necesita privilegios de root dentro de su contenedor
-para preparar los permisos del archivo; no usa contenedores privilegiados ni el
-socket de Docker.
+No se crean tablas del catálogo ni se activa una importación. La preparación del
+esquema y de los datos corresponde a los componentes que aportará el equipo.
+Tampoco se añaden credenciales Google ni se cambia la autenticación del proyecto.
 
-Cada nuevo arranque repite de forma idempotente las migraciones y la importación.
-Se conservan registros editados; no se borran tablas ni comentarios. El archivo 0
-es el caso sin comentarios por defecto. Si ya tiene comentarios persistidos,
-seleccionar otro ID válido mediante `PROTUBE_NO_COMMENTS_ID` (tarea 4).
-
-```sh
-docker compose restart
-docker compose down
-docker compose up -d --wait --wait-timeout 300
-```
-
-`down` sin `-v` conserva `postgres_data` y `db_credentials`. Los archivos sobreviven
-porque siguen en la carpeta del host. No eliminar esos volúmenes ni la carpeta
-original para reiniciar el incremento. Mantener el mismo nombre de proyecto
-Compose y las mismas opciones entre ejecuciones; otro nombre usa otros volúmenes.
-
-## Opciones, bases anteriores y alcance
-
-Opciones de entorno (sin editar archivos):
+## Configuración
 
 | Variable | Valor por defecto | Uso |
 |---|---|---|
-| `PROTUBE_VIDEO_DIR` | `./videos` | Carpeta entregada de la tarea 4 |
-| `PROTUBE_HTTP_PORT` | `8080` | Puerto HTTP en el host |
-| `PROTUBE_BIND_ADDRESS` | `127.0.0.1` | Interfaz del host donde se publica HTTP |
-| `PROTUBE_NO_COMMENTS_ID` | `0` | ID de archivo sin comentarios |
+| `PROTUBE_VIDEO_DIR` | `./videos` | Carpeta de archivos entregada |
+| `PROTUBE_HTTP_PORT` | `8080` | Puerto HTTP del host |
+| `PROTUBE_BIND_ADDRESS` | `127.0.0.1` | Interfaz HTTP del host |
 | `ENV_PROTUBE_DB` | `protube_db` | Base inicial |
 | `ENV_PROTUBE_DB_USER` | `protube_user` | Rol inicial |
-| `ENV_PROTUBE_DB_PASS` | Generada automáticamente | Contraseña inicial opcional |
+| `ENV_PROTUBE_DB_PASS` | Generada | Contraseña inicial opcional |
 
-El incremento se publica por defecto solo en localhost. La autenticación del
-proyecto no está implementada en este checkout; este despliegue no añade ni desactiva
-seguridad y no constituye una configuración para exponerlo públicamente.
+No se necesitan contraseñas versionadas ni un `.env` obligatorio. Estas opciones
+no cambian bases, roles o contraseñas de un volumen PostgreSQL ya inicializado.
+Conservar su versión y credenciales originales si se adopta un volumen anterior.
+No borrar datos para resolver diferencias de configuración.
 
-Estas opciones de inicialización no cambian roles, bases ni contraseñas de un
-volumen PostgreSQL ya creado. Para adoptar volúmenes del Compose antiguo, conservar
-su versión PostgreSQL y proporcionar sus valores originales antes de crear el
-volumen de credenciales. Si la contraseña suministrada no coincide con el archivo
-ya creado, la inicialización falla sin modificarlo. No borrar datos para resolverlo.
+## Comprobaciones de infraestructura
 
-Si la base contiene tablas pero no historial Flyway, revisar/adoptar el esquema
-según [CATALOG_PERSISTENCE.md](CATALOG_PERSISTENCE.md); no se activa baseline
-automático. Este caso de actualización es diferente de la entrega limpia: en una
-base nueva las migraciones se aplican sin pasos manuales.
-
-El frontend disponible actualmente lista títulos. La reproducción se comprueba
-mediante `/media/0.mp4` y la miniatura mediante `/media/0.webp`. No se implementan
-pantallas de reproducción, paginación ni otras funcionalidades de otros compañeros.
-
-## Verificación integrada
-
-El script opcional requiere Python 3.11 o posterior, crea un proyecto Compose
-aislado y no utiliza el PostgreSQL local ni sus credenciales:
-
-```powershell
-python tooling/verify_compose.py --video-dir C:/ProTube/videos
-```
-
-Comprueba HTML y bundle del frontend, catálogo real, miniatura, HTTP Range de vídeo,
-migración Flyway, comentarios y caso vacío. Después recrea los contenedores,
-compara todas las filas de vídeos/comentarios y los hashes de todos los archivos
-originales. No elimina volúmenes ni registros existentes. Deja su proyecto
-disponible en localhost:18080 e indica el comando para detenerlo conservando datos.
-Antes de empezar comprueba un margen de 3 GiB en la unidad del proyecto para evitar
-agotar el disco durante la descarga inicial. `--min-free-gib` permite ajustar ese
-umbral si Docker guarda sus datos en otra unidad; no sustituye revisar el espacio
-disponible donde reside el almacenamiento de Docker.
-
-Diagnóstico manual:
+Validar la configuración, sin construir ni iniciar las aplicaciones:
 
 ```sh
-docker compose ps -a
-docker compose logs --tail 100 app db init-secrets
+docker compose config --quiet
 ```
 
-No compartir la salida de configuraciones renderizadas si se ha proporcionado una
-contraseña por entorno. En Git solo deben quedar plantillas y código.
+Opcionalmente, iniciar solo PostgreSQL y su preparación de credenciales:
 
-## Validación realizada y límite del entorno (2026-10-19)
+```sh
+docker compose up -d --wait --wait-timeout 120 db
+docker compose ps -a
+```
 
-- `docker compose config --quiet`: correcto.
-- Sintaxis de los scripts shell y del verificador Python: correcta.
-- Frontend del código limpio: TypeScript y build Vite de producción correctos.
-- Empaquetado Maven `-Pprod` con frontend ya compilado: BUILD SUCCESS; JAR
-  ejecutable con `static/index.html` y bundles de React. Se omitieron las pruebas
-  en ese empaquetado; no se presenta como una ejecución de la suite.
-- Arranque temporal de ese JAR con H2 e importación desactivada: página React,
-  API y HTTP Range de un vídeo original correctos. No acredita PostgreSQL.
-- Credenciales, en contenedor temporal: generación aleatoria, repetición estable,
-  rechazo de contraseña distinta sin modificar el archivo y permisos UID 10001/400
-  correctos.
+Para detener conservando los datos:
 
-La prueba integral desde una copia limpia se detuvo durante la descarga de imágenes
-porque C: quedó con unos 100 MiB libres y el motor dejó de responder normalmente.
-Se detuvieron los procesos de prueba y se retiraron solo los JAR temporales para
-recuperar unos 55 MiB; no se borraron imágenes, volúmenes ni datos existentes.
-No se acreditan aún el primer arranque completo, la carga real en PostgreSQL ni la
-recreación con persistencia. Liberar espacio y repetir el verificador antes de
-dar por completados esos criterios de aceptación.
+```sh
+docker compose down
+```
+
+No utilizar `down -v` para reiniciar. Mantener el mismo nombre de proyecto Compose:
+los volúmenes de PostgreSQL y credenciales permanecen, y los vídeos siguen en su
+carpeta del host. No se eliminan imágenes, cachés ni volúmenes existentes.
+
+## Validación pendiente tras el pull
+
+1. Revisar los nombres reales de propiedades, perfil, endpoint de salud y esquema.
+2. Construir las aplicaciones aportadas por el equipo sin modificar sus clases.
+3. Comprobar migraciones e importación mediante sus mecanismos acordados.
+4. Verificar frontend, API, vídeos y consultas con PostgreSQL real.
+5. Recrear los contenedores sin borrar volúmenes y comprobar registros y archivos.
+
+Las pruebas anteriores sobre el catálogo provisional no acreditan esta versión,
+porque esa implementación se ha retirado. Se ha eliminado también el verificador
+que dependía de sus tablas y de su importador.
+
+Validación del alcance reducido (2026-10-20): `docker compose config --quiet` y
+`sh -n` de ambos scripts de `deploy/` correctos. El constructor de la prueba
+anterior está detenido. No se han construido ni arrancado las aplicaciones para
+esta comprobación. Los vídeos y los datos existentes no se han eliminado.

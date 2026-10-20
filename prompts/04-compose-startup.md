@@ -30,7 +30,7 @@ and original media. Do not implement unrelated frontend features. Record real
 build, startup and restart test results and report any unavailable Docker runtime.
 Use the commit-ai-change skill. No push or merge requested.
 
-## Validation
+## Validation before scope reduction (historical)
 
 Compose configuration, shell/Python syntax, clean-source TypeScript/Vite production
 build and executable Maven production packaging passed. A temporary H2 smoke test
@@ -44,3 +44,24 @@ verification processes and reproducible temporary JARs were removed; no Docker
 images, volumes, user data or original videos were deleted. Added a disk-space
 preflight to the verifier. Actual integrated startup, PostgreSQL import and
 container recreation/persistence remain pending until space is available.
+
+## Scope adjustment requested by the user (2026-10-20)
+
+> te he parado porque me he dado cuenta de que estabas haciendo de mas ya que la implementacion de las clases es algo correspondiente al backend que haran mis compañeros. Para no solaparnos ni crear merges conflicts, deshaz las partes correspondientes a frontend y backend y deja solo lo necesario o generico para el docker compose. seguiremos con esta implementacion cuando haga pull de las partes implementadas por mis compañeros.
+
+Withdraw the provisional task 3/4 backend implementation from the current branch,
+including its tests, migrations and Flyway dependencies. Preserve pre-existing
+local changes in both applications and the original task 4 Python preparation.
+Keep generic Docker packaging, PostgreSQL, secret initialization and read-only
+media mounting. Remove importer-specific Compose options and the verifier tied
+to provisional database tables. Retain credential sanitization to avoid restoring
+versioned secrets. Preserve history and approved prompts for traceability.
+
+The integrated task remains pending until the teammates' implementations are
+pulled. Previous catalog test results describe withdrawn code and do not certify
+the reduced current version. Do not resume full application verification now.
+
+Reduced-scope checks on 2026-10-20: Compose configuration and both deployment
+shell scripts passed syntax validation. No application build or startup was run
+after the scope reduction. The task-specific builder is stopped; original media,
+existing database storage and unrelated staged/unstaged changes are preserved.
