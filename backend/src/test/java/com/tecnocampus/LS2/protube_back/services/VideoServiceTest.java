@@ -1,8 +1,11 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
+import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoSummaryResponse;
@@ -24,11 +27,17 @@ class VideoServiceTest {
             repository,
             commentRepository);
 
+    @BeforeEach
+    void setUp() {
+        videoService = new VideoService(repository, comments, store.toString());
+    }
 
     @Test
     void returnsStoredVideoSummaries() {
         var first = new Video();
         first.setTitle("First video");
+        first.setId(10L);
+        first.setThumbnailPath("covers/first #1.webp");
         var second = new Video();
         second.setTitle("Second video");
         when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(first, second));
@@ -46,8 +55,33 @@ class VideoServiceTest {
 
     @Test
     void returnsEmptyCatalogWithoutInventingData() {
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of());
-        assertEquals(List.of(), videoService.getVideos());
+        var page = org.springframework.data.domain.PageRequest.of(0, 12);
+        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
+                new org.springframework.data.domain.SliceImpl<>(List.of(), page, false));
+        var result = videoService.getVideos(0, 12);
+        assertEquals(List.of(), result.items());
+        org.junit.jupiter.api.Assertions.assertFalse(result.hasNext());
+    }
+
+    @Test
+    void rejectsMissingVideoBeforeReadingComments() {
+        when(repository.findById(42L)).thenReturn(Optional.empty());
+        assertThrows(VideoNotFoundException.class, () -> videoService.getVideo(42L));
+        verifyNoInteractions(comments);
+    }
+
+    @Test
+    void rejectsMissingDirectoryOutsidePathsAndInvalidFilePaths() {
+        var video = new Video();
+        when(repository.findById(42L)).thenReturn(Optional.of(video));
+        for (String path : List.of("absent.mp4", "../outside.mp4", store.resolve("absolute.mp4").toString(),
+                "invalid\u0000.mp4")) {
+            video.setVideoPath(path);
+            assertThrows(VideoNotFoundException.class, () -> videoService.getVideo(42L));
+        }
+        video.setVideoPath(""); // A directory is not a playable video file.
+        assertThrows(VideoNotFoundException.class, () -> videoService.getVideo(42L));
+        verifyNoInteractions(comments);
     }
 
     @Test
