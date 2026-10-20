@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.junit.Assert.assertNotNull;
 
 @SpringBootTest({
-        "pro_tube.store.dir=c:",
+        "pro_tube.store.dir=${java.io.tmpdir}",
         "pro_tube.load_initial_data=false"
 })
 class ProtubeBackApplicationTests {

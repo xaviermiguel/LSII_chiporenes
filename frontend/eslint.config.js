@@ -8,7 +8,14 @@ import prettierESLint from 'eslint-plugin-prettier/recommended';
 export default [
   prettierESLint,
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+      'unit-test-results/**',
+    ],
   },
   ...tseslint.config({
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -21,7 +28,7 @@ export default [
         React: 'readonly',
       },
       parserOptions: {
-        project: ['./tsconfig.app.json', './tsconfig.configs.json', './tsconfig.node.json'],
+        project: ['./tsconfig.app.json', './tsconfig.configs.json', './tsconfig.node.json', './tsconfig.e2e.json'],
       },
     },
     plugins: {

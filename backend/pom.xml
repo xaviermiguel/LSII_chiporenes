@@ -227,7 +227,7 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
                 <configuration>
-                    <excludes>com/tecnocampus/LS2/protube_back/ProtubeBackApplication*</excludes>
+                    <excludes><exclude>com/tecnocampus/LS2/protube_back/ProtubeBackApplication*</exclude></excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -238,14 +238,14 @@
                     </execution>
                     <execution>
                         <id>default-report</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
                     </execution>
                     <execution>
                         <id>default-check</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
