@@ -739,3 +739,528 @@ with this unrelated local failure documented in the PR; no configuration or
 frontend corrections are made. CI, teammate approval and Copilot review remain
 required before any merge. No installed PR template exists; use the template
 documented in docs/GITHUB_SETUP.md.
+
+## Complete frontend video catalog (US-04, 2026-10-20)
+
+Reuses the approved frontend-consumer scope of this prompt, including the existing
+catalog/detail integration recorded above. References: REQUIREMENT.md US-04 and
+NFR-07, prompts/README.md, frontend/AGENTS.md, docs/VIDEO_CATALOG.md and
+docs/TESTING.md. No new prompt file or approval claim is introduced.
+
+### User request (verbatim)
+
+Quiero que completes la página del listado de vídeos del proyecto.
+
+OBJETIVO
+
+Permitir que cualquier visitante consulte el catálogo de vídeos y pueda seleccionar uno para abrir su detalle.
+
+CRITERIOS DE ACEPTACIÓN
+
+La interfaz debe:
+
+- Mostrar el título y la miniatura de cada vídeo.
+- Permitir cargar más resultados.
+- Indicar claramente cuándo no quedan más resultados.
+- Abrir la ruta/página de detalle correspondiente al seleccionar un vídeo.
+- Mostrar correctamente los estados de:
+  - carga,
+  - catálogo vacío,
+  - error.
+- Poder utilizarse sin iniciar sesión.
+- Obtener los datos de la API real del backend.
+- Incluir pruebas de interfaz para los comportamientos anteriores.
+
+IMPORTANTE
+
+Esta tarea es principalmente de FRONTEND.
+
+El backend relacionado con el catálogo ya está implementado y debe utilizarse como fuente de verdad para conocer el contrato real de la API.
+
+No rediseñes ni vuelvas a implementar el backend.
+
+Solo modifica backend si descubres un bloqueo real que impida cumplir estos criterios y que no pueda resolverse correctamente desde frontend. En ese caso, detente y explícame el problema antes de modificarlo.
+
+==================================================
+FASE 0 — REVISAR TODO EL CONTEXTO DEL REPOSITORIO
+==================================================
+
+ANTES de escribir código, revisa exhaustivamente toda la documentación existente del repositorio.
+
+No te limites a los documentos principales.
+
+Busca y lee TODOS los archivos `.md` relevantes del repositorio para entender:
+
+- arquitectura;
+- frontend;
+- backend;
+- contrato de API;
+- rutas;
+- testing;
+- convenciones de código;
+- flujo Git;
+- ramas;
+- commits;
+- Pull Requests;
+- uso de IA;
+- conservación de prompts;
+- skills disponibles;
+- CI;
+- cualquier decisión técnica ya documentada.
+
+Incluye como mínimo, si existen:
+
+- todos los `AGENTS.md`, incluidos los de subdirectorios;
+- `README.md`;
+- `DEVELOPMENT.md`;
+- `REQUIREMENT.md`;
+- todos los `.md` dentro de `docs/`;
+- todos los `.md` dentro de `prompts/`;
+- `prompts/README.md`;
+- documentación específica de frontend;
+- documentación específica de backend;
+- documentación de Git/GitHub;
+- `.agents/skills/**/SKILL.md`;
+- cualquier otro `.md` relevante que encuentres.
+
+No empieces a implementar hasta haber entendido esas instrucciones.
+
+Si una documentación más específica contradice una general, aplica las reglas de alcance indicadas por el propio repositorio.
+
+No inventes convenciones si ya existen.
+
+==================================================
+FASE 1 — INSPECCIONAR LA IMPLEMENTACIÓN EXISTENTE
+==================================================
+
+Después de leer la documentación, inspecciona el código existente.
+
+FRONTEND
+
+Revisa completamente lo que ya existe relacionado con:
+
+- `App`;
+- componentes de vídeo;
+- hooks;
+- utilidades de API;
+- `Env.ts`;
+- rutas o navegación;
+- estilos relevantes;
+- estados de carga/error;
+- tests;
+- mocks existentes;
+- configuración Jest/Testing Library;
+- cualquier implementación previa del catálogo.
+
+No asumas que hay que crear todo desde cero.
+
+Reutiliza componentes, hooks, tipos, estilos y convenciones existentes cuando corresponda.
+
+BACKEND
+
+Aunque esta es una tarea de frontend, revisa la parte del backend necesaria para conocer exactamente el contrato real de la API.
+
+Inspecciona como mínimo:
+
+- `VideosController`;
+- DTOs relacionados con catálogo;
+- `VideoService`;
+- repositorio si ayuda a entender paginación/orden;
+- configuración de rutas;
+- configuración de seguridad;
+- acceso a `/media/**`;
+- tests del endpoint;
+- documentación del contrato.
+
+Determina a partir del código REAL:
+
+- endpoint del catálogo;
+- método HTTP;
+- parámetros de paginación;
+- valores por defecto;
+- estructura exacta de la respuesta;
+- nombre de los campos;
+- referencia de miniaturas;
+- cómo se indica `hasNext` o equivalente;
+- posibles errores;
+- acceso anónimo.
+
+No inventes el contrato y no uses datos mock como implementación final.
+
+La aplicación debe consumir la API real existente.
+
+==================================================
+FASE 2 — PLAN MÍNIMO DE IMPLEMENTACIÓN
+==================================================
+
+Antes de modificar archivos, determina cuál es el cambio mínimo necesario para cumplir todos los criterios.
+
+Respeta la arquitectura existente.
+
+NO:
+
+- hagas refactors generales;
+- cambies arquitectura sin necesidad;
+- introduzcas una librería nueva si no hace falta;
+- implementes funcionalidades futuras;
+- añadas búsqueda;
+- añadas autenticación;
+- implementes upload;
+- implementes comentarios;
+- cambies el backend por comodidad;
+- hagas mejoras visuales ajenas a los criterios;
+- dupliques hooks/componentes/utilidades que ya existen.
+
+Haz únicamente lo necesario para completar correctamente el listado de vídeos.
+
+==================================================
+FASE 3 — IMPLEMENTACIÓN DEL CATÁLOGO
+==================================================
+
+Implementa la página/listado utilizando la API real.
+
+Debe cubrir:
+
+1. LISTADO
+
+Mostrar por cada vídeo, como mínimo:
+
+- título;
+- miniatura.
+
+Utiliza la referencia de miniatura proporcionada por la API y las utilidades/configuración de media ya existentes.
+
+No hardcodees hosts o URLs si el proyecto ya tiene una abstracción para ello.
+
+2. CARGAR MÁS
+
+Utiliza el mecanismo de paginación/carga progresiva que exponga la API real.
+
+La primera carga debe obtener el primer bloque de vídeos.
+
+Al solicitar más resultados:
+
+- pide el siguiente bloque;
+- conserva los resultados anteriores;
+- añade los nuevos;
+- evita duplicados producidos por errores de estado;
+- evita peticiones simultáneas innecesarias.
+
+3. FIN DEL CATÁLOGO
+
+Utiliza la información proporcionada por la API (`hasNext` o equivalente).
+
+Cuando no queden resultados:
+
+- no permitas realizar peticiones adicionales innecesarias;
+- muestra el estado/indicación esperado según las convenciones existentes de interfaz.
+
+4. SELECCIÓN DE VÍDEO
+
+Al seleccionar un vídeo:
+
+- abre la ruta de detalle existente/acordada;
+- utiliza su identificador real;
+- reutiliza el sistema de navegación/routing existente.
+
+No implementes la página de detalle si pertenece a otra funcionalidad ya existente o separada.
+
+Solo realiza la navegación necesaria.
+
+5. ESTADO DE CARGA
+
+Debe existir un estado visible durante la carga inicial.
+
+La carga adicional también debe evitar que el usuario pueda provocar peticiones duplicadas mientras está en curso.
+
+6. CATÁLOGO VACÍO
+
+Si la API devuelve correctamente un catálogo sin vídeos:
+
+- no debe tratarse como error;
+- debe mostrarse un estado vacío apropiado.
+
+7. ERROR
+
+Si falla la petición:
+
+- muestra el estado de error siguiendo las convenciones existentes;
+- no muestres el error como catálogo vacío;
+- evita dejar la interfaz en un estado inconsistente.
+
+Si tiene sentido según la implementación existente, permite reintentar sin crear arquitectura adicional innecesaria.
+
+8. ACCESO ANÓNIMO
+
+La página debe funcionar sin iniciar sesión.
+
+No añadas protecciones de autenticación al catálogo.
+
+==================================================
+FASE 4 — PRUEBAS DE INTERFAZ
+==================================================
+
+Añade o adapta pruebas utilizando las herramientas ya configuradas en frontend.
+
+No introduzcas un framework de testing nuevo.
+
+Las pruebas deben cubrir como mínimo:
+
+1. LISTADO CON CONTENIDO
+
+Comprueba que:
+
+- se realiza la petición;
+- aparecen los títulos;
+- aparecen las miniaturas;
+- se utilizan los datos de la respuesta de API.
+
+2. CARGA INICIAL
+
+Comprueba el estado de carga antes de recibir los datos.
+
+3. CATÁLOGO VACÍO
+
+Comprueba que:
+
+- una respuesta válida con `items` vacío no provoca error;
+- se muestra el estado vacío apropiado.
+
+4. ERROR
+
+Comprueba que un fallo de API muestra el estado de error correspondiente.
+
+5. CARGAR MÁS
+
+Comprueba que:
+
+- se carga la primera página;
+- al solicitar más se pide la página/bloque siguiente;
+- los resultados nuevos se añaden a los anteriores;
+- los anteriores no desaparecen;
+- no se duplican resultados;
+- el estado de `hasNext` o equivalente se respeta.
+
+6. FIN DE RESULTADOS
+
+Comprueba que cuando no quedan más resultados:
+
+- se indica correctamente;
+- no se realizan solicitudes adicionales innecesarias.
+
+7. SELECCIÓN
+
+Comprueba que seleccionar un vídeo lleva a la ruta de detalle correcta utilizando su ID.
+
+8. ACCESO ANÓNIMO
+
+Si la arquitectura actual dispone de una protección/routing que pueda afectar a este caso, comprueba que el catálogo no requiere sesión.
+
+No hagas tests artificiales de detalles internos.
+
+Prioriza comportamiento observable por el usuario.
+
+==================================================
+FASE 5 — VALIDACIÓN
+==================================================
+
+Cuando termines la implementación:
+
+Ejecuta las validaciones indicadas por la documentación del proyecto.
+
+Como mínimo, si corresponde:
+
+- tests específicos del frontend;
+- suite completa de frontend;
+- build;
+- lint;
+- format/check correspondiente;
+- `git diff --check`;
+- cualquier otra validación obligatoria indicada por AGENTS.md, DEVELOPMENT.md, CI o documentación específica.
+
+Si una validación falla:
+
+- comprueba primero si el fallo ha sido causado por esta contribución.
+
+Si el fallo ESTÁ causado por esta contribución:
+- corrígelo antes de continuar.
+
+Si el fallo NO está causado por esta contribución:
+- no modifiques archivos ajenos para solucionarlo;
+- verifica que es realmente preexistente/ajeno;
+- documenta el problema;
+- no permitas que un fallo ajeno bloquee el commit/PR si las reglas del repositorio permiten continuar.
+
+No hagas cambios masivos de formato o finales de línea sobre archivos que no pertenecen a esta tarea.
+
+==================================================
+FASE 6 — DOCUMENTACIÓN Y PROMPT DE IA
+==================================================
+
+Revisa otra vez TODA la documentación relevante antes de decidir qué archivos `.md` modificar.
+
+No modifiques documentación solo por modificarla.
+
+Solo actualiza documentación si es necesaria para reflejar el comportamiento implementado.
+
+Para el uso de IA:
+
+- revisa completamente `prompts/README.md`;
+- revisa todos los prompts existentes;
+- reutiliza uno existente si las reglas indican que cubre este tipo de trabajo;
+- crea uno nuevo únicamente si corresponde según las convenciones existentes.
+
+No modifiques políticas generales de IA/prompts simplemente para registrar esta tarea.
+
+Si debes crear un prompt nuevo:
+- usa la convención de nombres existente;
+- usa la estructura existente;
+- conserva el prompt realmente utilizado.
+
+==================================================
+FASE 7 — BRANCH / GIT
+==================================================
+
+Esta contribución debe realizarse en su propia rama siguiendo el workflow documentado del proyecto.
+
+ANTES DE MODIFICAR CÓDIGO, comprueba:
+
+- rama actual;
+- `git status`;
+- cambios locales;
+- estado respecto a `main`;
+- documentación sobre ramas y PR.
+
+No mezcles esta tarea con cambios de una tarea anterior.
+
+Si hay cambios locales pendientes ajenos a esta nueva tarea:
+- no los sobrescribas;
+- no los incluyas;
+- detente si impiden crear una rama limpia de forma segura.
+
+La nueva rama debe partir del punto correcto según el workflow del repositorio.
+
+Revisa si existe una convención obligatoria para nombres de ramas.
+
+Si existe:
+- síguela.
+
+Si no existe:
+- utiliza un nombre descriptivo apropiado para completar el listado de vídeos del frontend.
+
+No uses operaciones Git destructivas.
+
+No uses:
+- `reset --hard`;
+- `clean`;
+- force push;
+- comandos que descarten trabajo local.
+
+==================================================
+FASE 8 — REVISIÓN FINAL
+==================================================
+
+Antes del commit:
+
+1. Revisa todo el diff.
+2. Comprueba uno por uno los criterios de aceptación.
+3. Confirma que no has implementado funcionalidades fuera del alcance.
+4. Confirma que no has modificado backend salvo que hubiese sido estrictamente necesario y autorizado.
+5. Confirma que no hay archivos ajenos incluidos.
+6. Comprueba que el prompt está registrado correctamente.
+7. Comprueba que estás en la rama correcta.
+
+==================================================
+FASE 9 — COMMIT
+==================================================
+
+Si todo es correcto, realiza el commit siguiendo TODAS las instrucciones existentes del repositorio.
+
+Revisa de nuevo:
+
+- AGENTS.md;
+- documentación Git;
+- conventional commits;
+- reglas de IA;
+- `.agents/skills/commit-ai-change/SKILL.md`.
+
+Si la skill `commit-ai-change` aplica, úsala exactamente como está documentada.
+
+El commit debe:
+
+- incluir únicamente archivos pertenecientes a esta contribución;
+- utilizar el formato indicado por el proyecto;
+- incluir referencias a la tarea/requisito si corresponde;
+- indicar asistencia de IA si corresponde;
+- referenciar el prompt utilizado según las reglas existentes.
+
+No inventes el mensaje antes de leer las convenciones.
+
+==================================================
+RESUMEN FINAL
+==================================================
+
+Cuando termines, dame un resumen con:
+
+- toda la documentación relevante que revisaste;
+- qué implementación frontend ya existía;
+- qué contrato backend encontraste;
+- endpoint consumido;
+- estructura de respuesta utilizada;
+- archivos modificados;
+- archivos nuevos;
+- comportamiento implementado;
+- tests añadidos/modificados;
+- comandos de validación ejecutados;
+- resultados;
+- cualquier fallo ajeno detectado;
+- rama inicial;
+- rama creada/utilizada;
+- estado Git antes y después;
+- prompt utilizado y ubicación;
+- hash del commit;
+- mensaje final del commit;
+
+No implementes nada fuera de los criterios de aceptación descritos.
+
+### Implementation notes
+
+Started from clean main at f6726a9, matching origin/main. Created the descriptive
+work branch feat/frontend-video-catalog; no mandatory naming rule is documented.
+Reused App, useAllVideos, VideoSummary/VideoListResponse, Env.ts, existing fixtures
+and the existing VideoDetail page selected by state. No router or URL route exists;
+selection keeps that navigation and passes the persisted ID, with no detail rewrite.
+No backend changes, new dependencies, authentication, search, uploads or comments.
+
+Read all repository Markdown, including all scoped AGENTS, docs, prompts, testing
+and CI instructions, the commit skill and .run/README.md. Only VIDEO_CATALOG.md
+and TESTING.md need technical updates: their old UI-contract/integration claims
+are superseded by this implementation. General policies remain unchanged.
+
+### Validation and final review
+
+Commands: npm ci; npm test -- --runInBand src/components/__tests__/app.test.tsx
+--coverage=false (10 passed); npm run test:ci (21 passed and one snapshot);
+npm run build; npm run lint; npx prettier --check on the seven modified frontend
+files; mvn clean verify (59 reported, 49 passed, 10 optional tests skipped);
+npx playwright install chromium; npm run test:e2e (6 passed); git diff --check.
+Frontend coverage: 91.66% lines, 89.74% statements, 87.87% functions, 75% branches.
+Backend coverage: 273/278 lines; all checks passed without changing thresholds.
+Local tools: Node 24.22.0, npm 11.19.1, Java Corretto 21.0.12, Maven 3.9.11.
+
+The first build lacked the already-declared Playwright dependency; npm ci resolved
+it without changing the lockfile. Initial navigation tests exposed the old Jest
+mock's non-URL media domain; the catalog test now supplies a valid configured
+media server. A formatting error in the new test was fixed with scoped Prettier.
+No failing validations remain. No unrelated code, formatting or configuration
+was changed. PostgreSQL tests remain optional and were skipped; the browser tests
+use the actual Spring API with isolated H2 fixtures, not the development database.
+
+Acceptance review: API titles/thumbnails, first and subsequent pages, retained
+results and ID deduplication, in-flight lock, visible end state, existing detail
+selection by persisted ID, initial loading, empty state, errors and retry,
+anonymous access, cancellation and real browser/API integration are covered.
+The detail component is unchanged; there is no new router, detail feature,
+backend change, dependency, auth, search, upload or comment implementation.
+Only the ten task files are committed. No push, PR or merge is requested for
+this frontend task; those operations remain separate from its authorized commit.

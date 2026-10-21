@@ -63,12 +63,21 @@ Playwright arranca un backend real en el puerto **18080** y Vite en **15173**. N
 
 La configuración carga explícitamente `backend/src/test/resources/application-e2e.properties`: H2 en memoria, importación desactivada y datos SQL sintéticos. Los recursos están en `src/test`, por lo que no se empaquetan para producción. No se utiliza la base de PostgreSQL ni la carpeta de vídeos de desarrollo/despliegue. Los archivos de `e2e-media` son bytes sintéticos para comprobar HTTP/Range: no son vídeos reproducibles.
 
-Hay dos grupos de comprobaciones:
+Hay tres grupos de comprobaciones:
 
 - **API real por HTTP:** catálogo paginado sin duplicados, detalle con comentarios, Range parcial, parámetros incorrectos y vídeos inexistentes o con archivo ausente.
-- **Navegador con API simulada:** listado y error de petición según el contrato actual de la pantalla.
+- **Navegador con API real:** catálogo público, miniaturas, selección del detalle
+  por ID persistido y carga de páginas sin perder los vídeos anteriores. Para
+  paginar las tres fixtures se ajusta únicamente el parámetro size a 2 en la
+  petición de esa prueba; la respuesta procede del backend real.
+- **Navegador con fallo simulado:** respuesta 503 y opción de reintento.
 
-**Integración pendiente:** la API de los compañeros ya devuelve `VideoPage` (`items`, `page`, `size`, `hasNext`), pero `useAllVideos` y `App` todavía esperan `string[]`. Por eso las pruebas de navegador simulan explícitamente ese contrato antiguo y no certifican el recorrido completo navegador → catálogo persistido. La tarea de frontend deberá actualizar el contrato y sustituir esas simulaciones por la API real. Esta tarea de pruebas no modifica funcionalidades ni implementa pantallas pendientes.
+El listado de `App` y `useAllVideos` consume `VideoPage` (`items`, `page`, `size`,
+`hasNext`). Las pruebas Jest del catálogo verifican carga, títulos/miniaturas,
+vacío, errores/reintentos, páginas sucesivas, bloqueo durante carga, deduplicación,
+fin de resultados, selección del detalle y cancelación de peticiones abandonadas.
+Playwright comprueba el recorrido navegador → catálogo persistido en la base H2
+aislada. La selección reutiliza la pantalla por estado de `App`, sin router.
 
 Si Maven no está en PATH, definir `E2E_MAVEN_COMMAND` con el ejecutable o comando Maven (entre comillas si la ruta contiene espacios). Para abrir la interfaz interactiva: `npm run test:e2e:ui`. Para consultar el informe: `npx playwright show-report`.
 
@@ -122,7 +131,8 @@ Antes de dar la tarea por terminada:
 1. `npm run build` y `npm run test:ci` pasan en frontend.
 2. `mvn clean verify` pasa en backend.
 3. Cada aplicación supera el 50 % de cobertura por separado.
-4. `npm run test:e2e` pasa: API real con fixtures aisladas y navegador con contrato simulado. La integración de la pantalla con `VideoPage` permanece pendiente.
+4. `npm run test:e2e` pasa: API y catálogo de navegador reales con fixtures aisladas,
+   más el error de petición simulado. Se mantiene el contrato `VideoPage`.
 5. El equipo puede repetir estos comandos y consultar los informes.
 
 No se deben versionar `node_modules`, `target`, cobertura ni resultados generados.

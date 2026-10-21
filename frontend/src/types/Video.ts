@@ -2,7 +2,7 @@ export type VideoSummary = {
   id: number;
   title: string;
   user: string;
-  duration: number;
+  duration: number | null;
   thumbnailUrl: string;
 };
 export type VideoListResponse = {
