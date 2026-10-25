@@ -30,3 +30,94 @@
     transform: rotate(360deg);
   }
 }
+.App-header {
+  justify-content: flex-start;
+  padding: 24px;
+  font-size: 16px;
+}
+
+.App-logo {
+  height: 90px;
+  margin-bottom: 24px;
+}
+
+.video-detail {
+  width: 100%;
+  max-width: 900px;
+  text-align: left;
+}
+
+.video-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px;
+  padding: 0;
+  list-style: none;
+}
+
+.video-catalog button {
+  width: 100%;
+}
+
+.video-catalog img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.video-detail h1 {
+  margin: 24px 0 12px;
+  font-size: 28px;
+}
+
+.video-description {
+  margin: 24px 0;
+  padding: 20px;
+  background: #343945;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.video-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 16px 0 32px;
+  list-style: none;
+}
+
+.video-tags li {
+  padding: 6px 12px;
+  background: #414857;
+  border-radius: 20px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.video-comments {
+  padding: 0;
+  list-style: none;
+}
+
+.video-comments li {
+  margin-bottom: 16px;
+  padding: 20px;
+  background: #343945;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.video-comments p {
+  margin: 12px 0;
+  white-space: pre-wrap;
+}
+
+.video-comments small {
+  color: #c2c8d2;
+}

@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "test": "jest --coverage",
     "precommit": "lint-staged",
-    "test:ci": "jest --coverage --ci --runInBand --json --outputFile=test-results/unit.json",
+    "test:ci": "node -e \"require('node:fs').mkdirSync('unit-test-results', { recursive: true })\" && jest --coverage --ci --runInBand --json --outputFile=unit-test-results/unit.json",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

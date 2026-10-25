@@ -1,12 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="ProtubeBackApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
     <option name="ACTIVE_PROFILES" value="prod" />
-    <envs>
-      <env name="ENV_PROTUBE_GOOGLE_CLIENT_ID" value="" />
-      <env name="ENV_PROTUBE_GOOGLE_CLIENT_SECRET" value="" />
-    </envs>
     <module name="protube-back" />
-    <option name="PROGRAM_PARAMETERS" value="--spring.jpa.hibernate.ddl-auto=validate" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.jpa.hibernate.ddl-auto=validate --spring.config.additional-location=file:./.run/protube-local.properties" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
     <extension name="coverage">
       <pattern>
@@ -17,5 +13,6 @@
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
   </configuration>
 </component>

@@ -8,7 +8,14 @@ import prettierESLint from 'eslint-plugin-prettier/recommended';
 export default [
   prettierESLint,
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'playwright-report/**', 'test-results/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+      'unit-test-results/**',
+    ],
   },
   ...tseslint.config({
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

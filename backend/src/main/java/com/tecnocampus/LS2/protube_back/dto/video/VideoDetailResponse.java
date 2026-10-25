@@ -8,8 +8,10 @@ public record VideoDetailResponse(
         String title,
         String user,
         BigDecimal duration,
-        String description,
         String thumbnailUrl,
+        String description,
         String videoUrl,
+        List<String> tags,
         List<CommentResponse> comments
-) {}
+) {
+}

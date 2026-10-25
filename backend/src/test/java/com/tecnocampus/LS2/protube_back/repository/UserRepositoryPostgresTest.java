@@ -48,13 +48,16 @@ import static org.junit.jupiter.api.Assertions.*;
 //         confirmado fuera de esta transaccion. Este test no demuestra ese requisito.
 // La preparacion, el guardado y las comprobaciones de abajo ya estan implementados.
 @DataJpaTest(properties = {
-        "spring.datasource.url=jdbc:postgresql://${ENV_PROTUBE_DB_HOST}:5432/${ENV_PROTUBE_DB}",
+        "spring.datasource.url=jdbc:postgresql://${ENV_PROTUBE_DB_HOST}:${ENV_PROTUBE_DB_PORT:5432}/${ENV_PROTUBE_DB}",
         "spring.datasource.username=${ENV_PROTUBE_DB_USER}",
         "spring.datasource.password=${ENV_PROTUBE_DB_PASS}",
         "spring.datasource.driver-class-name=org.postgresql.Driver",
         "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
         "spring.jpa.hibernate.ddl-auto=validate",
-        "spring.sql.init.mode=never"
+        "spring.sql.init.mode=never",
+        "spring.flyway.enabled=true",
+        "spring.flyway.baseline-on-migrate=false",
+        "spring.flyway.clean-disabled=true"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")

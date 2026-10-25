@@ -1,7 +1,4 @@
 .vscode/
 .idea/
-.env
-.env.*
-!.env.example
-/videos/
-/store/
+# Private Spring Boot run configuration
+.run/protube-local.properties
