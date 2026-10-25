@@ -65,6 +65,10 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      - name: Check visual token contrast
+        working-directory: frontend
+        run: npm run test:contrast
+
       # Upload Frontend Coverage
       - name: Upload Frontend Coverage Report
         if: always()
