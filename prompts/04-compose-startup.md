@@ -65,3 +65,26 @@ Reduced-scope checks on 2026-10-20: Compose configuration and both deployment
 shell scripts passed syntax validation. No application build or startup was run
 after the scope reduction. The task-specific builder is stopped; original media,
 existing database storage and unrelated staged/unstaged changes are preserved.
+
+## Resume after pulling the team implementation (2026-10-25)
+
+> ya puedes seguir con la implementacion del compose. primero es INDISPENSABLE que hagas un pull de las novedades del proyecto. Una vez lo hagas, si hay algun conflicto de merge SIEMPRE acepta los cambios que vienen por parte del pull, ignora las implementaciones que hayamos hecho nosotros, imprescindible aceptar todos los cambios que vengan nuevos
+
+Ran `git pull --no-rebase -X theirs origin main` on `codex/compose-startup` before
+implementation. Incoming main is `cebd8bc`; merge commit `5986c06`. No unresolved
+conflicts remain. Backend and frontend match incoming main exactly. Reuse the
+approved task 11 prompt and commit-ai-change skill. Limit changes to deployment,
+verification and documentation; integrate the importer, Flyway and paginated API
+now supplied by main without modifying either application.
+
+Validation on 2026-10-25: full multi-stage Docker production build passed with the
+incoming backend/frontend unchanged. Fresh isolated Compose project initialized
+generated credentials and PostgreSQL 16.15, applied Flyway and imported 21 real
+videos plus 154 comments. Deployment verifier passed paginated catalog, all
+details, empty-comments case, packaged assets, thumbnail and HTTP Range; recreated
+containers without deleting volumes and confirmed identical rows/credentials and
+all 63 original file hashes. Chromium smoke passed catalog, load-more, playback
+and both comment cases without page errors. Maven packaging skips unit tests;
+these results describe real deployment tests, not the full application unit suites.
+No local PostgreSQL installation or original media was modified. Test project
+protube-check-20261025 remains on http://127.0.0.1:18080. No push or merge into main.
