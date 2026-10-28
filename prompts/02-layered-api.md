@@ -1,5 +1,225 @@
 # Layered API and PostgreSQL entities
 
+## Tasks 20 and 21: registration and session authentication (2026-10-28)
+
+**Approved on:** 2026-10-28
+**Approved by:** The requesting user, through the reviewed contract and implementation request in this chat.
+**Used for:** Backend registration, login, current user, logout, CSRF and automated tests; extends the approved layered API scope.
+
+### Prompt
+
+Implementa las tareas **20 — API de registro de usuarios** y **21 — API de inicio y cierre de sesión** de ProTube, siguiendo las instrucciones del repositorio y el siguiente contrato.
+
+El alcance incluye únicamente **backend y pruebas automatizadas**. No incluye pantallas ni cambios del frontend.
+
+## Autenticación compartida
+
+Utiliza **Spring Security con sesiones HTTP** y reutiliza el `PasswordEncoder` BCrypt existente, de coste 12.
+
+Registro y login deben compartir el mecanismo que establece y persiste la autenticación. Un registro correcto debe dejar al usuario autenticado automáticamente, conservando la autenticación en peticiones posteriores.
+
+Respeta `User.enabled`: las cuentas desactivadas no pueden autenticarse.
+
+Implementa primero la base mínima compartida, después el registro y sus pruebas, y finalmente login, consulta del usuario y logout con sus pruebas.
+
+Mantén el manejo HTTP en controladores y la lógica de negocio en servicios.
+
+## Endpoints
+
+| Método | Ruta | Resultado correcto |
+|---|---|---|
+| POST | `/api/auth/register` | `201 Created` con `AuthUserResponse` y sesión autenticada |
+| POST | `/api/auth/login` | `200 OK` con `AuthUserResponse` y sesión autenticada |
+| GET | `/api/auth/me` | `200 OK` con `AuthUserResponse`; requiere autenticación |
+| POST | `/api/auth/logout` | `204 No Content` |
+| GET | `/api/auth/csrf` | `200 OK` con el token CSRF y el nombre de su cabecera |
+
+Registro, login y obtención de CSRF son públicos. La protección CSRF se aplica a las operaciones de escritura, incluidos registro, login y logout.
+
+## DTO y validaciones
+
+### RegisterRequest
+
+```json
+{
+  "displayName": "Mi usuario",
+  "email": "usuario@example.com",
+  "password": "Mi clave segura!",
+  "confirmPassword": "Mi clave segura!"
+}
+```
+
+Todos los campos son obligatorios.
+
+- `displayName`: eliminar espacios exteriores y validar una longitud de entre 1 y 30 caracteres. Conservar espacios interiores. Puede repetirse entre cuentas.
+- `email`: eliminar espacios exteriores, normalizar a minúsculas de forma independiente de la configuración regional y validar formato y longitud máxima de 254 caracteres. Rechazar espacios interiores y formatos incompatibles con las restricciones existentes de PostgreSQL.
+- `password`: entre 8 y 72 caracteres ASCII imprimibles, rango `U+0020` a `U+007E`. Permitir espacios interiores y rechazar espacios exteriores. No recortar ni modificar la contraseña.
+- Rechazar caracteres de control, tabulaciones, saltos de línea y caracteres fuera de ASCII.
+- No exigir combinaciones de mayúsculas, números o símbolos.
+- `confirmPassword`: debe coincidir exactamente con `password`. No se persiste.
+
+### LoginRequest
+
+```json
+{
+  "email": "usuario@example.com",
+  "password": "Mi clave segura!"
+}
+```
+
+Ambos campos son obligatorios. Normaliza el email igual que en el registro.
+
+Comprueba la contraseña exactamente como se recibe mediante BCrypt, sin modificarla. Una cuenta desactivada debe recibir el mismo error que unas credenciales incorrectas.
+
+### AuthUserResponse
+
+```json
+{
+  "id": 42,
+  "displayName": "Mi usuario",
+  "email": "usuario@example.com"
+}
+```
+
+Utiliza este DTO en registro, login y `/me`.
+
+No serialices directamente entidades JPA ni expongas contraseñas, hashes o detalles internos.
+
+## Persistencia y duplicados
+
+- Guarda las cuentas en PostgreSQL mediante la persistencia existente.
+- Guarda únicamente el hash BCrypt; nunca la contraseña en claro ni su confirmación.
+- Mantén la unicidad del email sin distinguir mayúsculas.
+- Utiliza la restricción única de PostgreSQL como garantía final frente a registros concurrentes. No dependas únicamente de una consulta previa.
+- Traduce específicamente el conflicto de email a `409`, sin convertir cualquier error de integridad en un supuesto email duplicado.
+- Un registro inválido o duplicado no debe crear una cuenta nueva.
+- Reutiliza el esquema existente y no modifiques migraciones ya aplicadas.
+
+## Sesiones y cookies
+
+- Almacena las sesiones en memoria del backend.
+- Configura **7 días de inactividad** como plazo de caducidad.
+- Cada petición que utilice una sesión autenticada válida debe renovar tanto el plazo de sesión como el de su cookie.
+- La cookie debe permitir conservar el acceso tras cerrar y volver a abrir el navegador mientras la sesión siga siendo válida.
+- Configura `HttpOnly`, `SameSite=Lax` y `Secure` en producción mediante HTTPS.
+- Permite el desarrollo local mediante HTTP con configuración diferenciada.
+- Frontend y backend se consideran desplegados bajo el mismo sitio.
+- Reiniciar el backend invalida las sesiones anteriores; las cuentas permanecen en PostgreSQL.
+- No crees sesiones por consultar anónimamente catálogo, detalle o medios.
+- Evita la fijación de sesión al autenticar.
+- No guardes las credenciales originales en la sesión.
+
+El logout debe invalidar la sesión y eliminar la cookie utilizando los atributos de ruta y dominio correspondientes. Los identificadores anteriores deben dejar de autorizar peticiones.
+
+Devuelve `204` también si no hay sesión o ya estaba cerrada, siempre que la petición supere la comprobación CSRF.
+
+## CORS y CSRF
+
+- Mantén activa la protección CSRF de Spring Security.
+- Permite únicamente orígenes configurados, incluyendo el frontend de desarrollo.
+- Permite credenciales y las cabeceras necesarias para JSON y CSRF.
+- No utilices orígenes comodín con credenciales.
+- Haz compatible la configuración CORS de seguridad con la configuración MVC existente.
+- Permite las peticiones de preflight CORS necesarias sin exigir autenticación.
+- Implementa `/api/auth/csrf` con una respuesta explícita y documentada que incluya el token y el nombre de la cabecera.
+- El cliente debe poder obtener el token antes del registro, login o logout y enviarlo en la cabecera indicada.
+- Tras autenticar mediante registro o login, debe poder obtener un token nuevo.
+- La obtención del token puede crear una sesión técnica anónima; esta no concede permisos de usuario autenticado.
+- Devuelve errores JSON coherentes, evitando redirecciones a páginas HTML de login.
+
+## Acceso a operaciones
+
+Mantén públicos catálogo, detalle y reproducción de vídeos.
+
+Exige autenticación para las operaciones existentes de consulta del usuario actual, subida de vídeos, comentarios y estadísticas propias.
+
+Si existen operaciones de edición de vídeos o perfiles, comprueba también la propiedad. Las estadísticas deben limitarse a los datos del usuario autenticado.
+
+Identifica las rutas existentes y aplica reglas explícitas. No implementes funcionalidades pendientes de subida, comentarios, perfiles o estadísticas únicamente para protegerlas. Conserva los contratos públicos ajenos a estas tareas.
+
+## Errores
+
+Utiliza el formato:
+
+```json
+{
+  "code": "CODIGO_DEL_ERROR",
+  "message": "Mensaje comprensible para el usuario."
+}
+```
+
+| HTTP | Código | Mensaje |
+|---|---|---|
+| `400` | `INVALID_DISPLAY_NAME` | El nombre de usuario debe tener entre 1 y 30 caracteres. |
+| `400` | `INVALID_EMAIL` | Introduce un email válido de hasta 254 caracteres. |
+| `400` | `INVALID_PASSWORD` | La contraseña debe tener entre 8 y 72 caracteres ASCII imprimibles, sin espacios al principio ni al final. |
+| `400` | `PASSWORD_MISMATCH` | Las contraseñas no coinciden. |
+| `400` | `INVALID_REQUEST` | La solicitud contiene campos obligatorios ausentes o un formato incorrecto. |
+| `409` | `EMAIL_ALREADY_REGISTERED` | El email ya está registrado. |
+| `401` | `INVALID_CREDENTIALS` | Email o contraseña incorrectos. |
+| `401` | `AUTHENTICATION_REQUIRED` | Debes iniciar sesión para realizar esta operación. |
+| `403` | `ACCESS_DENIED` | No tienes permiso para realizar esta operación. |
+| `403` | `INVALID_CSRF_TOKEN` | El token de seguridad falta o no es válido. |
+| `500` | `INTERNAL_ERROR` | Se ha producido un error interno. |
+
+Reglas:
+
+- Los campos ausentes, nulos o vacíos y los formatos de solicitud incorrectos devuelven `INVALID_REQUEST`.
+- Los campos presentes y no vacíos que incumplan sus reglas devuelven el error específico.
+- Un nombre o email formado únicamente por espacios queda vacío después de normalizarlo.
+- Para errores de validación simultáneos en el registro, utiliza el orden: nombre, email, contraseña y confirmación.
+- Un login con campos vacíos devuelve `400`; unas credenciales completas pero incorrectas devuelven `401`.
+- Una cuenta desactivada recibe `INVALID_CREDENTIALS`.
+- Una sesión ausente, inválida o caducada no autoriza operaciones protegidas.
+- La ausencia o invalidez del token CSRF devuelve `403` cuando proceda, aunque no exista una sesión autenticada.
+- No expongas contraseñas, hashes, consultas SQL, trazas ni detalles internos en respuestas o registros de aplicación.
+
+## Pruebas
+
+Incluye pruebas significativas de:
+
+- Registro correcto y autenticación conservada en una petición posterior a `/me`.
+- Campos obligatorios, normalización y límites de nombre, email y contraseña.
+- Contraseñas con símbolos y espacios interiores.
+- Rechazo de espacios exteriores, caracteres de control y caracteres fuera de ASCII.
+- Confirmación de contraseña.
+- Email duplicado, diferencias de mayúsculas y garantía de unicidad ante concurrencia.
+- Persistencia real en PostgreSQL y comprobación del hash con BCrypt.
+- Login correcto, incorrecto y con cuenta desactivada.
+- Credenciales incorrectas que no produzcan una sesión autenticada.
+- Consulta del usuario actual sin datos sensibles.
+- Logout con y sin sesión, y rechazo del identificador cerrado.
+- Caducidad de sesión simulada sin esperar siete días.
+- Renovación del plazo de sesión y cookie, y atributos de la cookie.
+- Ausencia de sesiones nuevas durante navegación pública ordinaria.
+- Rutas públicas, acceso sin autenticación y permisos de propiedad aplicables.
+- Flujo CSRF completo, tokens ausentes o incorrectos y obtención de un token nuevo tras autenticar.
+- CORS para orígenes permitidos y no permitidos, incluyendo preflight.
+- Ausencia de credenciales y hashes en las respuestas.
+
+Utiliza las convenciones de pruebas existentes y PostgreSQL aislado para comprobar sus restricciones reales. Las pruebas H2 no sustituyen la comprobación de persistencia en PostgreSQL.
+
+Ejecuta las comprobaciones requeridas por el repositorio y verifica que la configuración de seguridad mantiene la navegación pública. Las pruebas que escriban datos deben utilizar bases aisladas, nunca la base habitual del equipo.
+
+### Notes
+
+The user explicitly authorized implementation, verification and a commit after reviewing this contract. Required fields are checked before ordered field validations. The CSRF response is {token, headerName}. Preserve unrelated local run configuration and frontend lockfile changes. No push or PR requested. Session expiry and PostgreSQL writes are tested only in isolated fixtures.
+
+Validation: Java 21, `mvn --offline --batch-mode clean verify` against a disposable
+PostgreSQL 16.15 container: 132 tests, 131 passed, one optional local-store test
+skipped, zero failures/errors. All JaCoCo checks passed; 494/504 lines covered
+(98.02%). Real HTTP tests verify cookies, CSRF rotation, session fixation,
+rolling inactivity, expiry, logout and old-cookie rejection. PostgreSQL tests
+force concurrent registrations past the precheck to exercise the unique index.
+Existing restart/migration tests passed. The isolated container was removed;
+the team's usual database was not accessed and no migrations were changed.
+Frontend build, 26 unit tests, lint, contrast and 12 Playwright E2E tests passed.
+Only backend E2E origin configuration changed; frontend sources remain unchanged.
+The legacy HTML logout now delegates to the same session invalidation mechanism.
+Peer review by a team member and remote CI remain pending.
+
+
+
 ## Task 19 user persistence and video ownership (2026-10-28)
 
 Reuses the approved User/JPA, service, DTO and PostgreSQL testing scope below.
