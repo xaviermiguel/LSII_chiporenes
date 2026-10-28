@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecnocampus.LS2.protube_back.model.Comment;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
+import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,14 +26,16 @@ public class VideoImportService {
     private final VideoGrabberReader reader;
     private final VideoRepository videos;
     private final CommentRepository comments;
+    private final UserRepository users;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
 
     public VideoImportService(VideoGrabberReader reader, VideoRepository videos, CommentRepository comments,
-                              JdbcTemplate jdbc, ObjectMapper mapper) {
+                              UserRepository users, JdbcTemplate jdbc, ObjectMapper mapper) {
         this.reader = reader;
         this.videos = videos;
         this.comments = comments;
+        this.users = users;
         this.jdbc = jdbc;
         this.mapper = mapper;
     }
@@ -55,6 +58,9 @@ public class VideoImportService {
             }
             return null;
         });
+        var demoOwner = users.findByEmailIgnoreCase("demo@protube.invalid")
+                .orElseThrow(() -> new IllegalStateException(
+                        "ProTube Demo account is missing; apply the owner migration before importing videos."));
         int addedVideos = 0;
         int addedComments = 0;
         int unchanged = 0;
@@ -63,6 +69,7 @@ public class VideoImportService {
             var existing = videos.findByVideoPath(source.video().getVideoPath());
             var video = existing.orElse(source.video());
             if (existing.isEmpty()) {
+                video.setOwner(demoOwner);
                 video = videos.saveAndFlush(video);
                 addedVideos++;
             } else {

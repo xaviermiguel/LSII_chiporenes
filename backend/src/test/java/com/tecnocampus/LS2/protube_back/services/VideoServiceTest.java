@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import com.tecnocampus.LS2.protube_back.model.Video;
+import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 
@@ -25,20 +26,27 @@ class VideoServiceTest {
     CommentRepository commentRepository = mock(CommentRepository.class);
     @TempDir Path store;
     VideoService videoService;
+    User owner;
 
     @BeforeEach
     void setUp() {
         videoService = new VideoService(repository, commentRepository,store.toString());
+        owner = new User();
+        owner.setId(1L);
+        owner.setEmail("owner@example.test");
+        owner.setDisplayName("Test owner");
 
     }
 
     @Test
     void readsStoredSummariesUsingDatabasePagination() {
         var first = new Video();
+        first.setOwner(owner);
         first.setTitle("First video");
         first.setId(10L);
         first.setThumbnailPath("covers/first #1.webp");
         var second = new Video();
+        second.setOwner(owner);
         second.setTitle("Second video");
         second.setThumbnailPath("second.webp");
         var page = org.springframework.data.domain.PageRequest.of(0, 2);
@@ -81,6 +89,7 @@ class VideoServiceTest {
         Files.write(store.resolve("1.mp4"), new byte[]{1, 2, 3});
 
         var video = new Video();
+        video.setOwner(owner);
         video.setId(45L);
         video.setTitle("Stored video");
         video.setDescription("Original description");
@@ -116,6 +125,7 @@ class VideoServiceTest {
         Files.write(store.resolve("1.mp4"), new byte[]{1, 2, 3});
 
         var video = new Video();
+        video.setOwner(owner);
         video.setId(1L);
         video.setVideoPath("1.mp4");
         video.setThumbnailPath("1.webp");
@@ -131,6 +141,38 @@ class VideoServiceTest {
 
         assertTrue(detail.tags().isEmpty());
         assertTrue(detail.comments().isEmpty());
+    }
+
+    @Test
+    void authorSelectionIsConsistentForSummaryAndDetail() throws Exception {
+        Files.write(store.resolve("author.mp4"), new byte[]{1});
+        var video = new Video();
+        video.setOwner(owner);
+        video.setId(91L);
+        video.setVideoPath("author.mp4");
+        video.setThumbnailPath("author.webp");
+        video.setExternalAuthor("Original channel");
+        var page = org.springframework.data.domain.PageRequest.of(0, 12);
+        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
+                new org.springframework.data.domain.SliceImpl<>(List.of(video), page, false));
+        when(repository.findById(91L)).thenReturn(Optional.of(video));
+        when(commentRepository.findByVideoIdOrderByCreatedAtAscIdAsc(91L)).thenReturn(List.of());
+
+        // Normal owners retain their public name even if imported metadata exists.
+        assertAuthor("Test owner");
+        // Only the reserved account selects the external author, case-insensitively.
+        owner.setEmail("DEMO@PROTUBE.INVALID");
+        owner.setDisplayName("ProTube Demo");
+        assertAuthor("Original channel");
+        video.setExternalAuthor(null);
+        assertAuthor("ProTube Demo");
+        video.setExternalAuthor("   ");
+        assertAuthor("ProTube Demo");
+    }
+
+    private void assertAuthor(String expected) {
+        assertEquals(expected, videoService.getVideos(0, 12).items().getFirst().user());
+        assertEquals(expected, videoService.getVideoById(91L).user());
     }
 
     @Test
