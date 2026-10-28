@@ -1297,3 +1297,18 @@ The detail component is unchanged; there is no new router, detail feature,
 backend change, dependency, auth, search, upload or comment implementation.
 Only the ten task files are committed. No push, PR or merge is requested for
 this frontend task; those operations remain separate from its authorized commit.
+
+## Video upload service test correction (2026-10-28)
+
+Reuses the existing approved service and testing scope of this prompt.
+User request: "me ayudas a corregirlo ?", referring to VideoUploadServiceTest.
+Replace the mixed TestNG/JUnit skeleton with JUnit 5 and mocked repositories.
+Verify saved owner and metadata, generated relative paths and file bytes; verify
+cleanup after database failure and partial thumbnail write failure, preserving
+unrelated catalog files and the original failure cause. Use temporary storage
+only. Preserve the user's pending VideoUploadService implementation.
+Validation: Maven offline test -Dtest=VideoUploadServiceTest with Java 21:
+3 tests passed, no failures, errors or skips. No database or real store accessed.
+The tests exercise the user's pending service changes, which are not included
+in this test-only commit. File bytes are synthetic fixtures, not media decoding
+or format validation tests.
