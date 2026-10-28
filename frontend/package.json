@@ -15,7 +15,8 @@
     "precommit": "lint-staged",
     "test:ci": "node -e \"require('node:fs').mkdirSync('unit-test-results', { recursive: true })\" && jest --coverage --ci --runInBand --json --outputFile=unit-test-results/unit.json",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
     "axios": "^1.11.0",

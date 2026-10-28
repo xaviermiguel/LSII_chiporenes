@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const api = 'http://127.0.0.1:18080';
+const api = `http://127.0.0.1:${process.env.E2E_API_PORT || '18080'}`;
 
 test('real API returns paginated fixtures without duplicates', async ({ request }) => {
   const first = await request.get(`${api}/api/videos?size=2`);
@@ -36,7 +36,11 @@ test('real API handles invalid pagination and unavailable videos', async ({ requ
 
 test('anonymous browser displays the real catalog and opens the persisted detail', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('listitem')).toHaveText(['E2E first video', 'E2E second video', 'E2E unavailable file']);
+  await expect(page.locator('.video-card-title')).toHaveText([
+    'E2E first video',
+    'E2E second video',
+    'E2E unavailable file',
+  ]);
   await expect(page.getByRole('status')).toHaveText('No hay más vídeos.');
   await expect(page.getByRole('img', { name: 'logo' })).toBeVisible();
   const video = page.getByRole('button', { name: 'E2E first video' });
@@ -58,9 +62,13 @@ test('browser appends real API pages and stops at the end', async ({ page }) => 
     await route.continue({ url: url.href });
   });
   await page.goto('/');
-  await expect(page.getByRole('listitem')).toHaveText(['E2E first video', 'E2E second video']);
+  await expect(page.locator('.video-card-title')).toHaveText(['E2E first video', 'E2E second video']);
   await page.getByRole('button', { name: 'Cargar más' }).click();
-  await expect(page.getByRole('listitem')).toHaveText(['E2E first video', 'E2E second video', 'E2E unavailable file']);
+  await expect(page.locator('.video-card-title')).toHaveText([
+    'E2E first video',
+    'E2E second video',
+    'E2E unavailable file',
+  ]);
   await expect(page.getByRole('status')).toHaveText('No hay más vídeos.');
   await expect(page.getByRole('button', { name: 'Cargar más' })).toHaveCount(0);
   // StrictMode can restart the initial request; subsequent pages are requested once.

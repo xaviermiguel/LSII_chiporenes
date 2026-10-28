@@ -53,18 +53,26 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
 
   if (loading) {
     return (
-      <section>
-        <p>Cargando vídeo...</p>
-        <button onClick={onBack}>Volver al catálogo</button>
+      <section className="video-detail state-panel">
+        <p className="status-message" role="status">
+          Cargando vídeo...
+        </p>
+        <button className="button button-secondary" onClick={onBack}>
+          Volver al catálogo
+        </button>
       </section>
     );
   }
 
   if (error || !video) {
     return (
-      <section>
-        <p role="alert">{error || 'Vídeo no disponible.'}</p>
-        <button onClick={onBack}>Volver al catálogo</button>
+      <section className="video-detail state-panel">
+        <p className="status-message status-error" role="alert">
+          {error || 'Vídeo no disponible.'}
+        </p>
+        <button className="button button-secondary" onClick={onBack}>
+          Volver al catálogo
+        </button>
       </section>
     );
   }
@@ -73,10 +81,15 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
 
   return (
     <section className="video-detail">
-      <button onClick={onBack}>Volver al catálogo</button>
+      <button className="button button-secondary" onClick={onBack}>
+        Volver al catálogo
+      </button>
 
-      <h1>{video.title}</h1>
-      <p>{video.user}</p>
+      <div className="detail-heading">
+        <p className="eyebrow">Ahora en ProTube</p>
+        <h1>{video.title}</h1>
+        <p>{video.user}</p>
+      </div>
 
       <video
         key={video.id}
@@ -84,40 +97,53 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
         controls
         preload="metadata"
         onError={() => setPlaybackError(true)}
-        style={{ width: '100%', maxWidth: '800px' }}
+        className="video-player"
+        aria-label={`Reproductor: ${video.title}`}
       >
         Tu navegador no permite reproducir este vídeo.
       </video>
 
-      {playbackError && <p role="alert">No se pudo reproducir el archivo de vídeo.</p>}
-
-      <p className="video-description">{video.description || 'Sin descripción'}</p>
-
-      <h2>Tags</h2>
-      {video.tags.length === 0 ? (
-        <p>Sin etiquetas.</p>
-      ) : (
-        <ul className="video-tags">
-          {video.tags.map((tag, index) => (
-            <li key={`${tag}-${index}`}>{tag}</li>
-          ))}
-        </ul>
+      {playbackError && (
+        <p className="status-message status-error" role="alert">
+          No se pudo reproducir el archivo de vídeo.
+        </p>
       )}
 
-      <h2>Comentarios ({video.comments.length})</h2>
-      {video.comments.length === 0 ? (
-        <p>Este vídeo todavía no tiene comentarios.</p>
-      ) : (
-        <ul className="video-comments">
-          {video.comments.map((comment) => (
-            <li key={comment.id}>
-              <strong>{comment.user}</strong>
-              <p>{comment.text}</p>
-              <small>{new Date(comment.createdAt).toLocaleString()}</small>
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="detail-section" aria-label="Descripción">
+        <h2>Acerca del vídeo</h2>
+        <p className="video-description">{video.description || 'Sin descripción'}</p>
+      </section>
+
+      <section className="detail-section" aria-label="Etiquetas">
+        <h2>Tags</h2>
+        {video.tags.length === 0 ? (
+          <p className="muted-text">Sin etiquetas.</p>
+        ) : (
+          <ul className="video-tags">
+            {video.tags.map((tag, index) => (
+              <li className="tag" key={`${tag}-${index}`}>
+                {tag}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="detail-section" aria-label="Comentarios">
+        <h2>Comentarios ({video.comments.length})</h2>
+        {video.comments.length === 0 ? (
+          <p className="status-message">Este vídeo todavía no tiene comentarios.</p>
+        ) : (
+          <ul className="video-comments">
+            {video.comments.map((comment) => (
+              <li key={comment.id}>
+                <strong>{comment.user}</strong>
+                <p>{comment.text}</p>
+                <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString()}</time>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </section>
   );
 }
