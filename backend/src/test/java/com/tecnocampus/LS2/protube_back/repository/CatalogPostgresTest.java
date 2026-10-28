@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named = "RUN_CATALOG_POSTGRES_TESTS", matches = "true")
 class CatalogPostgresTest extends CatalogRepositoryTest {
     @Autowired JdbcTemplate jdbc;
+    @Autowired UserRepository users;
 
     @Test
     void usesPostgresJsonbAndTheMigratedSchema() {
@@ -45,7 +46,7 @@ class CatalogPostgresTest extends CatalogRepositoryTest {
 
     @Test
     void databaseRejectsVideoWithoutAnyAuthor() {
-        var video = video("missing-author.mp4");
+        var video = video("missing-author.mp4", null);
         video.setExternalAuthor(null);
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
                 () -> videos.saveAndFlush(video));
@@ -53,9 +54,38 @@ class CatalogPostgresTest extends CatalogRepositoryTest {
 
     @Test
     void databaseRejectsNonpositiveDuration() {
-        var video = video("negative-duration.mp4");
+        var video = video("negative-duration.mp4", defaultOwner);
         video.setDurationSeconds(java.math.BigDecimal.ZERO);
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
                 () -> videos.saveAndFlush(video));
+    }
+
+    @Test
+    void databaseRejectsDuplicateEmail() {
+        assertDuplicateEmail(defaultOwner.getEmail());
+    }
+
+    @Test
+    void databaseRejectsDuplicateEmailIgnoringCase() {
+        assertDuplicateEmail(defaultOwner.getEmail().toUpperCase(java.util.Locale.ROOT));
+    }
+
+    private void assertDuplicateEmail(String email) {
+        var duplicate = new com.tecnocampus.LS2.protube_back.model.User();
+        duplicate.setEmail(email);
+        duplicate.setDisplayName("Duplicate");
+        duplicate.setPasswordHash("unused-test-placeholder");
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> users.saveAndFlush(duplicate));
+    }
+
+    @Test
+    void postgresRejectsMissingOwnerWithoutJpaValidation() {
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbc.update("""
+                        insert into public.videos
+                            (title, description, video_path, thumbnail_path, external_author)
+                        values ('Missing owner', 'Test', 'null-owner.mp4', 'null-owner.webp', 'External author')
+                        """));
     }
 }

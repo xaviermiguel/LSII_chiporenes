@@ -1,6 +1,8 @@
 package com.tecnocampus.LS2.protube_back.repository;
 
 import com.tecnocampus.LS2.protube_back.ProtubeBackApplication;
+import com.tecnocampus.LS2.protube_back.model.User;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -22,6 +24,7 @@ class CatalogPostgresRestartTest {
                 "--server.port=0",
                 "--pro_tube.store.dir=" + System.getProperty("java.io.tmpdir"),
                 "--pro_tube.load_initial_data=false",
+                "--pro_tube.import.enabled=false",
                 "--spring.jpa.hibernate.ddl-auto=validate",
                 "--spring.flyway.enabled=true",
                 "--spring.flyway.baseline-on-migrate=false",
@@ -29,21 +32,30 @@ class CatalogPostgresRestartTest {
     }
 
     @Test
-    void committedVideoAndCommentSurviveApplicationRestart() {
+    void committedUserOwnershipVideoAndCommentSurviveApplicationRestart() {
         String path = "restart-test-" + UUID.randomUUID() + ".mp4";
+        String email = "restart-" + UUID.randomUUID() + "@example.com";
+        String hash = new BCryptPasswordEncoder(12).encode("Restart-test-password");
         Long videoId;
         Long commentId;
+        Long ownerId;
         try (var first = start()) {
             var transaction = new TransactionTemplate(first.getBean(PlatformTransactionManager.class));
             var ids = transaction.execute(status -> {
-                var video = first.getBean(VideoRepository.class).saveAndFlush(CatalogRepositoryTest.video(path));
+                var owner = new User();
+                owner.setEmail(email);
+                owner.setDisplayName("Restart test owner");
+                owner.setPasswordHash(hash);
+                first.getBean(UserRepository.class).saveAndFlush(owner);
+                var video = first.getBean(VideoRepository.class).saveAndFlush(CatalogRepositoryTest.video(path, owner));
                 var comment = first.getBean(CommentRepository.class).saveAndFlush(
                         CatalogRepositoryTest.comment(video, "Committed before restart"));
-                return new Long[]{video.getId(), comment.getId()};
+                return new Long[]{video.getId(), comment.getId(), owner.getId()};
             });
             assertNotNull(ids);
             videoId = ids[0];
             commentId = ids[1];
+            ownerId = ids[2];
         }
         // A new connection pool and EntityManagerFactory must read committed PostgreSQL data.
         try (var second = start()) {
@@ -55,6 +67,14 @@ class CatalogPostgresRestartTest {
                     var video = videos.findById(videoId).orElseThrow();
                     var comment = comments.findById(commentId).orElseThrow();
                     assertEquals(path, video.getVideoPath());
+                    assertEquals(ownerId, video.getOwner().getId());
+                    var users = second.getBean(UserRepository.class);
+                    var owner = users.findById(ownerId).orElseThrow();
+                    assertEquals(email, owner.getEmail());
+                    assertEquals(hash, owner.getPasswordHash());
+                    assertTrue(owner.isEnabled());
+                    assertFalse(users.findByEmailIgnoreCase("demo@protube.invalid").orElseThrow().isEnabled());
+                    assertTrue(new BCryptPasswordEncoder(12).matches("Restart-test-password", owner.getPasswordHash()));
                     assertEquals(videoId, comment.getVideo().getId());
                     assertEquals("Committed before restart", comment.getText());
                     assertEquals(3, comment.getSourceMetadata().get("like_count"));
@@ -75,6 +95,8 @@ class CatalogPostgresRestartTest {
                     comments.deleteById(commentId);
                     comments.flush();
                     videos.deleteById(videoId);
+                    videos.flush();
+                    second.getBean(UserRepository.class).deleteById(ownerId);
                 });
             }
         }

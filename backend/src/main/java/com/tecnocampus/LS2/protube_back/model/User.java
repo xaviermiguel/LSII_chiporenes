@@ -23,6 +23,9 @@ public class User {
     @Column(name = "password_hash", nullable = false, columnDefinition = "text")
     private String passwordHash;
 
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
 

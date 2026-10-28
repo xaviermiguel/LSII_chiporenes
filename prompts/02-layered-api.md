@@ -1,5 +1,38 @@
 # Layered API and PostgreSQL entities
 
+## Task 19 user persistence and video ownership (2026-10-28)
+
+Reuses the approved User/JPA, service, DTO and PostgreSQL testing scope below.
+The user authorized the implementation, tests and a commit including the earlier
+pending task changes. This is the task prompt, preserved verbatim:
+
+> He preparado BCrypt, el campo `enabled` de los usuarios, la relación obligatoria entre vídeos y propietarios y una migración V2 que crea la cuenta interna ProTube Demo y le asigna los vídeos existentes sin propietario. El importador asigna esta cuenta a los vídeos nuevos y conserva los propietarios existentes.
+> Revisa estos cambios y adapta las pruebas al modelo actual. Comprueba BCrypt, emails duplicados, relaciones de propiedad, rechazo de vídeos sin propietario o con propietarios inexistentes, asignación de ProTube Demo y conservación de propietarios existentes. Verifica también que las respuestas de la API no exponen contraseñas ni hashes. Actualiza los datos de prueba de E2E que lo necesiten.
+> Ajusta `VideoService` para que los vídeos cuyo propietario sea ProTube Demo (`demo@protube.invalid`) muestren `external_author` como autor original. Los vídeos de otros usuarios deben seguir mostrando el nombre de su propietario. Añade las pruebas correspondientes.
+> Valida la migración y la conservación de usuarios, vídeos, metadatos y relaciones después de reiniciar utilizando exclusivamente una base PostgreSQL de pruebas. No ejecutes la migración sobre mi base habitual. Si alguna comprobación no puede ejecutarse, explica qué queda pendiente. En el commit inclute todas las clases que tengan cambios, tanto las que vayas a cambiar tu como las que he cambiado yo.
+
+Earlier implementation instructions for this task:
+
+> vamos a usar bcrypt, crea la clase pero no hagas commit
+> Vale, añade el campo enabled a User.java con valor true por defecto, pero no hagas commit ni toques todavía la base de datos.
+> Vale, crea la migración V2 para añadir enabled, crear ProTube Demo y asignarle los vídeos sin propietario, pero no la ejecutes, no hagas commit ni toques prompts.
+> Vale, añade la búsqueda por email en UserRepository y adapta VideoImportService para asignar ProTube Demo a los vídeos nuevos, sin cambiar propietarios existentes. No ejecutes la migración, no hagas commit ni toques prompts.
+
+The current instruction supersedes the earlier no-commit restriction. The user
+also explicitly lifted the restriction on recording prompts for this request.
+Keep unrelated run configuration and frontend lockfile changes out of the commit.
+No push or migration of the user's usual database is authorized.
+
+Validation: Java 21, `mvn --offline --batch-mode clean verify` against a newly
+created PostgreSQL 16 Docker container on an isolated random localhost port:
+72 tests, 71 passed, no failures/errors, one optional local-store reader skipped.
+All JaCoCo checks passed. This includes V1-to-V2 migration with existing data,
+duplicate email checks, required/valid owners, import ownership, public DTOs and
+committed user/hash/ownership persistence across two Spring application contexts.
+Playwright: 12 E2E tests passed with separate H2 fixtures and Flyway disabled.
+The temporary PostgreSQL container and its test data were removed afterwards.
+No usual database was accessed. Peer review and remote CI remain pending.
+
 ## Task 10 merge integration checkpoint (2026-10-20)
 
 Reuses the approved API/service/DTO and frontend-consumer scope recorded below.
