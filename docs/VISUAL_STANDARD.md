@@ -110,18 +110,12 @@ npm run test:e2e
 
 Playwright utiliza un backend H2 aislado; no accede al PostgreSQL ni a los vídeos del equipo. La suite visual comprueba 320, 390, 768 y 1440px, ausencia de desbordamiento horizontal, enlace de salto, foco visible, detalle, comentarios y vuelta al catálogo. Las capturas se generan en `frontend/test-results/visual-standard-*/`. Las miniaturas ilustradas de las capturas son fixtures explícitas de la prueba, no datos añadidos al producto. La prueba de reproducción genera un WebM válido y silencioso en Chromium para comprobar el reproductor a 390 y 1440px; no certifica todos los formatos o el despliegue Docker.
 
-### Revisión con otro miembro — pendiente
+### Aceptación visual (28/10/2026)
 
-El usuario ha solicitado dejar la revisión conjunta pendiente. La revisión automatizada y la inspección de capturas no la sustituyen.
+Tras abrir la interfaz en el navegador, el usuario confirmó: «crea la pull request y finaliza esta feature, la damos por buena». Se registra esta aceptación y la autorización para publicar la PR de la tarea 15.
 
-- Miembro revisor: pendiente.
-- Fecha y dispositivos/navegadores: pendiente.
-- [ ] Revisar catálogo en móvil y escritorio; títulos largos, miniaturas, carga adicional y final de resultados.
-- [ ] Revisar reproducción real, descripción, etiquetas, comentarios y ausencia de comentarios.
-- [ ] Probar Tab, Enter, enlace de salto, foco y vuelta al catálogo.
-- [ ] Revisar cargas, errores/reintento, pulsado, deshabilitado y legibilidad.
-- [ ] Confirmar espaciados y anchura; registrar ajustes acordados y aprobación.
+La revisión conjunta se había dejado pendiente por indicación del usuario. No se ha identificado un segundo revisor ni se ha registrado una sesión conjunta con dispositivos físicos; esta aceptación no se presenta como evidencia de esa sesión. Las comprobaciones responsive realizadas corresponden a Chromium automatizado a 320, 390, 768 y 1440px y a la inspección de sus capturas.
 
 ### Resultado de la revisión automatizada (25/10/2026)
 
-26 pruebas Jest y 12 comprobaciones Playwright correctas; TypeScript, compilación Vite, ESLint y formato correctos. Cobertura de líneas del frontend: 95,19 %. Las 17 parejas de contraste verificadas superan sus mínimos. Se inspeccionaron las capturas de catálogo y detalle en móvil y escritorio. La revisión conjunta anterior sigue pendiente y no se marca como aprobada por estos resultados.
+26 pruebas Jest y 12 comprobaciones Playwright correctas; TypeScript, compilación Vite, ESLint y formato correctos. Cobertura de líneas del frontend: 95,19 %. Las 17 parejas de contraste verificadas superan sus mínimos. Se inspeccionaron las capturas de catálogo y detalle en móvil y escritorio. Estos resultados automatizados no acreditan una revisión conjunta; la aceptación posterior del usuario se registra arriba.

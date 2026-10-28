@@ -51,3 +51,7 @@ Use commit-ai-change for this completed change. No push, PR creation or merge wa
 - Inspected catalog and detail screenshots on mobile and desktop. Test thumbnail illustrations and media bytes are synthetic; no production media were modified.
 - The default E2E port was occupied; used configurable E2E_API_PORT=18085 and E2E_WEB_PORT=15175 without stopping the existing service.
 - Backend code and deployment files are unchanged. GitHub Actions execution and a joint review with a teammate are not claimed; the latter is explicitly deferred by the user.
+
+## Feature acceptance and pull request (2026-10-28)
+
+After viewing the interface in the browser, the user said: "crea la pull request y finaliza esta feature, la damos por buena". Record visual acceptance and publish visual-standard as a non-draft PR against main. This supersedes the earlier no-push/no-PR scope for this feature; no merge is requested. A second teammate/device review is not independently documented and must not be claimed. Preserve the unrelated local vars.py change.
