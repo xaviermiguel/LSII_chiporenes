@@ -297,3 +297,13 @@ Read-only verification of the original store found 21 videos and 154 selected
 comments with source ID 0 empty in the import plan; original JSON content unchanged.
 PostgreSQL localhost:5432 was unavailable and no local binaries were found.
 No real PostgreSQL import, concurrent-load or restart verification was performed.
+
+## Seguimiento del catálogo compartido (2026-10-28)
+
+Se reutiliza el alcance aprobado de preparación y documentación del catálogo.
+Peticiones del usuario: «ayudame a redactar este documento», «ha de ser unas
+150 linias aprox» y «ahora quiero hacer un commit y pull request en github».
+Resultado: guía del paquete de 30 vídeos, manifiesto de integridad y exclusión
+local de .env. Pruebas de importación y reinicio comunicadas por el usuario:
+30 vídeos, 240 comentarios y segunda carga sin nuevas inserciones.
+La validación en los otros tres equipos y la confirmación de la semilla quedan pendientes.
