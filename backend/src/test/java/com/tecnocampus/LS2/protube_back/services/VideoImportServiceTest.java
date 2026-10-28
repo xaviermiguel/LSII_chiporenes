@@ -2,8 +2,10 @@ package com.tecnocampus.LS2.protube_back.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecnocampus.LS2.protube_back.model.Comment;
+import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
+import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,12 +35,20 @@ public class VideoImportServiceTest {
     @Autowired VideoImportService importer;
     @Autowired VideoRepository videos;
     @Autowired CommentRepository comments;
+    @Autowired UserRepository users;
 
     @BeforeEach
     void setup() throws IOException {
         // Isolated test database only; no application data or real media is touched.
         comments.deleteAllInBatch();
         videos.deleteAllInBatch();
+        users.deleteAllInBatch();
+        var demo = new User();
+        demo.setEmail("demo@protube.invalid");
+        demo.setPasswordHash("unused-test-placeholder");
+        demo.setDisplayName("ProTube Demo");
+        demo.setEnabled(false);
+        users.saveAndFlush(demo);
         store(store, 3);
     }
 
@@ -81,6 +91,49 @@ public class VideoImportServiceTest {
     }
 
     @Test
+    void assignsDemoToNewVideosAndPreservesExistingOwnersAndExternalAuthors() throws IOException {
+        importer.importDirectory(store, 2, null);
+        var demoId = users.findByEmailIgnoreCase("demo@protube.invalid").orElseThrow().getId();
+        assertTrue(videos.findAll().stream().allMatch(video -> video.getOwner().getId().equals(demoId)));
+
+        var owner = new User();
+        owner.setEmail("existing-owner@example.com");
+        owner.setPasswordHash("unused-test-placeholder");
+        owner.setDisplayName("Existing owner");
+        owner = users.saveAndFlush(owner);
+        var existing = videos.findByVideoPath("1.mp4").orElseThrow();
+        var originalAuthor = existing.getExternalAuthor();
+        assertNotNull(originalAuthor);
+        existing.setOwner(owner);
+        videos.saveAndFlush(existing);
+        write(store, 3, data(3));
+        Files.write(store.resolve("3.mp4"), new byte[]{1});
+        Files.write(store.resolve("3.webp"), new byte[]{2});
+
+        var result = importer.importDirectory(store, 2, null);
+
+        assertEquals(1, result.addedVideos());
+        assertEquals(3, result.unchangedVideos());
+        var reloaded = videos.findById(existing.getId()).orElseThrow();
+        assertEquals(owner.getId(), reloaded.getOwner().getId());
+        assertEquals(originalAuthor, reloaded.getExternalAuthor());
+        assertEquals(demoId, videos.findByVideoPath("3.mp4").orElseThrow().getOwner().getId());
+    }
+
+    @Test
+    void missingDemoAccountFailsWithoutCreatingAccountsVideosOrComments() {
+        users.deleteAllInBatch();
+
+        var error = assertThrows(IllegalStateException.class,
+                () -> importer.importDirectory(store, 2, null));
+
+        assertTrue(error.getMessage().contains("ProTube Demo"));
+        assertEquals(0, users.count());
+        assertEquals(0, videos.count());
+        assertEquals(0, comments.count());
+    }
+
+    @Test
     void invalidJsonCausesNoDatabaseWrites() throws IOException {
         Files.writeString(store.resolve("2.json"), "{");
         assertThrows(IOException.class, () -> importer.importDirectory(store, 2, null));
@@ -91,6 +144,7 @@ public class VideoImportServiceTest {
     @Test
     void conflictingEmptyCaseRollsBackEntireLoadWithoutDeletingExistingComments() throws IOException {
         var existing = new Video();
+        existing.setOwner(users.findByEmailIgnoreCase("demo@protube.invalid").orElseThrow());
         existing.setTitle("Existing");
         existing.setDescription("Existing description");
         existing.setExternalAuthor("Channel");
@@ -113,6 +167,7 @@ public class VideoImportServiceTest {
     @Test
     void rejectsPathsAlreadyUsedByUnrelatedVideos() {
         var video = new Video();
+        video.setOwner(users.findByEmailIgnoreCase("demo@protube.invalid").orElseThrow());
         video.setTitle("Uploaded video");
         video.setDescription("Existing");
         video.setExternalAuthor("Owner");

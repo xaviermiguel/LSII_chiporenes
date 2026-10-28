@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -235,6 +236,21 @@ class VideoDetailIntegrationTest {
     }
 
     @Test
+    @Sql("/e2e-data.sql")
+    void e2eFixturesHaveOwnersAndExposeOnlyPublicAuthorData() throws Exception {
+        assertEquals(3, videos.count());
+        assertTrue(videos.findAll().stream().allMatch(video -> video.getOwner().getId().equals(1L)));
+        var response = mvc.perform(get("/api/videos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(3))
+                .andExpect(jsonPath("$.items[0].user").value("Test channel"))
+                .andReturn().getResponse().getContentAsString();
+        assertFalse(response.contains("password"));
+        assertFalse(response.contains("unused-test-placeholder"));
+        assertFalse(response.contains("demo@protube.invalid"));
+    }
+
+    @Test
     void emptyCatalogReturnsAnEmptyPage() throws Exception {
         mvc.perform(get("/api/videos"))
                 .andExpect(status().isOk())
@@ -291,6 +307,12 @@ class VideoDetailIntegrationTest {
 
     private Video video(String path, String title) {
         var video = new Video();
+        var demo = users.findByEmailIgnoreCase("demo@protube.invalid").orElseGet(() -> {
+            var created = user("demo@protube.invalid", "ProTube Demo");
+            created.setEnabled(false);
+            return users.saveAndFlush(created);
+        });
+        video.setOwner(demo);
         video.setTitle(title);
         video.setDescription("Descripción persistida\ncon dos líneas.");
         video.setVideoPath(path);

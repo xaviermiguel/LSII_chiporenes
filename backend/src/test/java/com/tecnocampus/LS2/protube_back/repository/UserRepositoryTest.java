@@ -23,6 +23,7 @@ class UserRepositoryTest {
     @Test
     void savesAndReadsUserFromDatabase() {
         var user = new User();
+        assertTrue(user.isEnabled());
         user.setEmail("user@example.com");
         user.setPasswordHash("example-stored-hash");
         user.setDisplayName("Example user");
@@ -41,6 +42,9 @@ class UserRepositoryTest {
         assertEquals(user.getAvatarPath(), loaded.getAvatarPath());
         assertEquals(user.getDescription(), loaded.getDescription());
         assertEquals(user.getCreatedAt(), loaded.getCreatedAt());
+        assertTrue(loaded.isEnabled());
+        assertEquals(saved.getId(), repository.findByEmailIgnoreCase("USER@EXAMPLE.COM").orElseThrow().getId());
+        assertTrue(repository.findByEmailIgnoreCase("missing@example.com").isEmpty());
         assertTrue(repository.findById(-1L).isEmpty());
     }
 }

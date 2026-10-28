@@ -2,6 +2,7 @@ package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.video.CommentResponse;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
+import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class VideoService {
     public VideoPage getVideos(int page, int size) {
         var videos = videoRepository.findAllByOrderByIdAsc(PageRequest.of(page, size));
         var items = videos.map(video -> new VideoSummary(video.getId(), video.getTitle(),
-                video.getOwner() == null ? video.getExternalAuthor() : video.getOwner().getDisplayName(),
+                displayedAuthor(video),
                 video.getDurationSeconds(), mediaUrl(video.getThumbnailPath()))).getContent();
         return new VideoPage(items, page, size, videos.hasNext());
     }
@@ -76,7 +77,7 @@ public class VideoService {
         return new VideoDetailResponse(
                 video.getId(),
                 video.getTitle(),
-                video.getOwner() == null ? video.getExternalAuthor() : video.getOwner().getDisplayName(),
+                displayedAuthor(video),
                 video.getDurationSeconds(),
                 mediaUrl(video.getThumbnailPath()),
                 video.getDescription(),
@@ -85,6 +86,16 @@ public class VideoService {
                 comments
         );
     }
+    private String displayedAuthor(Video video) {
+        var owner = video.getOwner();
+        var externalAuthor = video.getExternalAuthor();
+        if ("demo@protube.invalid".equalsIgnoreCase(owner.getEmail())
+                && externalAuthor != null && !externalAuthor.isBlank()) {
+            return externalAuthor;
+        }
+        return owner.getDisplayName();
+    }
+
     private void requireVideoFile(String relativePath) {
         try {
             Path storedPath = Path.of(relativePath);

@@ -40,6 +40,7 @@ class PostgresVideoImportTest {
     @Autowired VideoImportService importer;
     @Autowired VideoRepository videos;
     @Autowired CommentRepository comments;
+    @Autowired com.tecnocampus.LS2.protube_back.repository.UserRepository users;
 
     @Test
     void importsTwiceIntoPostgresWithoutDuplicateRecords() throws Exception {
@@ -62,6 +63,10 @@ class PostgresVideoImportTest {
         assertEquals(beforeVideos + 3, videos.count());
         assertEquals(beforeComments + 2, comments.count());
         var empty = videos.findByVideoPath(base + ".mp4").orElseThrow();
+        var demo = users.findByEmailIgnoreCase("demo@protube.invalid").orElseThrow();
+        assertFalse(demo.isEnabled());
+        assertEquals(demo.getId(), empty.getOwner().getId());
+        assertEquals("Canal externo", empty.getExternalAuthor());
         assertTrue(comments.findByVideoIdOrderByCreatedAtAscIdAsc(empty.getId()).isEmpty());
     }
 }

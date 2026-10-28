@@ -2,6 +2,7 @@ package com.tecnocampus.LS2.protube_back.repository;
 
 import com.tecnocampus.LS2.protube_back.model.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -21,9 +22,20 @@ class CatalogRepositoryTest {
     @Autowired VideoRepository videos;
     @Autowired CommentRepository comments;
     @Autowired TestEntityManager entityManager;
+    User defaultOwner;
 
-    static Video video(String path) {
+    @BeforeEach
+    void createOwner() {
+        defaultOwner = new User();
+        defaultOwner.setEmail("catalog-" + java.util.UUID.randomUUID() + "@example.com");
+        defaultOwner.setPasswordHash("test-placeholder");
+        defaultOwner.setDisplayName("Local owner");
+        entityManager.persistAndFlush(defaultOwner);
+    }
+
+    static Video video(String path, User owner) {
         var video = new Video();
+        video.setOwner(owner);
         video.setTitle("Stored video");
         video.setDescription("Stored description");
         video.setVideoPath(path);
@@ -49,19 +61,14 @@ class CatalogRepositoryTest {
 
     @Test
     void roundTripsMetadataAuthorsCategoryRepliesAndEmptyComments() {
-        var owner = new User();
-        owner.setEmail("catalog@example.com");
-        owner.setPasswordHash("test-placeholder");
-        owner.setDisplayName("Local owner");
-        entityManager.persist(owner);
+        var owner = defaultOwner;
         var category = new Category();
         category.setName("Music");
         entityManager.persist(category);
-        var video = video("catalog-test.mp4");
-        video.setOwner(owner);
+        var video = video("catalog-test.mp4", owner);
         video.setCategory(category);
         videos.saveAndFlush(video);
-        var empty = videos.saveAndFlush(video("empty-test.mp4"));
+        var empty = videos.saveAndFlush(video("empty-test.mp4", owner));
         var parent = comment(video, "First comment");
         parent.setAuthor(owner);
         comments.saveAndFlush(parent);
@@ -106,15 +113,29 @@ class CatalogRepositoryTest {
 
     @Test
     void videoPathIsUnique() {
-        videos.saveAndFlush(video("duplicate.mp4"));
+        videos.saveAndFlush(video("duplicate.mp4", defaultOwner));
         assertThrows(DataIntegrityViolationException.class,
-                () -> videos.saveAndFlush(video("duplicate.mp4")));
+                () -> videos.saveAndFlush(video("duplicate.mp4", defaultOwner)));
+    }
+
+    @Test
+    void rejectsVideoWithoutOwnerEvenWithExternalAuthor() {
+        var video = video("missing-owner.mp4", null);
+        assertNotNull(video.getExternalAuthor());
+        assertThrows(DataIntegrityViolationException.class, () -> videos.saveAndFlush(video));
+    }
+
+    @Test
+    void rejectsVideoWithNonexistentOwner() {
+        var missingOwner = entityManager.getEntityManager().getReference(User.class, Long.MAX_VALUE);
+        assertThrows(DataIntegrityViolationException.class,
+                () -> videos.saveAndFlush(video("missing-owner-reference.mp4", missingOwner)));
     }
 
     @Test
     void replyCannotBelongToAnotherVideo() {
-        var first = videos.saveAndFlush(video("first.mp4"));
-        var second = videos.saveAndFlush(video("second.mp4"));
+        var first = videos.saveAndFlush(video("first.mp4", defaultOwner));
+        var second = videos.saveAndFlush(video("second.mp4", defaultOwner));
         var parent = comments.saveAndFlush(comment(first, "Parent"));
         var reply = comment(second, "Wrong video");
         reply.setParent(parent);
