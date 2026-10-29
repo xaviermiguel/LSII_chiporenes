@@ -2,7 +2,7 @@ package com.tecnocampus.LS2.protube_back.controller;
 
 import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
-import com.tecnocampus.LS2.protube_back.services.VideoNotFoundException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
 import com.tecnocampus.LS2.protube_back.dto.ApiError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

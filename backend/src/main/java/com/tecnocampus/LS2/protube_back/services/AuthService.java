@@ -5,10 +5,13 @@ import com.tecnocampus.LS2.protube_back.dto.auth.LoginRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
 import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
+import com.tecnocampus.LS2.protube_back.services.exceptions.AuthValidationException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.AuthenticationRequiredException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.DuplicateEmailException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.InvalidCredentialsException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.postgresql.util.PSQLException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,22 +42,20 @@ public class AuthService {
     public AuthUserResponse register(RegisterRequest request) {
         if (request == null || blank(request.displayName()) || blank(request.email())
                 || blank(request.password()) || blank(request.confirmPassword())) {
-            throw invalidRequest();
+            throw new AuthValidationException(AuthValidationException.Reason.MISSING_FIELDS);
         }
         String name = request.displayName().strip();
         String email = normalizeEmail(request.email());
         if (name.codePointCount(0, name.length()) > 30) {
-            throw new AuthException(HttpStatus.BAD_REQUEST, "INVALID_DISPLAY_NAME",
-                    "El nombre de usuario debe tener entre 1 y 30 caracteres.");
+            throw new AuthValidationException(AuthValidationException.Reason.DISPLAY_NAME);
         }
         validateEmail(email);
         validatePassword(request.password());
         if (!request.password().equals(request.confirmPassword())) {
-            throw new AuthException(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH",
-                    "Las contraseñas no coinciden.");
+            throw new AuthValidationException(AuthValidationException.Reason.PASSWORD_CONFIRMATION);
         }
         if (users.findByEmailIgnoreCase(email).isPresent()) {
-            throw duplicateEmail();
+            throw new DuplicateEmailException();
         }
         User user = new User();
         user.setDisplayName(name);
@@ -64,7 +65,7 @@ public class AuthService {
             return response(users.saveAndFlush(user));
         } catch (DataIntegrityViolationException exception) {
             if (isDuplicateEmail(exception)) {
-                throw duplicateEmail();
+                throw new DuplicateEmailException();
             }
             throw exception;
         }
@@ -73,7 +74,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthUserResponse login(LoginRequest request) {
         if (request == null || blank(request.email()) || blank(request.password())) {
-            throw invalidRequest();
+            throw new AuthValidationException(AuthValidationException.Reason.MISSING_FIELDS);
         }
         User user = users.findByEmailIgnoreCase(normalizeEmail(request.email())).orElse(null);
         // Missing accounts also perform a password comparison to reduce account-enumeration timing differences.
@@ -88,8 +89,7 @@ public class AuthService {
             matches = false;
         }
         if (user == null || !validCandidate || !matches || !user.isEnabled()) {
-            throw new AuthException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
-                    "Email o contraseña incorrectos.");
+            throw new InvalidCredentialsException();
         }
         return response(user);
     }
@@ -97,10 +97,10 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthUserResponse current(Long id) {
         if (id == null) {
-            throw authenticationRequired();
+            throw new AuthenticationRequiredException();
         }
         return users.findById(id).filter(User::isEnabled).map(AuthService::response)
-                .orElseThrow(AuthService::authenticationRequired);
+                .orElseThrow(AuthenticationRequiredException::new);
     }
 
     private static boolean blank(String value) {
@@ -113,8 +113,7 @@ public class AuthService {
 
     private static void validateEmail(String email) {
         if (email.length() > 254 || !EMAIL.matcher(email).matches()) {
-            throw new AuthException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL",
-                    "Introduce un email válido de hasta 254 caracteres.");
+            throw new AuthValidationException(AuthValidationException.Reason.EMAIL);
         }
     }
 
@@ -122,27 +121,12 @@ public class AuthService {
         if (password.length() < 8 || password.length() > 72
                 || password.charAt(0) == ' ' || password.charAt(password.length() - 1) == ' '
                 || password.chars().anyMatch(character -> character < 0x20 || character > 0x7e)) {
-            throw new AuthException(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD",
-                    "La contraseña debe tener entre 8 y 72 caracteres ASCII imprimibles, sin espacios al principio ni al final.");
+            throw new AuthValidationException(AuthValidationException.Reason.PASSWORD);
         }
     }
 
     private static AuthUserResponse response(User user) {
         return new AuthUserResponse(user.getId(), user.getDisplayName(), user.getEmail());
-    }
-
-    private static AuthException invalidRequest() {
-        return new AuthException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST",
-                "La solicitud contiene campos obligatorios ausentes o un formato incorrecto.");
-    }
-
-    private static AuthException duplicateEmail() {
-        return new AuthException(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "El email ya está registrado.");
-    }
-
-    private static AuthException authenticationRequired() {
-        return new AuthException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED",
-                "Debes iniciar sesión para realizar esta operación.");
     }
 
     private static boolean isDuplicateEmail(Throwable exception) {

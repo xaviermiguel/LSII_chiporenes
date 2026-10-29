@@ -4,6 +4,10 @@ import com.tecnocampus.LS2.protube_back.dto.auth.LoginRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
 import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
+import com.tecnocampus.LS2.protube_back.services.exceptions.AuthValidationException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.AuthenticationRequiredException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.DuplicateEmailException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.InvalidCredentialsException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,7 +15,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.sql.SQLException;
@@ -81,19 +84,19 @@ class AuthServiceTest {
     @ParameterizedTest
     @MethodSource("missingFields")
     void rejectsMissingFieldsBeforeOtherValidations(RegisterRequest request) {
-        assertError("INVALID_REQUEST", HttpStatus.BAD_REQUEST, () -> auth.register(request));
+        assertValidation(AuthValidationException.Reason.MISSING_FIELDS, () -> auth.register(request));
         verifyNoInteractions(users);
     }
 
     @Test
     void validatesPresentFieldsInAgreedOrder() {
-        assertError("INVALID_DISPLAY_NAME", HttpStatus.BAD_REQUEST, () -> auth.register(
+        assertValidation(AuthValidationException.Reason.DISPLAY_NAME, () -> auth.register(
                 new RegisterRequest("a".repeat(31), "bad-email", "short", "different")));
-        assertError("INVALID_EMAIL", HttpStatus.BAD_REQUEST, () -> auth.register(
+        assertValidation(AuthValidationException.Reason.EMAIL, () -> auth.register(
                 new RegisterRequest("Name", "bad-email", "short", "different")));
-        assertError("INVALID_PASSWORD", HttpStatus.BAD_REQUEST, () -> auth.register(
+        assertValidation(AuthValidationException.Reason.PASSWORD, () -> auth.register(
                 new RegisterRequest("Name", "a@example.com", "short", "different")));
-        assertError("PASSWORD_MISMATCH", HttpStatus.BAD_REQUEST, () -> auth.register(
+        assertValidation(AuthValidationException.Reason.PASSWORD_CONFIRMATION, () -> auth.register(
                 new RegisterRequest("Name", "a@example.com", "password", "different")));
         verifyNoInteractions(users);
     }
@@ -103,7 +106,7 @@ class AuthServiceTest {
             "user@@example.com", ".user@example.com", "user..name@example.com", "user@-example.com",
             "user@example..com", "user@example.com.", "user@example.com\ninside"})
     void rejectsMalformedEmails(String email) {
-        assertError("INVALID_EMAIL", HttpStatus.BAD_REQUEST,
+        assertValidation(AuthValidationException.Reason.EMAIL,
                 () -> auth.register(new RegisterRequest("Name", email, "password", "password")));
         verifyNoInteractions(users);
     }
@@ -115,9 +118,9 @@ class AuthServiceTest {
         when(users.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         assertEquals(maxEmail, auth.register(new RegisterRequest("x".repeat(30), maxEmail,
                 "password", "password")).email());
-        assertError("INVALID_EMAIL", HttpStatus.BAD_REQUEST,
+        assertValidation(AuthValidationException.Reason.EMAIL,
                 () -> auth.register(new RegisterRequest("Name", "a" + maxEmail, "password", "password")));
-        assertError("INVALID_DISPLAY_NAME", HttpStatus.BAD_REQUEST,
+        assertValidation(AuthValidationException.Reason.DISPLAY_NAME,
                 () -> auth.register(new RegisterRequest("x".repeat(31), "a@example.com", "password", "password")));
     }
 
@@ -125,7 +128,7 @@ class AuthServiceTest {
     @ValueSource(strings = {"short", " password", "password ", "pass\tword", "pass\nword",
             "contraseña", "password😀", "password\u007f"})
     void rejectsInvalidPasswordsWithoutChangingThem(String password) {
-        assertError("INVALID_PASSWORD", HttpStatus.BAD_REQUEST,
+        assertValidation(AuthValidationException.Reason.PASSWORD,
                 () -> auth.register(new RegisterRequest("Name", "a@example.com", password, password)));
         verifyNoInteractions(users);
     }
@@ -137,14 +140,14 @@ class AuthServiceTest {
             assertNotNull(auth.register(new RegisterRequest("N", "a@example.com", password, password)));
         }
         String tooLong = "x".repeat(73);
-        assertError("INVALID_PASSWORD", HttpStatus.BAD_REQUEST,
+        assertValidation(AuthValidationException.Reason.PASSWORD,
                 () -> auth.register(new RegisterRequest("Name", "a@example.com", tooLong, tooLong)));
     }
 
     @Test
     void rejectsKnownDuplicateBeforeHashingAndSaving() {
         when(users.findByEmailIgnoreCase("a@example.com")).thenReturn(Optional.of(user()));
-        assertError("EMAIL_ALREADY_REGISTERED", HttpStatus.CONFLICT,
+        assertThrows(DuplicateEmailException.class,
                 () -> auth.register(validRegistration()));
         verify(users, never()).saveAndFlush(any());
     }
@@ -154,7 +157,7 @@ class AuthServiceTest {
         var sql = new SQLException("private database details", "23505");
         var constraint = new ConstraintViolationException("private details", sql, "users_email_unique");
         when(users.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("private details", constraint));
-        var error = assertError("EMAIL_ALREADY_REGISTERED", HttpStatus.CONFLICT,
+        var error = assertThrows(DuplicateEmailException.class,
                 () -> auth.register(validRegistration()));
         assertFalse(error.getMessage().contains("private"));
         assertNull(error.getCause());
@@ -176,31 +179,31 @@ class AuthServiceTest {
         when(users.findByEmailIgnoreCase("a@example.com")).thenReturn(Optional.of(user));
         var result = auth.login(new LoginRequest(" A@EXAMPLE.COM ", "My password!"));
         assertEquals(42L, result.id());
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> auth.login(new LoginRequest("a@example.com", "My password! ")));
         verify(users, never()).saveAndFlush(any());
     }
 
     @Test
     void rejectsWrongMissingAndDisabledAccountsWithTheSameError() {
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> auth.login(new LoginRequest("missing@example.com", "password")));
         User user = user();
         user.setPasswordHash(passwords.encode("password"));
         when(users.findByEmailIgnoreCase("a@example.com")).thenReturn(Optional.of(user));
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> auth.login(new LoginRequest("a@example.com", "incorrect")));
         user.setEnabled(false);
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> auth.login(new LoginRequest("a@example.com", "password")));
     }
 
     @Test
     void malformedLoginNeverLooksLikeAnAuthenticationFailure() {
-        assertError("INVALID_REQUEST", HttpStatus.BAD_REQUEST, () -> auth.login(null));
-        assertError("INVALID_REQUEST", HttpStatus.BAD_REQUEST, () -> auth.login(new LoginRequest(" ", "password")));
-        assertError("INVALID_REQUEST", HttpStatus.BAD_REQUEST, () -> auth.login(new LoginRequest("a@example.com", "")));
-        assertError("INVALID_REQUEST", HttpStatus.BAD_REQUEST, () -> auth.login(new LoginRequest("a@example.com", null)));
+        assertValidation(AuthValidationException.Reason.MISSING_FIELDS, () -> auth.login(null));
+        assertValidation(AuthValidationException.Reason.MISSING_FIELDS, () -> auth.login(new LoginRequest(" ", "password")));
+        assertValidation(AuthValidationException.Reason.MISSING_FIELDS, () -> auth.login(new LoginRequest("a@example.com", "")));
+        assertValidation(AuthValidationException.Reason.MISSING_FIELDS, () -> auth.login(new LoginRequest("a@example.com", null)));
         verifyNoInteractions(users);
     }
 
@@ -210,7 +213,7 @@ class AuthServiceTest {
         when(rejecting.encode(any())).thenReturn("dummy-hash");
         when(rejecting.matches(any(), any())).thenThrow(new IllegalArgumentException("too many bytes"));
         var service = new AuthService(users, rejecting);
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> service.login(new LoginRequest("a@example.com", "x".repeat(100))));
     }
 
@@ -220,9 +223,9 @@ class AuthServiceTest {
         user.setPasswordHash(passwords.encode("x".repeat(72)));
         when(users.findByEmailIgnoreCase("a@example.com")).thenReturn(Optional.of(user));
         assertNotNull(auth.login(new LoginRequest("a@example.com", "x".repeat(72))));
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> auth.login(new LoginRequest("a@example.com", "x".repeat(73))));
-        assertError("INVALID_CREDENTIALS", HttpStatus.UNAUTHORIZED,
+        assertThrows(InvalidCredentialsException.class,
                 () -> auth.login(new LoginRequest("a@example.com", "password😀")));
     }
 
@@ -231,10 +234,10 @@ class AuthServiceTest {
         User user = user();
         when(users.findById(42L)).thenReturn(Optional.of(user));
         assertEquals("a@example.com", auth.current(42L).email());
-        assertError("AUTHENTICATION_REQUIRED", HttpStatus.UNAUTHORIZED, () -> auth.current(null));
-        assertError("AUTHENTICATION_REQUIRED", HttpStatus.UNAUTHORIZED, () -> auth.current(99L));
+        assertThrows(AuthenticationRequiredException.class, () -> auth.current(null));
+        assertThrows(AuthenticationRequiredException.class, () -> auth.current(99L));
         user.setEnabled(false);
-        assertError("AUTHENTICATION_REQUIRED", HttpStatus.UNAUTHORIZED, () -> auth.current(42L));
+        assertThrows(AuthenticationRequiredException.class, () -> auth.current(42L));
     }
 
     @Test
@@ -255,10 +258,9 @@ class AuthServiceTest {
         return user;
     }
 
-    private static AuthException assertError(String code, HttpStatus status, org.junit.jupiter.api.function.Executable action) {
-        AuthException error = assertThrows(AuthException.class, action);
-        assertEquals(code, error.code());
-        assertEquals(status, error.status());
-        return error;
+    private static void assertValidation(AuthValidationException.Reason reason,
+                                         org.junit.jupiter.api.function.Executable action) {
+        var error = assertThrows(AuthValidationException.class, action);
+        assertEquals(reason, error.reason());
     }
 }

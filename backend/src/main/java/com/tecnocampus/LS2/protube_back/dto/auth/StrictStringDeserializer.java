@@ -7,7 +7,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
 import java.io.IOException;
 
-/** Credential fields must be JSON strings; Jackson's default scalar coercion is not appropriate here. */
+/** Credential fields must be JSON strings; Jackson's default scalar coercion is not appropriate here.
+ * Not a DTO. Decide as a team whether to keep it here or move it elsewhere.*/
 public class StrictStringDeserializer extends StdDeserializer<String> {
     public StrictStringDeserializer() {
         super(String.class);

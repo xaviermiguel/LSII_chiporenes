@@ -1,13 +1,13 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
+import com.tecnocampus.LS2.protube_back.services.exceptions.DuplicateEmailException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -90,11 +90,8 @@ class AuthPostgresTest {
         String email = uniqueEmail();
         var original = auth.register(request("Same name", email));
 
-        var error = assertThrows(AuthException.class,
+        assertThrows(DuplicateEmailException.class,
                 () -> auth.register(request("Another name", "  " + email.toUpperCase(Locale.ROOT) + "  ")));
-
-        assertEquals("EMAIL_ALREADY_REGISTERED", error.code());
-        assertEquals(HttpStatus.CONFLICT, error.status());
         assertEquals(1L, count(email));
         assertEquals(original.id(), jdbc.queryForObject(
                 "select id from public.users where lower(email) = ?", Long.class, email));
@@ -131,7 +128,7 @@ class AuthPostgresTest {
             }
             var results = List.of(first.get(30, TimeUnit.SECONDS), second.get(30, TimeUnit.SECONDS));
             assertEquals(1, results.stream().filter("CREATED"::equals).count());
-            assertEquals(1, results.stream().filter("EMAIL_ALREADY_REGISTERED"::equals).count());
+            assertEquals(1, results.stream().filter("DUPLICATE"::equals).count());
         }
         assertEquals(1L, count(email));
         var hash = jdbc.queryForObject("select password_hash from public.users where lower(email) = ?",
@@ -146,9 +143,8 @@ class AuthPostgresTest {
         try {
             auth.register(request("Concurrent account", email));
             return "CREATED";
-        } catch (AuthException exception) {
-            assertEquals(HttpStatus.CONFLICT, exception.status());
-            return exception.code();
+        } catch (DuplicateEmailException exception) {
+            return "DUPLICATE";
         }
     }
 
