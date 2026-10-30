@@ -8,7 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
 
 @Service
 public class VideoUploadService {
@@ -37,18 +40,67 @@ public class VideoUploadService {
 
 
         // TODO: Validar los datos y los archivos.
+        if (!owner.isEnabled()){
+            throw new IllegalArgumentException("Usuario no activado");
+        }
+        if (title == null || title.isBlank() ){
+            throw new IllegalArgumentException("Titulo no valido");
+        }
+        if(description == null || description.isBlank() ){
+            throw new IllegalArgumentException("Descripcion no valido");
 
+        }
+        if (video ==null || video.isEmpty()){
+            throw new IllegalArgumentException("Video no valido");
+        }
+        if (thumbnail ==null || thumbnail.isEmpty()){
+            throw new IllegalArgumentException("Miniatura no valido");
+        }
 
         // TODO: Guardar los archivos con nombres únicos.
 
-        // TODO: Guardar el vídeo asociado al propietario.
+        String uploadId = UUID.randomUUID().toString();
 
+        String videoFileName = uploadId + ".mp4";
+        String thumbnailFileName = uploadId + ".jpg";
+
+        Path videoDestination = store.resolve(videoFileName);
+        Path thumbDestination = store.resolve(thumbnailFileName);
+
+        // TODO: Guardar el vídeo asociado al propietario.
+        Video uploadVideo = new Video();
+
+        uploadVideo.setOwner(owner);
+        uploadVideo.setTitle(title);
+        uploadVideo.setDescription(description);
+        uploadVideo.setVideoPath(videoFileName);
+        uploadVideo.setThumbnailPath(thumbnailFileName);
+
+        //return videoRepository.save(uploadVideo);
         // TODO: Limpiar los archivos si falla el guardado.
 
+        try {
+            Files.createDirectories(store);
 
+            video.transferTo(videoDestination);
+            thumbnail.transferTo(thumbDestination);
 
-        throw new UnsupportedOperationException(
-                "Not supported yet.");
+            return videoRepository.saveAndFlush(uploadVideo);
+        }catch (RuntimeException | IOException e){
+            try{
+                Files.deleteIfExists(videoDestination);
+            } catch (IOException ioe){
+                e.addSuppressed(ioe);
+            }
+            try{
+                Files.deleteIfExists(thumbDestination);
+            }catch (IOException ioe){
+                e.addSuppressed(ioe);
+            }
+            throw new IllegalArgumentException("No se ha podido completar la subida del vídeo", e);
+
+        }
+
     }
 
 

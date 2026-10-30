@@ -50,4 +50,6 @@ public class VideosController {
     public ResponseEntity<ApiError> videoNotFound(VideoNotFoundException exception) {
         return ResponseEntity.status(404).body(new ApiError("VIDEO_NOT_FOUND", exception.getMessage()));
     }
+
+
 }
