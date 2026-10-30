@@ -4,6 +4,7 @@ import com.tecnocampus.LS2.protube_back.dto.video.CommentResponse;
 import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
+import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
