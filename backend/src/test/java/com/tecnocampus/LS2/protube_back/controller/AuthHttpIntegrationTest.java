@@ -291,6 +291,17 @@ class AuthHttpIntegrationTest {
                 401, "AUTHENTICATION_REQUIRED");
     }
 
+    @Test
+    void swaggerIsPublicWhileCurrentUserStillRequiresAuthentication() throws Exception {
+        assertEquals(200, raw("GET", "/swagger-ui/index.html", null, Map.of()).statusCode());
+        assertEquals(200, raw("GET", "/swagger-ui/swagger-ui.css", null, Map.of()).statusCode());
+        assertEquals(200, raw("GET", "/v3/api-docs/swagger-config", null, Map.of()).statusCode());
+        var docs = raw("GET", "/v3/api-docs", null, Map.of());
+        assertEquals(200, docs.statusCode());
+        assertTrue(json(docs).path("paths").has("/api/auth/login"));
+        assertError(raw("GET", "/api/auth/me", null, Map.of()), 401, "AUTHENTICATION_REQUIRED");
+    }
+
     private void assertError(HttpResponse<String> response, int status, String code) throws IOException {
         assertEquals(status, response.statusCode(), response.body());
         assertEquals(code, json(response).path("code").asText(), response.body());

@@ -1,5 +1,14 @@
 # Layered API and PostgreSQL entities
 
+## Swagger documentation access (2026-10-30)
+
+Reuses this approved prompt's Spring Security and backend API scope.
+User request: "quiero configurar para ver endpoints en swagger".
+Permit anonymous GET access to Swagger UI and OpenAPI documentation, including
+its assets and configuration. Preserve session authentication and CSRF on the
+application API. Verify documentation access and that /api/auth/me remains protected
+using the existing isolated HTTP integration tests.
+
 ## Tasks 20 and 21: registration and session authentication (2026-10-28)
 
 **Approved on:** 2026-10-28
