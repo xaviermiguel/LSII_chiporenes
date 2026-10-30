@@ -4,6 +4,7 @@
     <module name="protube-back" />
     <option name="PROGRAM_PARAMETERS" value="--spring.jpa.hibernate.ddl-auto=validate --spring.config.additional-location=file:./.run/protube-local.properties" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
+    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="com.tecnocampus.LS2.protube_back.*" />
@@ -13,6 +14,5 @@
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
   </configuration>
 </component>
