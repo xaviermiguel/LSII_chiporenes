@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.config.annotation.*;
+import java.nio.file.Path;
 
 @Configuration
 @EnableWebMvc
@@ -19,10 +20,13 @@ public class MvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String mediaLocation = Path.of(env.getRequiredProperty("pro_tube.store.dir"))
+                .toAbsolutePath().normalize().toUri().toString();
+        if (!mediaLocation.endsWith("/")) mediaLocation += "/";
         registry
            .addResourceHandler("/media/**")
            .addResourceLocations(
-                   String.format("file:%s", env.getProperty("pro_tube.store.dir")));
+                   mediaLocation);
 
         registry.addResourceHandler("/**")
            .addResourceLocations("classpath:/static/", "classpath:/public/",
@@ -31,11 +35,4 @@ public class MvcConfig implements WebMvcConfigurer {
            .setCachePeriod(3600);
     }
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOriginPatterns("*");
-        registry.addMapping("/auth/**")
-                .allowedOriginPatterns("*");
-    }
 }

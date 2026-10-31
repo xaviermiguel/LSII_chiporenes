@@ -98,10 +98,6 @@
       <option name="ALTERNATIVE_JRE_PATH" value="corretto-21" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <envs>
-        <env name="ENV_PROTUBE_DB" value="protube-dev" />
-        <env name="ENV_PROTUBE_DB_PWD" value="secret" />
-        <env name="ENV_PROTUBE_DB_USER" value="root" />
-        <env name="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
       </envs>
       <option name="MAIN_CLASS_NAME" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
       <module name="protube-back" />
@@ -114,10 +110,6 @@
       <option name="ALTERNATIVE_JRE_PATH" value="corretto-21" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <envs>
-        <env name="ENV_PROTUBE_DB" value="protube-dev" />
-        <env name="ENV_PROTUBE_DB_PWD" value="secret" />
-        <env name="ENV_PROTUBE_DB_USER" value="root" />
-        <env name="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
       </envs>
       <option name="MAIN_CLASS_NAME" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
       <module name="protube-back" />
@@ -233,10 +225,6 @@
     <configuration name="ProtubeBackApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <option name="ACTIVE_PROFILES" value="prod" />
       <envs>
-        <env name="ENV_PROTUBE_DB" value="protube-dev" />
-        <env name="ENV_PROTUBE_DB_PWD" value="secret" />
-        <env name="ENV_PROTUBE_DB_USER" value="root" />
-        <env name="ENV_PROTUBE_STORE_DIR" value="$PROJECT_DIR$/../test-videos/" />
       </envs>
       <module name="protube-back" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />

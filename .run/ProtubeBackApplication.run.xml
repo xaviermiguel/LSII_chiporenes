@@ -1,18 +1,10 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="ProtubeBackApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
     <option name="ACTIVE_PROFILES" value="prod" />
-    <envs>
-      <env name="ENV_PROTUBE_DB" value="protube-chiporenes" />
-      <env name="ENV_PROTUBE_DB_PASS" value="chiporenes11" />
-      <env name="ENV_PROTUBE_DB_USER" value="admin" />
-      <env name="ENV_PROTUBE_GOOGLE_CLIENT_ID" value="" />
-      <env name="ENV_PROTUBE_GOOGLE_CLIENT_SECRET" value="" />
-      <env name="ENV_PROTUBE_DB_HOST" value="localhost" />
-      <env name="ENV_PROTUBE_STORE_DIR" value="D:\code\videos" />
-    </envs>
     <module name="protube-back" />
-    <option name="PROGRAM_PARAMETERS" value="--spring.jpa.hibernate.ddl-auto=update --logging.level.com.zaxxer.hikari=DEBUG" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.jpa.hibernate.ddl-auto=validate --spring.config.additional-location=file:./.run/protube-local.properties" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.tecnocampus.LS2.protube_back.ProtubeBackApplication" />
+    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="com.tecnocampus.LS2.protube_back.*" />

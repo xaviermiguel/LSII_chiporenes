@@ -1,0 +1,11 @@
+# Copy to .run/protube-local.properties and fill in your local values.
+# The real file is ignored by Git and loaded by ProtubeBackApplication.
+ENV_PROTUBE_DB_HOST=localhost
+ENV_PROTUBE_DB_PORT=5432
+ENV_PROTUBE_DB=protube-chiporenes
+ENV_PROTUBE_DB_USER=your-postgres-user
+ENV_PROTUBE_DB_PASS=your-postgres-password
+ENV_PROTUBE_STORE_DIR=C:/Protube/videos
+ENV_PROTUBE_IMPORT_ENABLED=false
+ENV_PROTUBE_GOOGLE_CLIENT_ID=
+ENV_PROTUBE_GOOGLE_CLIENT_SECRET=
