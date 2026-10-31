@@ -1,19 +1,16 @@
 package com.tecnocampus.LS2.protube_back.controller;
 
 import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
+import com.tecnocampus.LS2.protube_back.dto.video.VideoUploadRequest;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
 import com.tecnocampus.LS2.protube_back.dto.ApiError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @RestController
 @RequestMapping("/api/videos")
@@ -49,6 +46,12 @@ public class VideosController {
     @ExceptionHandler(VideoNotFoundException.class)
     public ResponseEntity<ApiError> videoNotFound(VideoNotFoundException exception) {
         return ResponseEntity.status(404).body(new ApiError("VIDEO_NOT_FOUND", exception.getMessage()));
+    }
+
+    @PostMapping
+    public ResponseEntity<?>uploadVideo (@AuthenticationPrincipal Long ownerId, @ModelAttribute VideoUploadRequest request){
+
+
     }
 
 
