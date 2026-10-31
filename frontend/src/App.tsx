@@ -1,15 +1,91 @@
 import './App.css';
 import { useAllVideos } from './useAllVideos.ts';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AuthForm } from './components/AuthForm';
+import { currentUser, signOut } from './auth';
+import type { AuthUser } from './auth';
 import { VideoDetail } from './components/VideoDetail.tsx';
 import { getEnv } from './utils/Env';
 
 function App() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+  const [page, setPage] = useState(window.location.hash);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [sessionError, setSessionError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
+  const version = useRef(0);
+  const logoutLock = useRef(false);
+
+  useEffect(() => {
+    const navigate = () => {
+      setPage(window.location.hash);
+      setSelectedVideoId(null);
+      document.getElementById('contenido')?.focus();
+    };
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => {
+      const revision = ++version.current;
+      void currentUser(controller.signal)
+        .then((value) => {
+          if (!controller.signal.aborted && revision === version.current) setUser(value);
+        })
+        .catch(() => {
+          /* A network failure does not prove that the session expired. */
+        });
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => {
+      controller.abort();
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+
+  function authenticated(value: AuthUser) {
+    ++version.current;
+    setUser(value);
+    setSessionError('');
+    setSelectedVideoId(null);
+    setPage('#contenido');
+    window.location.hash = 'contenido';
+    document.getElementById('contenido')?.focus();
+  }
+
+  async function logout() {
+    if (logoutLock.current) return;
+    logoutLock.current = true;
+    setLoggingOut(true);
+    setSessionError('');
+    try {
+      await signOut();
+      ++version.current;
+      setUser(null);
+      setPage('#contenido');
+      setSelectedVideoId(null);
+      window.location.hash = 'contenido';
+    } catch {
+      setSessionError('No se ha podido cerrar la sesión. Inténtalo de nuevo.');
+    } finally {
+      logoutLock.current = false;
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <div className="App">
-      <a className="skip-link" href="#contenido">
+      <a
+        className="skip-link"
+        href="#contenido"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('contenido')?.focus();
+        }}
+      >
         Saltar al contenido
       </a>
       <header className="site-header">
@@ -26,15 +102,40 @@ function App() {
             </span>
           </a>
           <nav className="header-nav" aria-label="Navegación principal">
-            <span className="header-caption">Un espacio para descubrir.</span>
+            {user ? (
+              <span className="account-name">Hola, {user.displayName}</span>
+            ) : (
+              <span className="header-caption">Un espacio para descubrir.</span>
+            )}
             <a className="nav-link" href="#contenido" onClick={() => setSelectedVideoId(null)}>
               Explorar
             </a>
+            {user ? (
+              <button className="button button-secondary" disabled={loggingOut} onClick={() => void logout()}>
+                {loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
+              </button>
+            ) : (
+              <>
+                <a className="nav-link" href="#login">
+                  Iniciar sesión
+                </a>
+                <a className="button" href="#register">
+                  Registrarse
+                </a>
+              </>
+            )}
           </nav>
         </div>
       </header>
       <main id="contenido" className="app-container main-content" tabIndex={-1}>
-        {selectedVideoId === null ? (
+        {sessionError && (
+          <p className="status-message status-error" role="alert">
+            {sessionError}
+          </p>
+        )}
+        {page === '#login' || page === '#register' ? (
+          <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
+        ) : selectedVideoId === null ? (
           <ContentApp onSelectedVideo={setSelectedVideoId} />
         ) : (
           <VideoDetail videoId={selectedVideoId} onBack={() => setSelectedVideoId(null)} />
