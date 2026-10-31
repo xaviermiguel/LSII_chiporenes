@@ -4,6 +4,7 @@ import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
+import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUploadException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -39,6 +40,26 @@ class VideoUploadServiceTest {
 
     private MockMultipartFile thumbnail() {
         return new MockMultipartFile("thumbnail", "example.webp", "image/webp", new byte[]{4, 5, 6});
+    }
+
+    @Test
+    void invalidMetadataOrMissingFilesNeverWritesFilesOrPublishes() throws IOException {
+        assertThrows(VideoUploadException.class,
+                () -> service.uploadVideo(1L, " ", "Description", video(), thumbnail()));
+        assertThrows(VideoUploadException.class,
+                () -> service.uploadVideo(1L, "Title", " ", video(), thumbnail()));
+        assertThrows(VideoUploadException.class,
+                () -> service.uploadVideo(1L, "Title", "Description", null, thumbnail()));
+        assertThrows(VideoUploadException.class,
+                () -> service.uploadVideo(1L, "Title", "Description", video(), null));
+        assertThrows(VideoUploadException.class,
+                () -> service.uploadVideo(1L, "Title", "Description",
+                        new MockMultipartFile("video", new byte[0]), thumbnail()));
+        assertThrows(VideoUploadException.class,
+                () -> service.uploadVideo(1L, "Title", "Description", video(),
+                        new MockMultipartFile("thumbnail", new byte[0])));
+        verifyNoInteractions(videos);
+        try (var files = Files.list(store)) { assertEquals(0, files.count()); }
     }
 
     @Test

@@ -10,13 +10,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.util.UriUtils;
 
 import java.util.List;
@@ -181,6 +184,76 @@ public class VideoService {
 
         return VideoMapper.toUploadResponse(video);
     }
+
+    @Transactional
+    public void deleteVideo(Long videoId, Long ownerId) {
+        if (ownerId == null) {
+            throw new AuthenticationRequiredException();
+        }
+
+        var video = videoRepository.findById(videoId)
+                .orElseThrow(VideoNotFoundException::new);
+
+        if (!video.getOwner().getId().equals(ownerId)) {
+            throw new VideoAccessDeniedException(
+                    "Solo puedes borrar tus propios vídeos."
+            );
+        }
+        //rutas
+        String videoPath = video.getVideoPath();
+        String thumbnailPath = video.getThumbnailPath();
+
+        // Pendiente: eliminar las relaciones del vídeo.
+        commentRepository.deleteLikesByVideoId(videoId);
+        commentRepository.deleteCommentsByVideoId(videoId);
+        // Pendiente: eliminar el registro del vídeo.
+
+        videoRepository.deleteTagLinksByVideoId(videoId);
+        videoRepository.deleteViewsByVideoId(videoId);
+        // Pendiente: programar la limpieza de archivos tras el commit.
+        videoRepository.delete(video);
+        videoRepository.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        deleteStoredFile(videoPath);
+                        deleteStoredFile(thumbnailPath);
+                    }
+                }
+        );
+    }
+    private void deleteStoredFile(String relativePath) {
+        try {
+            Path storedPath = Path.of(relativePath);
+            Path file = store.resolve(storedPath).normalize();
+
+            if (storedPath.isAbsolute() || !file.startsWith(store)) {
+                throw new IOException("Ruta fuera del almacén");
+            }
+
+            if (Files.notExists(file)) {
+                return;
+            }
+
+            if (!file.toRealPath().startsWith(store.toRealPath())) {
+                throw new IOException("El archivo apunta fuera del almacén");
+            }
+
+            Files.deleteIfExists(file);
+        } catch (IOException | RuntimeException exception) {
+            log.error(
+                    "No se pudo eliminar el archivo {}. Limpieza pendiente.",
+                    relativePath,
+                    exception
+            );
+        }
+    }
+    private static final Logger log =
+            LoggerFactory.getLogger(VideoService.class);
+
+
 
 
 }

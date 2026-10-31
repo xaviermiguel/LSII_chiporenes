@@ -1,5 +1,22 @@
 # Layered API and PostgreSQL entities
 
+## Video management regression tests (2026-10-31)
+
+Reuses this prompt's approved layered API and backend testing scope.
+User request: "puedes hacer los tests ?" after implementing upload, own videos,
+partial update and deletion. Add regression tests without changing production
+behavior: multipart response/Location, persisted ownership, own-list pagination,
+partial edits and invalid requests, ownership/CSRF failures, dependent-row deletion,
+after-commit file cleanup and rollback preservation. Use isolated databases and
+temporary files; never the real catalog. Preserve user changes. Do not commit or
+push, per the user's current step-by-step workflow.
+
+Validation: offline clean verify passed (139 passed, 20 optional skipped), including
+all JaCoCo checks. The selected integration/safety suite also passed 12 tests
+against a separate temporary PostgreSQL 18.6 instance, using real migrations.
+H2's row-by-row self-reference check differs for comment replies; the PostgreSQL
+run verifies that case. Production code and the user's catalog/store are unchanged.
+
 ## Swagger documentation access (2026-10-30)
 
 Reuses this approved prompt's Spring Security and backend API scope.

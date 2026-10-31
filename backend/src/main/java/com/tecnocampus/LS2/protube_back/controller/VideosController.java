@@ -125,6 +125,14 @@ public class VideosController {
                 new ApiError("VIDEO_ACCESS_DENIED", exception.getMessage())
         );
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteVideo(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Long ownerId
+    ) {
+        videoService.deleteVideo(id, ownerId);
+        return ResponseEntity.noContent().build();
+    }
 
 
 
