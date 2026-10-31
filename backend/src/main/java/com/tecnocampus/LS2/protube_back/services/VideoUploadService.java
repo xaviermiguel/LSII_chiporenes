@@ -4,6 +4,7 @@ import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
+import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUploadException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
@@ -45,17 +46,17 @@ public class VideoUploadService {
             throw new IllegalArgumentException("Usuario no activado");
         }
         if (title == null || title.isBlank() ){
-            throw new IllegalArgumentException("Titulo no valido");
+            throw new VideoUploadException("Titulo no valido");
         }
         if(description == null || description.isBlank() ){
-            throw new IllegalArgumentException("Descripcion no valido");
+            throw new VideoUploadException("Descripcion no valido");
 
         }
         if (video ==null || video.isEmpty()){
-            throw new IllegalArgumentException("Video no valido");
+            throw new VideoUploadException("Video no valido");
         }
         if (thumbnail ==null || thumbnail.isEmpty()){
-            throw new IllegalArgumentException("Miniatura no valido");
+            throw new VideoUploadException("Miniatura no valido");
         }
 
         // TODO: Guardar los archivos con nombres únicos.
@@ -63,7 +64,7 @@ public class VideoUploadService {
         String uploadId = UUID.randomUUID().toString();
 
         String videoFileName = uploadId + ".mp4";
-        String thumbnailFileName = uploadId + ".jpg";
+        String thumbnailFileName = uploadId + ".webp";
 
         Path videoDestination = store.resolve(videoFileName);
         Path thumbDestination = store.resolve(thumbnailFileName);

@@ -1,10 +1,11 @@
 package com.tecnocampus.LS2.protube_back.services;
 
-import com.tecnocampus.LS2.protube_back.dto.video.CommentResponse;
-import com.tecnocampus.LS2.protube_back.dto.video.VideoDetailResponse;
+import com.tecnocampus.LS2.protube_back.dto.video.*;
+import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.*;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import org.springframework.data.domain.PageRequest;
-import com.tecnocampus.LS2.protube_back.dto.video.VideoPage;
-import com.tecnocampus.LS2.protube_back.dto.video.VideoSummary;
 import org.springframework.web.util.UriUtils;
 
 import java.util.List;
@@ -109,6 +108,78 @@ public class VideoService {
             // A missing, invalid or inaccessible resource is unavailable to the player.
         }
         throw new VideoNotFoundException("El archivo del vídeo no está disponible.");
+    }
+
+
+    @Transactional(readOnly = true)
+    public VideoPage getMyVideos(Long ownerId, int page, int size) {
+        var videos = videoRepository.findByOwnerIdOrderByIdDesc(
+                ownerId,
+                PageRequest.of(page, size)
+        );
+
+        var items = videos.map(video -> new VideoSummary(
+                video.getId(),
+                video.getTitle(),
+                displayedAuthor(video),
+                video.getDurationSeconds(),
+                mediaUrl(video.getThumbnailPath())
+        )).getContent();
+
+        return new VideoPage(items, page, size, videos.hasNext());
+    }
+    @Transactional
+    public VideoUploadResponse updateVideo(
+            Long videoId,
+            Long ownerId,
+            VideoUpdateRequest request
+    ) {
+        var video = videoRepository.findById(videoId)
+                .orElseThrow(VideoNotFoundException::new);
+
+        //Comprobar session
+        if (ownerId == null) {
+            throw new AuthenticationRequiredException();
+        }
+        //Peticion sin cambios
+        if (request == null
+                || (request.title() == null && request.description() == null)) {
+            throw new VideoUpdateException(
+                    "Debes indicar un título o una descripción."
+            );
+        }
+
+        // 1. Comprobar que video.getOwner().getId() coincide con ownerId.
+        if (!video.getOwner().getId().equals(ownerId)) {
+            throw new VideoAccessDeniedException(
+                    "Solo puedes editar videos propios."
+            );
+        }
+        // 2. Validar los campos recibidos.
+        if (request.title()!=null && (request.title().isBlank() || request.title().length()>255)){
+            throw new VideoUpdateException(
+                    "El titulo debe tener entre 1 y 255 caracteres"
+            );
+        }
+        if (request.description()!=null && request.description().isBlank()){
+            throw new VideoUpdateException(
+                    "La descripcion no puede estar vacia");
+
+        }
+
+        // 3. Actualizar solo los campos distintos de null.
+
+
+        if (request.title() != null) {
+            video.setTitle(request.title());
+        }
+
+        if (request.description() != null) {
+            video.setDescription(request.description());
+        }
+        // 4. Devolver los datos actualizados mediante el mapper.
+
+        return VideoMapper.toUploadResponse(video);
     }
 
 

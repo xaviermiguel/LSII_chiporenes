@@ -38,7 +38,7 @@ class VideoUploadServiceTest {
     }
 
     private MockMultipartFile thumbnail() {
-        return new MockMultipartFile("thumbnail", "example.jpg", "image/jpeg", new byte[]{4, 5, 6});
+        return new MockMultipartFile("thumbnail", "example.webp", "image/webp", new byte[]{4, 5, 6});
     }
 
     @Test
@@ -58,9 +58,9 @@ class VideoUploadServiceTest {
         assertFalse(Path.of(result.getVideoPath()).isAbsolute());
         assertFalse(Path.of(result.getThumbnailPath()).isAbsolute());
         assertTrue(result.getVideoPath().endsWith(".mp4"));
-        assertTrue(result.getThumbnailPath().endsWith(".jpg"));
+        assertTrue(result.getThumbnailPath().endsWith(".webp"));
         assertNotEquals("example.mp4", result.getVideoPath());
-        assertNotEquals("example.jpg", result.getThumbnailPath());
+        assertNotEquals("example.webp", result.getThumbnailPath());
         assertArrayEquals(video().getBytes(), Files.readAllBytes(store.resolve(result.getVideoPath())));
         assertArrayEquals(thumbnail().getBytes(), Files.readAllBytes(store.resolve(result.getThumbnailPath())));
         verify(videos).saveAndFlush(same(result));
@@ -92,11 +92,11 @@ class VideoUploadServiceTest {
     void removesPartialFilesWhenThumbnailWriteFails() throws IOException {
         IOException failure = new IOException("Cannot write thumbnail");
         MockMultipartFile brokenThumbnail = new MockMultipartFile(
-                "thumbnail", "example.jpg", "image/jpeg", new byte[]{4}) {
+                "thumbnail", "example.webp", "image/webp", new byte[]{4}) {
             @Override
             public void transferTo(Path destination) throws IOException {
                 assertTrue(Files.exists(destination.resolveSibling(
-                        destination.getFileName().toString().replace(".jpg", ".mp4"))));
+                        destination.getFileName().toString().replace(".webp", ".mp4"))));
                 Files.write(destination, new byte[]{4});
                 throw failure;
             }
