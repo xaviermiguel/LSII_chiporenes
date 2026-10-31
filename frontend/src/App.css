@@ -483,3 +483,97 @@ h2 {
     animation: none !important;
   }
 }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.auth-panel {
+  max-width: 32rem;
+  margin-inline: auto;
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.auth-panel > p,
+.auth-panel form {
+  margin-top: var(--space-4);
+}
+
+.auth-panel fieldset {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  border: 0;
+}
+
+.form-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.form-field label {
+  font-weight: var(--weight-medium);
+}
+
+.form-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.form-field input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.field-error {
+  color: var(--color-error);
+}
+
+.form-field p {
+  font-size: var(--text-sm);
+}
+
+.auth-panel .muted-text {
+  color: var(--color-text-muted);
+}
+
+.header-content,
+.header-nav {
+  flex-wrap: wrap;
+}
+
+.header-content {
+  padding-block: var(--space-3);
+}
+
+.account-name {
+  max-width: 15rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 40rem) {
+  .header-nav {
+    gap: var(--space-2);
+  }
+
+  .auth-panel {
+    padding: var(--space-4);
+  }
+}
