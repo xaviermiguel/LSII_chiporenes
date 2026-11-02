@@ -64,6 +64,9 @@ for (const width of [320, 1440]) {
     await expect(page.getByLabel('Descripción *')).toBeFocused();
     await page.keyboard.type('Vídeo publicado desde el formulario real.');
     await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Tags (opcional)')).toBeFocused();
+    await page.keyboard.type(' música, viajes, música, , ');
+    await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Publicar vídeo' })).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.screenshot({ path: testInfo.outputPath(`publication-${width}.png`), fullPage: true });
@@ -75,12 +78,15 @@ for (const width of [320, 1440]) {
     expect(response.status()).toBe(201);
     const published = await response.json();
     const stored = await (await page.request.get(response.url() + '/' + published.id)).json();
+    expect(stored.tags).toEqual(['música', 'viajes']);
     for (const url of [stored.videoUrl, stored.thumbnailUrl]) uploadedFiles.add(url.split('/').at(-1));
     expect(published).toMatchObject({ title, description: 'Vídeo publicado desde el formulario real.' });
     await expect(page.getByRole('heading', { name: 'Vídeo publicado' })).toBeFocused();
     await expect(page.getByRole('status')).toContainText(title);
     await page.getByRole('button', { name: 'Ver vídeo publicado' }).click();
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+    await expect(page.getByText('música', { exact: true })).toBeVisible();
+    await expect(page.getByText('viajes', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Volver al catálogo' }).click();
     const card = page.getByRole('button', { name: title, exact: true });
     while (!(await card.count()) && (await page.getByRole('button', { name: 'Cargar más' }).count())) {

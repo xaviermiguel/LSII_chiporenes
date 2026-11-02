@@ -67,6 +67,7 @@ public class VideosController {
                 ownerId,
                 request.title(),
                 request.description(),
+                request.tags(),
                 request.video(),
                 request.thumbnail()
         );

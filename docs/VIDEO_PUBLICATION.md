@@ -14,6 +14,13 @@ La URL local del archivo se libera y la preparación tiene un límite de 15 s.
 
 ## Contrato real
 
+Los tags son opcionales y se introducen separados por comas. Se recortan espacios
+exteriores y se omiten valores vacíos y duplicados exactos. Se envían como campos
+multipart repetidos `tags`. El servidor también normaliza los valores y los guarda
+en `source_metadata.tags`, como los vídeos importados; el detalle existente los
+devuelve y muestra sin cambios de esquema. Omitir `tags` mantiene la compatibilidad
+con clientes anteriores. El borrador conserva los tags tras errores y redirecciones.
+
 `POST /api/videos`, `multipart/form-data` con los campos `title`, `description`,
 `video` y `thumbnail`. Los cuatro son obligatorios. `thumbnail` es la imagen
 generada, con nombre `thumbnail.webp`. El navegador establece el boundary;

@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 public class VideoUploadService {
@@ -32,6 +34,7 @@ public class VideoUploadService {
             Long ownerId,
             String title,
             String description,
+            List<String> tags,
             MultipartFile video,
             MultipartFile thumbnail ) {
 
@@ -75,6 +78,9 @@ public class VideoUploadService {
         uploadVideo.setOwner(owner);
         uploadVideo.setTitle(title);
         uploadVideo.setDescription(description);
+        uploadVideo.getSourceMetadata().put("tags", tags == null ? List.of()
+                : tags.stream().filter(Objects::nonNull).map(String::trim)
+                .filter(tag -> !tag.isEmpty()).distinct().toList());
         uploadVideo.setVideoPath(videoFileName);
         uploadVideo.setThumbnailPath(thumbnailFileName);
 

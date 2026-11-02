@@ -117,6 +117,24 @@ class VideoManagementIntegrationTest {
     }
 
     @Test
+    void uploadTagsArePersistedAndReturnedByDetail() throws Exception {
+        var owner = registered();
+        var csrf = csrf(owner);
+        var result = mvc.perform(multipart("/api/videos").file(videoFile()).file(thumbnailFile())
+                        .param("title", "Tagged").param("description", "Description")
+                        .param("tags", " Java ", "travel", "Java", " ").session(owner.session)
+                        .header(csrf.path("headerName").asText(), csrf.path("token").asText()))
+                .andExpect(status().isCreated()).andReturn();
+        long id = mapper.readTree(result.getResponse().getContentAsString()).path("id").asLong();
+        assertEquals(java.util.List.of("Java", "travel"),
+                videos.findById(id).orElseThrow().getSourceMetadata().get("tags"));
+        mvc.perform(get("/api/videos/" + id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags[0]").value("Java"))
+                .andExpect(jsonPath("$.tags[1]").value("travel"))
+                .andExpect(jsonPath("$.tags.length()").value(2));
+    }
+
+    @Test
     void invalidUploadDoesNotPublishOrWriteFiles() throws Exception {
         var owner = registered();
         long count = videos.count();

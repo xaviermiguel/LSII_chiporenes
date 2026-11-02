@@ -41,6 +41,7 @@ test('renders labelled fields, formats, request limit and automatic thumbnail in
   expect(screen.getByLabelText('Archivo de vídeo *')).toHaveAttribute('accept', '.mp4,video/mp4');
   expect(screen.getByLabelText('Título *')).toBeRequired();
   expect(screen.getByLabelText('Descripción *')).toBeRequired();
+  expect(screen.getByLabelText('Tags (opcional)')).not.toBeRequired();
   expect(screen.getByText(/Formato admitido: MP4/)).toHaveTextContent('100 MiB');
   expect(screen.getByText(/La miniatura se genera automáticamente/)).toBeInTheDocument();
 });
@@ -94,6 +95,7 @@ test('posts the real multipart fields with cookies and CSRF once, confirms and o
   });
   render(<Harness />);
   fill();
+  fireEvent.change(screen.getByLabelText('Tags (opcional)'), { target: { value: ' música, viajes, música, , ' } });
   send();
   fireEvent.submit(screen.getByLabelText('Título *').closest('form')!);
   expect(screen.getByRole('button', { name: 'Subiendo vídeo…' })).toBeDisabled();
@@ -107,7 +109,8 @@ test('posts the real multipart fields with cookies and CSRF once, confirms and o
   const post = fetchMock.mock.calls.find(([url]) => url === 'other/videos')!;
   expect(post[1]).toMatchObject({ method: 'POST', credentials: 'include' });
   const body = post[1]!.body as FormData;
-  expect([...body.keys()]).toEqual(['title', 'description', 'video', 'thumbnail']);
+  expect([...body.keys()]).toEqual(['title', 'description', 'tags', 'tags', 'video', 'thumbnail']);
+  expect(body.getAll('tags')).toEqual(['música', 'viajes']);
   expect(body.get('title')).toBe('Mi vídeo');
   expect(body.get('description')).toBe('Mi descripción');
   expect((body.get('video') as File).name).toBe('example.mp4');
@@ -132,11 +135,13 @@ test.each([
   if (code === 'INVALID_CSRF_TOKEN') fetchMock.mockResponseOnce(JSON.stringify({ id: 1 }));
   render(<Harness />);
   fill();
+  fireEvent.change(screen.getByLabelText('Tags (opcional)'), { target: { value: 'música, viajes' } });
   send();
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(expected));
   expect(screen.getByRole('alert')).toHaveFocus();
   expect(screen.getByLabelText('Título *')).toHaveValue('Mi vídeo');
   expect(screen.getByLabelText('Descripción *')).toHaveValue('Mi descripción');
+  expect(screen.getByLabelText('Tags (opcional)')).toHaveValue('música, viajes');
   expect((screen.getByLabelText('Archivo de vídeo *') as HTMLInputElement).files![0].name).toBe('example.mp4');
   expect(screen.getByRole('button', { name: 'Publicar vídeo' })).toBeEnabled();
   expect(screen.queryByText(/Debes volver a seleccionar/)).not.toBeInTheDocument();

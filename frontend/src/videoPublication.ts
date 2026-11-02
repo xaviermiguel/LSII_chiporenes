@@ -5,7 +5,7 @@ export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 // VideoUploadService stores uploads as .mp4; it does not transcode other containers.
 export const VIDEO_ACCEPT = '.mp4,video/mp4';
 export type Publication = { id: number; title: string; description: string };
-export type PublicationDraft = { title: string; description: string; hadFile: boolean };
+export type PublicationDraft = { title: string; description: string; tags?: string; hadFile: boolean };
 
 export class VideoPreviewError extends Error {}
 

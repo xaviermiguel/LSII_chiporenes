@@ -56,10 +56,19 @@ export function VideoPublication({ draft, onDraft, onOpen }: Props) {
       const data = new FormData();
       data.append('title', draft.title);
       data.append('description', draft.description);
+      const tags = [
+        ...new Set(
+          (draft.tags || '')
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        ),
+      ];
+      tags.forEach((tag) => data.append('tags', tag));
       data.append('video', file!);
       data.append('thumbnail', thumbnail, 'thumbnail.webp');
       // The server remains authoritative for multipart overhead and all validation.
-      if (file!.size + thumbnail.size + new Blob([draft.title, draft.description]).size >= MAX_UPLOAD_BYTES) {
+      if (file!.size + thumbnail.size + new Blob([draft.title, draft.description, ...tags]).size >= MAX_UPLOAD_BYTES) {
         setMessage(
           'El vídeo, la miniatura y los textos deben caber en los 100 MiB de la petición. Selecciona un vídeo más pequeño.'
         );
@@ -74,7 +83,7 @@ export function VideoPublication({ draft, onDraft, onOpen }: Props) {
         return;
       }
       setPublished(result);
-      onDraft({ title: '', description: '', hadFile: false });
+      onDraft({ title: '', description: '', tags: '', hadFile: false });
     } catch (error) {
       setMessage(publicationError(error));
     } finally {
@@ -107,7 +116,7 @@ export function VideoPublication({ draft, onDraft, onOpen }: Props) {
     <section className="auth-panel" aria-labelledby="publication-title">
       <p className="eyebrow">Comunidad ProTube</p>
       <h1 id="publication-title">Publicar vídeo</h1>
-      <p>Todos los campos son obligatorios (*). La miniatura se genera automáticamente a partir del vídeo.</p>
+      <p>Los campos marcados con * son obligatorios. La miniatura se genera automáticamente a partir del vídeo.</p>
       <p id="video-help" className="muted-text">
         Formato admitido: MP4 reproducible en tu navegador. Máximo: 100 MiB (104 857 600 bytes) por archivo y por
         petición completa, incluidos miniatura, textos y datos del formulario. El servidor realiza la validación
@@ -115,7 +124,7 @@ export function VideoPublication({ draft, onDraft, onOpen }: Props) {
       </p>
       {draft.hadFile && !file && (
         <p className="status-message status-warning" role="status">
-          Se han conservado el título y la descripción. Debes volver a seleccionar el archivo de vídeo.
+          Se han conservado el título, la descripción y los tags. Debes volver a seleccionar el archivo de vídeo.
         </p>
       )}
       <form ref={form} noValidate aria-busy={pending} onSubmit={(event) => void submit(event)}>
@@ -169,6 +178,20 @@ export function VideoPublication({ draft, onDraft, onOpen }: Props) {
               </div>
             );
           })}
+          <div className="form-field">
+            <label htmlFor="tags">Tags (opcional)</label>
+            <input
+              id="tags"
+              name="tags"
+              type="text"
+              value={draft.tags || ''}
+              aria-describedby="tags-help"
+              onChange={(event) => onDraft({ ...draft, tags: event.target.value })}
+            />
+            <p id="tags-help" className="muted-text">
+              Separa los tags con comas, por ejemplo: música, viajes. Los tags vacíos o repetidos se omiten.
+            </p>
+          </div>
           <button className="button" type="submit">
             {pending ? 'Subiendo vídeo…' : 'Publicar vídeo'}
           </button>

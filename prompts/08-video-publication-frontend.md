@@ -794,6 +794,31 @@ Especialmente, no conviertas la verificación del vídeo publicado en una reimpl
 
 ## Notes
 
+### Ampliación solicitada el 2026-11-03
+
+Se reutiliza este prompt aprobado para ampliar el formulario de publicación.
+Petición del usuario: «Quiero que en la funcionalidad de añadir un nuevo video,
+hagas tambien que ademas de subir el video, editar titulo y descripcion. También
+se pueda añadir tags. Es una tarea por ahora enteramente frontend, si necesitas
+modificar el backend dado a que no lo soporta, avisame antes de hacerlo. Primero
+revisa esto ultimo antes de hacer la parte del frontend.»
+
+Tras comprobar que ni POST ni PATCH aceptaban tags, se pidió autorización para
+el cambio mínimo de backend que permita aceptar y guardar tags al subir un vídeo,
+y después añadir el campo frontend. Respuesta del usuario: «Si,».
+
+Alcance de esta ampliación: tags opcionales separados por comas, normalizados y
+persistidos en source_metadata.tags para reutilizar la lectura del detalle.
+Sin ampliar PATCH, sin migraciones ni cambios de dependencias. Commit local
+según commit-ai-change; sin push ni PR solicitados en esta sesión.
+
+Validación de esta ampliación: build frontend correcto, 94 pruebas Jest y
+snapshot correctos; lint sin errores (aviso previo de Fast Refresh en
+SessionContext). Maven verify con Java 21: 161 casos, 20 omitidos, sin fallos
+ni errores; umbrales JaCoCo cumplidos. Playwright publication con API real:
+2/2 a 320 y 1440 px, tags normalizados persistidos y visibles en el detalle,
+catálogo y reproducción correctos. Prettier y git diff --check correctos.
+
 Aclaración del usuario: «Generar automáticamente una miniatura del vídeo en frontend».
 El contrato exige thumbnail; generar WebP en el navegador, sin modificar backend.
 Usar commit-ai-change; commit, push y PR hacia main autorizados; no hacer merge.
