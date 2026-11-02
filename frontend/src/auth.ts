@@ -61,3 +61,35 @@ export async function signOut(): Promise<void> {
   const csrf = await request('csrf');
   await request('logout', { method: 'POST', headers: { [csrf.headerName]: csrf.token } });
 }
+
+// Relative API paths only: never send cookies or CSRF tokens to a caller supplied origin.
+export async function authenticatedRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  if (!/^\/[a-zA-Z0-9]/.test(path) || path.includes('..') || path.includes('\\') || /[?#]/.test(path)) {
+    throw new Error('Expected a relative API path');
+  }
+  const headers = new Headers(init.headers);
+  const method = (init.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const csrf = await request('csrf', { signal: init.signal });
+    headers.set(csrf.headerName, csrf.token);
+  }
+  const response = await fetch(`${getEnv().API_BASE_URL}${path}`, {
+    ...init,
+    headers,
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    // CSRF rejection may also mean the underlying session expired.
+    if (
+      response.status === 403 &&
+      body.code === 'INVALID_CSRF_TOKEN' &&
+      !(await currentUser(init.signal || undefined))
+    ) {
+      throw new AuthError('AUTHENTICATION_REQUIRED', 401);
+    }
+    throw new AuthError(body.code || 'UNKNOWN', response.status);
+  }
+  return response;
+}

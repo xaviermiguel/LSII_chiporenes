@@ -56,3 +56,37 @@ Guía: `docs/AUTH_FORMS.md`.
 - Los 17 pares de contraste existentes pasan. Capturas de móvil y escritorio
   revisadas visualmente; no se afirma una certificación de accesibilidad.
 - No se ha ejecutado GitHub Actions ni PostgreSQL en esta tarea.
+
+## Reutilización: sesión compartida
+
+Tarea: gestionar la sesión compartida durante navegación, recuperación, logout,
+caducidad, rutas protegidas y cliente reutilizable de peticiones autenticadas.
+Se reutiliza este prompt aprobado de integración frontend de autenticación
+(US-01/US-02), junto con los criterios de aceptación proporcionados en el chat.
+Rama: `codex/shared-auth-session`. Dependencias: tareas 18, 21 y coordinación 22.
+
+Criterios recibidos para esta aplicación del prompt:
+- Mantener un estado común del usuario autenticado.
+- Recuperar o comprobar la sesión al cargar la aplicación.
+- Conservar el estado correcto durante la navegación y después de recargar si la sesión sigue siendo válida.
+- Mostrar las opciones correspondientes a usuarios autenticados y visitantes.
+- Permitir cerrar sesión desde la interfaz.
+- Limpiar el estado local de autenticación después de cerrar sesión.
+- Gestionar la caducidad o invalidez de la sesión sin dejar controles en un estado incorrecto.
+- Enviar al login al visitante que acceda a una pantalla protegida.
+- Proporcionar un mecanismo reutilizable para las peticiones autenticadas de subida y edición.
+- Mantener accesibles el catálogo y la reproducción sin iniciar sesión.
+- Incluir pruebas de recuperación de sesión, navegación, logout, caducidad y rutas protegidas.
+- Funcionar integrada con el backend y superar las comprobaciones de CI.
+
+Alcance: los controles del frontend complementan la autorización del backend.
+Ocultar una opción no sustituye la comprobación de permisos.
+
+Validación de la sesión compartida: TypeScript y build correctos; ESLint sin
+ errores (un aviso de Fast Refresh por exportar el hook junto al proveedor).
+Jest: 67 pruebas, 10 suites, cobertura de líneas 97,39 %.
+Playwright: 16 pruebas contra Spring real, incluida invalidación desde servidor,
+recarga de ruta privada y catálogo/reproducción públicos. Maven verify offline:
+142 pruebas reportadas, 20 omitidas, cero fallos y JaCoCo aprobado. El perfil
+coverage no existe en el POM actual; JaCoCo se ejecuta en verify por defecto.
+GitHub Actions no se ha ejecutado remotamente. Cambio local en vars.py preservado.

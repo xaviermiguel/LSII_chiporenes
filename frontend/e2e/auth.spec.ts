@@ -76,3 +76,29 @@ test('pending authentication cannot submit twice; network error permits retry', 
   await expect(page.getByRole('alert')).toBeFocused();
   await expect(page.getByRole('button', { name: 'Entrar' })).toBeEnabled();
 });
+
+test('protected navigation recovers session, survives reload and detects server logout', async ({ page, context }) => {
+  await page.goto('/#upload');
+  await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+  await page.getByRole('link', { name: 'Registrarse', exact: true }).first().click();
+  await page.getByLabel('Nombre de usuario *').fill('Session');
+  await page.getByLabel('Email *').fill(`session-${Date.now()}@example.com`);
+  await page.getByLabel('Contraseña *', { exact: true }).fill('Password1!');
+  await page.getByLabel('Confirmar contraseña *').fill('Password1!');
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await expect(page.getByText('Hola, Session')).toBeVisible();
+  await page.getByRole('link', { name: 'Mi cuenta' }).click();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Mi cuenta' })).toBeVisible();
+  const csrf = await (
+    await context.request.get('http://127.0.0.1:' + (process.env.E2E_API_PORT || '18080') + '/api/auth/csrf')
+  ).json();
+  await context.request.post('http://127.0.0.1:' + (process.env.E2E_API_PORT || '18080') + '/api/auth/logout', {
+    headers: { [csrf.headerName]: csrf.token },
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mi cuenta' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Explorar' }).click();
+  await expect(page.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeVisible();
+});
