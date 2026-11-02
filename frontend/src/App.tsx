@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { AuthForm } from './components/AuthForm';
 import { SessionProvider, useSession } from './SessionContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { VideoPublication } from './components/VideoPublication';
+import type { PublicationDraft } from './videoPublication';
 import type { AuthUser } from './auth';
 import { VideoDetail } from './components/VideoDetail.tsx';
 import { getEnv } from './utils/Env';
@@ -11,6 +13,11 @@ import { getEnv } from './utils/Env';
 function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [page, setPage] = useState(window.location.hash);
+  const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
+    title: '',
+    description: '',
+    hadFile: false,
+  });
   const { user, loading, sessionError, loggingOut, authenticated: setAuthenticated, logout } = useSession();
 
   useEffect(() => {
@@ -67,6 +74,9 @@ function AppContent() {
             </a>
             {user ? (
               <>
+                <a className="nav-link" href="#upload">
+                  Publicar vídeo
+                </a>
                 <a className="nav-link" href="#profile">
                   Mi cuenta
                 </a>
@@ -99,10 +109,23 @@ function AppContent() {
         )}
         {page === '#profile' || page === '#upload' || /^#videos\/[^/]+\/edit$/.test(page) ? (
           <ProtectedRoute>
-            <section>
-              <h1>{page === '#profile' ? 'Mi cuenta' : page === '#upload' ? 'Subir vídeo' : 'Editar vídeo'}</h1>
-              <p>{page === '#profile' ? user?.email : 'Esta función estará disponible con la gestión de vídeos.'}</p>
-            </section>
+            {page === '#upload' ? (
+              <VideoPublication
+                draft={publicationDraft}
+                onDraft={setPublicationDraft}
+                onOpen={(id) => {
+                  window.history.replaceState(null, '', '#contenido');
+                  setPage('#contenido');
+                  setSelectedVideoId(id);
+                  document.getElementById('contenido')?.focus();
+                }}
+              />
+            ) : (
+              <section>
+                <h1>{page === '#profile' ? 'Mi cuenta' : 'Editar vídeo'}</h1>
+                <p>{page === '#profile' ? user?.email : 'Esta función estará disponible con la gestión de vídeos.'}</p>
+              </section>
+            )}
           </ProtectedRoute>
         ) : page === '#login' || page === '#register' ? (
           <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
