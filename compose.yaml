@@ -56,7 +56,6 @@ services:
       - type: bind
         source: ${PROTUBE_VIDEO_DIR:-./videos}
         target: /store
-        read_only: true
         bind:
           create_host_path: false
     healthcheck:
