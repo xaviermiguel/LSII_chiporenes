@@ -61,4 +61,5 @@ public class AuthExceptionHandler {
         return new ApiError("INVALID_REQUEST",
                 "La solicitud contiene campos obligatorios ausentes o un formato incorrecto.");
     }
+
 }
