@@ -7,6 +7,11 @@ estas tareas.
 
 ## Contrato HTTP
 
+Swagger UI (`/swagger-ui/index.html`) y la documentación OpenAPI (`/v3/api-docs`)
+permiten consultas GET sin iniciar sesión. Esto permite consultar los endpoints
+desde el navegador; las operaciones de la API conservan sus requisitos de sesión
+y CSRF. La sesión de Postman no se comparte con el navegador.
+
 Todas las respuestas y errores de autenticación son JSON, salvo el logout
 correcto, que no tiene cuerpo. No hay redirecciones a formularios HTML.
 

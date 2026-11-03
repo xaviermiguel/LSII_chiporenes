@@ -1,5 +1,31 @@
 # Layered API and PostgreSQL entities
 
+## Video management regression tests (2026-10-31)
+
+Reuses this prompt's approved layered API and backend testing scope.
+User request: "puedes hacer los tests ?" after implementing upload, own videos,
+partial update and deletion. Add regression tests without changing production
+behavior: multipart response/Location, persisted ownership, own-list pagination,
+partial edits and invalid requests, ownership/CSRF failures, dependent-row deletion,
+after-commit file cleanup and rollback preservation. Use isolated databases and
+temporary files; never the real catalog. Preserve user changes. Do not commit or
+push, per the user's current step-by-step workflow.
+
+Validation: offline clean verify passed (139 passed, 20 optional skipped), including
+all JaCoCo checks. The selected integration/safety suite also passed 12 tests
+against a separate temporary PostgreSQL 18.6 instance, using real migrations.
+H2's row-by-row self-reference check differs for comment replies; the PostgreSQL
+run verifies that case. Production code and the user's catalog/store are unchanged.
+
+## Swagger documentation access (2026-10-30)
+
+Reuses this approved prompt's Spring Security and backend API scope.
+User request: "quiero configurar para ver endpoints en swagger".
+Permit anonymous GET access to Swagger UI and OpenAPI documentation, including
+its assets and configuration. Preserve session authentication and CSRF on the
+application API. Verify documentation access and that /api/auth/me remains protected
+using the existing isolated HTTP integration tests.
+
 ## Tasks 20 and 21: registration and session authentication (2026-10-28)
 
 **Approved on:** 2026-10-28
@@ -1517,3 +1543,18 @@ The detail component is unchanged; there is no new router, detail feature,
 backend change, dependency, auth, search, upload or comment implementation.
 Only the ten task files are committed. No push, PR or merge is requested for
 this frontend task; those operations remain separate from its authorized commit.
+
+## Video upload service test correction (2026-10-28)
+
+Reuses the existing approved service and testing scope of this prompt.
+User request: "me ayudas a corregirlo ?", referring to VideoUploadServiceTest.
+Replace the mixed TestNG/JUnit skeleton with JUnit 5 and mocked repositories.
+Verify saved owner and metadata, generated relative paths and file bytes; verify
+cleanup after database failure and partial thumbnail write failure, preserving
+unrelated catalog files and the original failure cause. Use temporary storage
+only. Preserve the user's pending VideoUploadService implementation.
+Validation: Maven offline test -Dtest=VideoUploadServiceTest with Java 21:
+3 tests passed, no failures, errors or skips. No database or real store accessed.
+The tests exercise the user's pending service changes, which are not included
+in this test-only commit. File bytes are synthetic fixtures, not media decoding
+or format validation tests.

@@ -6,6 +6,7 @@ import { videoListFixture, videoDetailsFixture } from '../../fixtures/videos';
 import type { VideoListResponse } from '../../types/Video';
 
 jest.mock('axios');
+jest.mock('../../auth', () => ({ ...jest.requireActual('../../auth'), currentUser: () => new Promise(() => {}) }));
 jest.mock('../../utils/Env', () => ({
   getEnv: () => ({ API_BASE_URL: 'other', MEDIA_BASE_URL: 'http://media.example/media' }),
 }));

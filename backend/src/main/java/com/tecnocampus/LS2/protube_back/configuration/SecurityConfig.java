@@ -110,8 +110,11 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(c -> c
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/logout").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/videos/me").authenticated()
+                        .requestMatchers(HttpMethod.HEAD, "/api/videos/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/*", "/api/hello").permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.ico", "/media/**").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/api/videos", "/api/videos/*", "/api/hello", "/media/**").permitAll()

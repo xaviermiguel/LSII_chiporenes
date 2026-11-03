@@ -1,5 +1,5 @@
 import fetchMock from 'jest-fetch-mock';
-import { authenticate, currentUser, signOut, AuthError } from '../../auth';
+import { authenticate, currentUser, signOut, AuthError, authenticatedRequest } from '../../auth';
 
 const user = { id: 1, displayName: 'Anna', email: 'anna@example.com' };
 beforeEach(() => fetchMock.resetMocks());
@@ -43,3 +43,37 @@ test('preserves safe API errors and handles malformed server errors', async () =
   await expect(currentUser()).rejects.toThrow('No se ha podido completar');
   expect(new AuthError('INVALID_EMAIL', 400).message).toContain('email válido');
 });
+
+test('authenticated upload preserves multipart headers and includes fresh CSRF', async () => {
+  fetchMock.mockResponseOnce(JSON.stringify({ token: 'fresh', headerName: 'X-CSRF-TOKEN' }));
+  fetchMock.mockResponseOnce('', { status: 204 });
+  const body = new FormData();
+  body.append('file', new Blob(['video']), 'video.mp4');
+  await authenticatedRequest('/videos', { method: 'POST', body });
+  const init = fetchMock.mock.calls[1][1]!;
+  expect(init.credentials).toBe('include');
+  expect(init.body).toBe(body);
+  expect(new Headers(init.headers).get('X-CSRF-TOKEN')).toBe('fresh');
+  expect(new Headers(init.headers).has('Content-Type')).toBe(false);
+});
+
+test.each([401, 403])('authenticated request propagates status %s', async (status) => {
+  fetchMock.mockResponseOnce(JSON.stringify({ code: 'ACCESS_DENIED' }), { status });
+  await expect(authenticatedRequest('/videos/1')).rejects.toMatchObject({ status });
+});
+
+test('expired CSRF checks the session without replaying the mutation', async () => {
+  fetchMock.mockResponseOnce(JSON.stringify({ token: 'fresh', headerName: 'X-CSRF-TOKEN' }));
+  fetchMock.mockResponseOnce(JSON.stringify({ code: 'INVALID_CSRF_TOKEN' }), { status: 403 });
+  fetchMock.mockResponseOnce('{}', { status: 401 });
+  await expect(authenticatedRequest('/videos/1', { method: 'PATCH' })).rejects.toMatchObject({ status: 401 });
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});
+
+test.each(['https://other.example/videos', '//other.example', '/videos/../auth/login'])(
+  'rejects unsafe API path %s',
+  async (path) => {
+    await expect(authenticatedRequest(path)).rejects.toThrow('relative API path');
+    expect(fetchMock).not.toHaveBeenCalled();
+  }
+);

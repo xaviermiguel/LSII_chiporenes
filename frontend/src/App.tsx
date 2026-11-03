@@ -1,20 +1,24 @@
 import './App.css';
 import { useAllVideos } from './useAllVideos.ts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthForm } from './components/AuthForm';
-import { currentUser, signOut } from './auth';
+import { SessionProvider, useSession } from './SessionContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { VideoPublication } from './components/VideoPublication';
+import type { PublicationDraft } from './videoPublication';
 import type { AuthUser } from './auth';
 import { VideoDetail } from './components/VideoDetail.tsx';
 import { getEnv } from './utils/Env';
 
-function App() {
+function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [page, setPage] = useState(window.location.hash);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [sessionError, setSessionError] = useState('');
-  const [loggingOut, setLoggingOut] = useState(false);
-  const version = useRef(0);
-  const logoutLock = useRef(false);
+  const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
+    title: '',
+    description: '',
+    hadFile: false,
+  });
+  const { user, loading, sessionError, loggingOut, authenticated: setAuthenticated, logout } = useSession();
 
   useEffect(() => {
     const navigate = () => {
@@ -26,54 +30,12 @@ function App() {
     return () => window.removeEventListener('hashchange', navigate);
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const refresh = () => {
-      const revision = ++version.current;
-      void currentUser(controller.signal)
-        .then((value) => {
-          if (!controller.signal.aborted && revision === version.current) setUser(value);
-        })
-        .catch(() => {
-          /* A network failure does not prove that the session expired. */
-        });
-    };
-    refresh();
-    window.addEventListener('focus', refresh);
-    return () => {
-      controller.abort();
-      window.removeEventListener('focus', refresh);
-    };
-  }, []);
-
   function authenticated(value: AuthUser) {
-    ++version.current;
-    setUser(value);
-    setSessionError('');
+    setAuthenticated(value);
     setSelectedVideoId(null);
     setPage('#contenido');
     window.location.hash = 'contenido';
     document.getElementById('contenido')?.focus();
-  }
-
-  async function logout() {
-    if (logoutLock.current) return;
-    logoutLock.current = true;
-    setLoggingOut(true);
-    setSessionError('');
-    try {
-      await signOut();
-      ++version.current;
-      setUser(null);
-      setPage('#contenido');
-      setSelectedVideoId(null);
-      window.location.hash = 'contenido';
-    } catch {
-      setSessionError('No se ha podido cerrar la sesión. Inténtalo de nuevo.');
-    } finally {
-      logoutLock.current = false;
-      setLoggingOut(false);
-    }
   }
 
   return (
@@ -111,9 +73,21 @@ function App() {
               Explorar
             </a>
             {user ? (
-              <button className="button button-secondary" disabled={loggingOut} onClick={() => void logout()}>
-                {loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
-              </button>
+              <>
+                <a className="nav-link" href="#upload">
+                  Publicar vídeo
+                </a>
+                <a className="nav-link" href="#profile">
+                  Mi cuenta
+                </a>
+                <button
+                  className="button button-secondary"
+                  disabled={loggingOut || loading}
+                  onClick={() => void logout()}
+                >
+                  {loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
+                </button>
+              </>
             ) : (
               <>
                 <a className="nav-link" href="#login">
@@ -133,7 +107,27 @@ function App() {
             {sessionError}
           </p>
         )}
-        {page === '#login' || page === '#register' ? (
+        {page === '#profile' || page === '#upload' || /^#videos\/[^/]+\/edit$/.test(page) ? (
+          <ProtectedRoute>
+            {page === '#upload' ? (
+              <VideoPublication
+                draft={publicationDraft}
+                onDraft={setPublicationDraft}
+                onOpen={(id) => {
+                  window.history.replaceState(null, '', '#contenido');
+                  setPage('#contenido');
+                  setSelectedVideoId(id);
+                  document.getElementById('contenido')?.focus();
+                }}
+              />
+            ) : (
+              <section>
+                <h1>{page === '#profile' ? 'Mi cuenta' : 'Editar vídeo'}</h1>
+                <p>{page === '#profile' ? user?.email : 'Esta función estará disponible con la gestión de vídeos.'}</p>
+              </section>
+            )}
+          </ProtectedRoute>
+        ) : page === '#login' || page === '#register' ? (
           <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
         ) : selectedVideoId === null ? (
           <ContentApp onSelectedVideo={setSelectedVideoId} />
@@ -226,4 +220,10 @@ function ContentApp({ onSelectedVideo }: ContentAppProps) {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <SessionProvider>
+      <AppContent />
+    </SessionProvider>
+  );
+}
