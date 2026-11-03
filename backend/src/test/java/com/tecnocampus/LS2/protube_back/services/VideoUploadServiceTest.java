@@ -45,18 +45,18 @@ class VideoUploadServiceTest {
     @Test
     void invalidMetadataOrMissingFilesNeverWritesFilesOrPublishes() throws IOException {
         assertThrows(VideoUploadException.class,
-                () -> service.uploadVideo(1L, " ", "Description", video(), thumbnail()));
+                () -> service.uploadVideo(1L, " ", "Description", null, video(), thumbnail()));
         assertThrows(VideoUploadException.class,
-                () -> service.uploadVideo(1L, "Title", " ", video(), thumbnail()));
+                () -> service.uploadVideo(1L, "Title", " ", null, video(), thumbnail()));
         assertThrows(VideoUploadException.class,
-                () -> service.uploadVideo(1L, "Title", "Description", null, thumbnail()));
+                () -> service.uploadVideo(1L, "Title", "Description", null, null, thumbnail()));
         assertThrows(VideoUploadException.class,
-                () -> service.uploadVideo(1L, "Title", "Description", video(), null));
+                () -> service.uploadVideo(1L, "Title", "Description", null, video(), null));
         assertThrows(VideoUploadException.class,
-                () -> service.uploadVideo(1L, "Title", "Description",
+                () -> service.uploadVideo(1L, "Title", "Description", null,
                         new MockMultipartFile("video", new byte[0]), thumbnail()));
         assertThrows(VideoUploadException.class,
-                () -> service.uploadVideo(1L, "Title", "Description", video(),
+                () -> service.uploadVideo(1L, "Title", "Description", null, video(),
                         new MockMultipartFile("thumbnail", new byte[0])));
         verifyNoInteractions(videos);
         try (var files = Files.list(store)) { assertEquals(0, files.count()); }
@@ -70,12 +70,13 @@ class VideoUploadServiceTest {
             return saved;
         });
 
-        Video result = service.uploadVideo(1L, "Mi primer video", "Descripcion", video(), thumbnail());
+        Video result = service.uploadVideo(1L, "Mi primer video", "Descripcion", null, video(), thumbnail());
 
         assertEquals(10L, result.getId());
         assertSame(owner, result.getOwner());
         assertEquals("Mi primer video", result.getTitle());
         assertEquals("Descripcion", result.getDescription());
+        assertEquals(java.util.List.of(), result.getSourceMetadata().get("tags"));
         assertFalse(Path.of(result.getVideoPath()).isAbsolute());
         assertFalse(Path.of(result.getThumbnailPath()).isAbsolute());
         assertTrue(result.getVideoPath().endsWith(".mp4"));
@@ -85,6 +86,14 @@ class VideoUploadServiceTest {
         assertArrayEquals(video().getBytes(), Files.readAllBytes(store.resolve(result.getVideoPath())));
         assertArrayEquals(thumbnail().getBytes(), Files.readAllBytes(store.resolve(result.getThumbnailPath())));
         verify(videos).saveAndFlush(same(result));
+    }
+
+    @Test
+    void normalizesTagsBeforeSaving() {
+        when(videos.saveAndFlush(any(Video.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Video result = service.uploadVideo(1L, "Title", "Description",
+                java.util.Arrays.asList(" Java ", "", "Java", null, "travel"), video(), thumbnail());
+        assertEquals(java.util.List.of("Java", "travel"), result.getSourceMetadata().get("tags"));
     }
 
     @Test
@@ -100,7 +109,7 @@ class VideoUploadServiceTest {
         Path existing = Files.writeString(store.resolve("existing.mp4"), "keep");
 
         RuntimeException thrown = assertThrows(RuntimeException.class,
-                () -> service.uploadVideo(1L, "Titulo", "Descripcion", video(), thumbnail()));
+                () -> service.uploadVideo(1L, "Titulo", "Descripcion", null, video(), thumbnail()));
 
         assertSame(failure, thrown.getCause());
         try (var files = Files.list(store)) {
@@ -124,7 +133,7 @@ class VideoUploadServiceTest {
         };
 
         RuntimeException thrown = assertThrows(RuntimeException.class,
-                () -> service.uploadVideo(1L, "Titulo", "Descripcion", video(), brokenThumbnail));
+                () -> service.uploadVideo(1L, "Titulo", "Descripcion", null, video(), brokenThumbnail));
 
         assertSame(failure, thrown.getCause());
         try (var files = Files.list(store)) {

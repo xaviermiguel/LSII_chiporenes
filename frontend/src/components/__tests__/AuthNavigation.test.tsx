@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '../../App';
-import { authenticate, currentUser, signOut } from '../../auth';
+import { authenticate, currentUser, signOut, authenticatedRequest, AuthError } from '../../auth';
+import { createThumbnail } from '../../videoPublication';
 import type { AuthUser } from '../../auth';
 
 jest.mock('../../auth', () => ({
@@ -8,6 +9,11 @@ jest.mock('../../auth', () => ({
   authenticate: jest.fn(),
   currentUser: jest.fn(),
   signOut: jest.fn(),
+  authenticatedRequest: jest.fn(),
+}));
+jest.mock('../../videoPublication', () => ({
+  ...jest.requireActual('../../videoPublication'),
+  createThumbnail: jest.fn(),
 }));
 jest.mock('../../useAllVideos', () => ({ useAllVideos: () => ({ value: [], loading: 'loaded', hasNext: false }) }));
 const user = { id: 1, displayName: 'Anna', email: 'anna@example.com' };
@@ -139,4 +145,37 @@ test('recovery failure keeps public catalog accessible and retries on focus', as
   expect(screen.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeInTheDocument();
   fireEvent(window, new Event('focus'));
   expect(await screen.findByText('Hola, Anna')).toBeInTheDocument();
+});
+
+test('expired upload redirects to login and preserves draft when returning after authentication', async () => {
+  jest.mocked(currentUser).mockResolvedValue(user);
+  jest.mocked(createThumbnail).mockResolvedValue(new Blob(['thumb'], { type: 'image/webp' }));
+  jest.mocked(authenticatedRequest).mockImplementation(async () => {
+    jest.mocked(currentUser).mockResolvedValue(null);
+    throw new AuthError('AUTHENTICATION_REQUIRED', 401);
+  });
+  window.history.replaceState(null, '', '/#upload');
+  render(<App />);
+  await screen.findByRole('heading', { name: 'Publicar vídeo' });
+  fireEvent.change(screen.getByLabelText('Título *'), { target: { value: 'Borrador conservado' } });
+  fireEvent.change(screen.getByLabelText('Descripción *'), { target: { value: 'Descripción conservada' } });
+  fireEvent.change(screen.getByLabelText('Archivo de vídeo *'), { target: { files: [new File(['v'], 'clip.mp4')] } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publicar vídeo' }));
+  expect(await screen.findByRole('heading', { name: 'Inicia sesión' })).toBeInTheDocument();
+  expect(window.location.hash).toBe('#login');
+  jest.mocked(authenticate).mockImplementation(async () => {
+    jest.mocked(currentUser).mockResolvedValue(user);
+    return user;
+  });
+  fireEvent.change(screen.getByLabelText('Email *'), { target: { value: user.email } });
+  fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Password1!' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+  await screen.findByText('Hola, Anna');
+  await act(async () => {
+    window.location.hash = 'upload';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  expect(screen.getByLabelText('Título *')).toHaveValue('Borrador conservado');
+  expect(screen.getByLabelText('Descripción *')).toHaveValue('Descripción conservada');
+  expect(screen.getByRole('status')).toHaveTextContent('Debes volver a seleccionar el archivo');
 });
