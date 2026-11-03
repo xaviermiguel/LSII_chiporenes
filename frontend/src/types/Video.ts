@@ -12,11 +12,15 @@ export type VideoListResponse = {
   hasNext: boolean;
 };
 export type VideoDetail = VideoSummary & {
+  ownerId: number;
+  category: Category | null;
   description: string;
   videoUrl: string;
   tags: string[];
   comments: VideoComment[];
 };
+
+export type Category = { id: number; name: string };
 
 export type VideoComment = {
   id: number;

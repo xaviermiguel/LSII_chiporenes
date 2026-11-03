@@ -10,6 +10,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // Uploads extend the shared test catalog; run them after fixture-only regressions.
+  projects: [
+    { name: 'regression', testIgnore: ['publication.spec.ts', 'editing.spec.ts'] },
+    { name: 'editing', testMatch: 'editing.spec.ts', dependencies: ['regression'] },
+    { name: 'publication', testMatch: 'publication.spec.ts', dependencies: ['editing'] },
+  ],
   reporter: [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/e2e.xml' }]],
   use: { baseURL: `http://127.0.0.1:${webPort}`, trace: 'retain-on-failure' },
   webServer: [

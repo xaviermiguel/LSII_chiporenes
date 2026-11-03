@@ -19,7 +19,8 @@ const messages: Record<string, string> = {
 export class AuthError extends Error {
   constructor(
     public code: string,
-    public status: number
+    public status: number,
+    public detail?: string
   ) {
     super(messages[code] || 'No se ha podido completar la solicitud. Inténtalo de nuevo.');
   }
@@ -89,7 +90,11 @@ export async function authenticatedRequest(path: string, init: RequestInit = {})
     ) {
       throw new AuthError('AUTHENTICATION_REQUIRED', 401);
     }
-    throw new AuthError(body.code || 'UNKNOWN', response.status);
+    throw new AuthError(
+      body.code || 'UNKNOWN',
+      response.status,
+      typeof body.message === 'string' ? body.message : undefined
+    );
   }
   return response;
 }

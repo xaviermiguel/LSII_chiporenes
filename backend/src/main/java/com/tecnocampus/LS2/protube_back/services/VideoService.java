@@ -1,8 +1,11 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.video.*;
-import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.model.Video;
+import com.tecnocampus.LS2.protube_back.model.Category;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.LinkedHashMap;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.services.exceptions.*;
 
@@ -26,6 +29,8 @@ import java.util.List;
 
 @Service
 public class VideoService {
+    @PersistenceContext
+    private EntityManager entityManager;
     private final VideoRepository videoRepository;
     private final CommentRepository commentRepository;
     private final Path store;
@@ -100,7 +105,10 @@ public class VideoService {
                 video.getDescription(),
                 mediaUrl(video.getVideoPath()),
                 tags,
-                comments
+                comments,
+                video.getOwner().getId(),
+                video.getCategory() == null ? null : new CategoryResponse(
+                        video.getCategory().getId(), video.getCategory().getName())
         );
     }
     private String displayedAuthor(Video video) {
@@ -146,7 +154,7 @@ public class VideoService {
         return new VideoPage(items, page, size, videos.hasNext());
     }
     @Transactional
-    public VideoUploadResponse updateVideo(
+    public VideoDetailResponse updateVideo(
             Long videoId,
             Long ownerId,
             VideoUpdateRequest request
@@ -158,20 +166,18 @@ public class VideoService {
         if (ownerId == null) {
             throw new AuthenticationRequiredException();
         }
-        //Peticion sin cambios
+        if (!video.getOwner().getId().equals(ownerId)) {
+            throw new VideoAccessDeniedException("Solo puedes editar videos propios.");
+        }
+        // Missing fields retain their values; explicit categoryId:null clears it.
         if (request == null
-                || (request.title() == null && request.description() == null)) {
+                || (request.title() == null && request.description() == null
+                    && request.tags() == null && !request.categorySupplied())) {
             throw new VideoUpdateException(
-                    "Debes indicar un título o una descripción."
+                    "Debes indicar al menos un campo editable."
             );
         }
 
-        // 1. Comprobar que video.getOwner().getId() coincide con ownerId.
-        if (!video.getOwner().getId().equals(ownerId)) {
-            throw new VideoAccessDeniedException(
-                    "Solo puedes editar videos propios."
-            );
-        }
         // 2. Validar los campos recibidos.
         if (request.title()!=null && (request.title().isBlank() || request.title().length()>255)){
             throw new VideoUpdateException(
@@ -184,6 +190,17 @@ public class VideoService {
 
         }
 
+        Category category = video.getCategory();
+        if (request.categorySupplied()) {
+            category = request.categoryId() == null ? null : entityManager.find(Category.class, request.categoryId());
+            if (request.categoryId() != null && category == null) {
+                throw new VideoUpdateException("La categoría seleccionada no existe.");
+            }
+        }
+        if (request.tags() != null && request.tags().stream().anyMatch(java.util.Objects::isNull)) {
+            throw new VideoUpdateException("Las etiquetas deben ser textos, sin valores nulos.");
+        }
+
         // 3. Actualizar solo los campos distintos de null.
 
 
@@ -194,9 +211,22 @@ public class VideoService {
         if (request.description() != null) {
             video.setDescription(request.description());
         }
-        // 4. Devolver los datos actualizados mediante el mapper.
+        if (request.tags() != null) {
+            var metadata = new LinkedHashMap<>(video.getSourceMetadata());
+            metadata.put("tags", request.tags().stream().map(String::trim)
+                    .filter(tag -> !tag.isEmpty()).distinct().toList());
+            video.setSourceMetadata(metadata);
+        }
+        if (request.categorySupplied()) video.setCategory(category);
+        // Return the authoritative detail, including normalized tags and category.
 
-        return VideoMapper.toUploadResponse(video);
+        return getVideoById(videoId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryResponse> getCategories() {
+        return entityManager.createQuery("select c from Category c order by c.name, c.id", Category.class)
+                .getResultStream().map(c -> new CategoryResponse(c.getId(), c.getName())).toList();
     }
 
     @Transactional

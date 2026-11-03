@@ -527,7 +527,9 @@ h2 {
   font-weight: var(--weight-medium);
 }
 
-.form-field input {
+.form-field input,
+.form-field select,
+.form-field textarea {
   width: 100%;
   min-width: 0;
   min-height: var(--control-min);
@@ -538,12 +540,22 @@ h2 {
   background: var(--color-surface);
 }
 
-.form-field input[aria-invalid='true'] {
+.form-field input[aria-invalid='true'],
+.form-field select[aria-invalid='true'],
+.form-field textarea[aria-invalid='true'] {
   border-color: var(--color-error);
 }
 
 .field-error {
   color: var(--color-error);
+}
+
+.form-field textarea {
+  resize: vertical;
+}
+
+.form-field input[type='file'] {
+  overflow: hidden;
 }
 
 .form-field p {

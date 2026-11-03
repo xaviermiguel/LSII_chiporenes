@@ -62,8 +62,9 @@ un usuario obsoleto. Un error de red conserva la sesión conocida; un 401 la lim
 
 `ProtectedRoute` espera la recuperación y redirige visitantes a `#login`.
 Se aplica a `#profile`, `#upload` y `#videos/:id/edit`. Mi cuenta muestra el email;
-subida y edición reservan la ruta para sus futuras pantallas, sin implementar
-esas funcionalidades en esta tarea. Catálogo y reproducción siguen públicos.
+`#upload` contiene el [formulario de publicación](VIDEO_PUBLICATION.md);
+`#videos/:id/edit` contiene el [editor de metadatos](VIDEO_EDITING.md),
+disponible únicamente para el propietario. Catálogo y reproducción siguen públicos.
 
 Para implementar subida o edición, usar `const { request } = useSession()` y
 `await request('/videos', { method: 'POST', body: formData })` o

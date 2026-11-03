@@ -6,9 +6,10 @@ import type { VideoDetail as VideoDetailData } from '../types/Video';
 type VideoDetailProps = {
   videoId: number;
   onBack: () => void;
+  userId?: number;
 };
 
-export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
+export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
   const [video, setVideo] = useState<VideoDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,6 +87,12 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
         Volver al catálogo
       </button>
 
+      {userId !== undefined && userId === video.ownerId && (
+        <a className="button" href={`#videos/${video.id}/edit`}>
+          Editar vídeo
+        </a>
+      )}
+
       <div className="detail-heading">
         <p className="eyebrow">Ahora en ProTube</p>
         <h1>{video.title}</h1>
@@ -115,6 +122,10 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
         <p className="video-description">{video.description || 'Sin descripción'}</p>
       </section>
 
+      <section className="detail-section" aria-label="Categoría">
+        <h2>Categoría</h2>
+        <p>{video.category?.name || 'Sin categoría'}</p>
+      </section>
       <section className="detail-section" aria-label="Etiquetas">
         <h2>Tags</h2>
         {video.tags.length === 0 ? (
