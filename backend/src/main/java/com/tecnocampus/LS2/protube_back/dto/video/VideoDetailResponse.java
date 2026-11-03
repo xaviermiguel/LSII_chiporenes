@@ -12,6 +12,8 @@ public record VideoDetailResponse(
         String description,
         String videoUrl,
         List<String> tags,
-        List<CommentResponse> comments
+        List<CommentResponse> comments,
+        Long ownerId,
+        CategoryResponse category
 ) {
 }

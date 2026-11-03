@@ -42,7 +42,7 @@ class VideosControllerTest {
         var detail = new VideoDetailResponse(
                 45L, "Video", "Author", null, "1.webp",
                 "Description", "1.mp4", List.of("music"),
-                List.of(new CommentResponse(349L, "Comment", "Reader", Instant.EPOCH,null)));
+                List.of(new CommentResponse(349L, "Comment", "Reader", Instant.EPOCH,null)), 7L, null);
         when(videoService.getVideoById(45L)).thenReturn(detail);
 
         MockMvcBuilders.standaloneSetup(videosController).build()

@@ -9,7 +9,9 @@ El servicio reutiliza `VideoRepository`, la consulta ordenada de
 `CommentRepository` y `/media/**` de `MvcConfig`. Las URLs se generan con las rutas
 guardadas, no con la identidad de PostgreSQL. La lectura y el mapeo se realizan
 dentro de una transacción de solo lectura para resolver los autores registrados
-sin depender de Open EntityManager in View. Solo se exponen nombres públicos.
+sin depender de Open EntityManager in View. Se exponen nombres públicos y el ID
+del propietario, sin credenciales. El detalle incluye también la categoría
+actual; véase el [contrato de edición](VIDEO_EDITING.md).
 
 El detalle devuelve un `404` JSON `VIDEO_NOT_FOUND` si falta el registro o su
 archivo de vídeo. El recurso de medios devuelve su propio `404` si falta el archivo
