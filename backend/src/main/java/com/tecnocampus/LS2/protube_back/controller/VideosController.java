@@ -52,6 +52,10 @@ public class VideosController {
     public ResponseEntity<VideoDetailResponse> getVideoId(@PathVariable Long id) {
         return ResponseEntity.ok(videoService.getVideoById(id));
     }
+    @GetMapping("/categories")
+    public ResponseEntity<java.util.List<CategoryResponse>> getCategories() {
+        return ResponseEntity.ok(videoService.getCategories());
+    }
     @ExceptionHandler(VideoNotFoundException.class)
     public ResponseEntity<ApiError> videoNotFound(VideoNotFoundException exception) {
         return ResponseEntity.status(404).body(new ApiError("VIDEO_NOT_FOUND", exception.getMessage()));
@@ -100,7 +104,7 @@ public class VideosController {
             value = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<VideoUploadResponse> updateVideo(
+    public ResponseEntity<VideoDetailResponse> updateVideo(
             @PathVariable Long id,
             @AuthenticationPrincipal Long ownerId,
             @RequestBody VideoUpdateRequest request
@@ -116,6 +120,12 @@ public class VideosController {
         return ResponseEntity.badRequest().body(
                 new ApiError("INVALID_VIDEO_UPDATE", exception.getMessage())
         );
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> invalidRequest() {
+        return ResponseEntity.badRequest().body(new ApiError("INVALID_REQUEST",
+                "La solicitud contiene campos con un formato incorrecto."));
     }
 
     @ExceptionHandler(VideoAccessDeniedException.class)

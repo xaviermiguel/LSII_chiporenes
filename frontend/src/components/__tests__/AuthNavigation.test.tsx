@@ -18,6 +18,41 @@ jest.mock('../../videoPublication', () => ({
 jest.mock('../../useAllVideos', () => ({ useAllVideos: () => ({ value: [], loading: 'loaded', hasNext: false }) }));
 const user = { id: 1, displayName: 'Anna', email: 'anna@example.com' };
 
+test('edit route loads owner form and preserves draft through expiry and login', async () => {
+  const video = { id: 15, ownerId: 1, title: 'Original', description: 'Description', tags: ['tag'], category: null };
+  jest.mocked(currentUser).mockResolvedValue(user);
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, init) => {
+    if (init?.method === 'PATCH') {
+      jest.mocked(currentUser).mockResolvedValue(null);
+      throw new AuthError('AUTHENTICATION_REQUIRED', 401);
+    }
+    return { json: async () => (path === '/videos/categories' ? [] : video) } as Response;
+  });
+  window.history.replaceState(null, '', '/#videos/15/edit');
+  render(<App />);
+  expect(await screen.findByLabelText('Título *')).toHaveValue('Original');
+  fireEvent.change(screen.getByLabelText('Título *'), { target: { value: 'Draft after expiry' } });
+  fireEvent.change(screen.getByLabelText('Descripción *'), { target: { value: 'Draft description' } });
+  fireEvent.change(screen.getByLabelText('Etiquetas (opcional)'), { target: { value: 'draft tag' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+  await screen.findByRole('heading', { name: 'Inicia sesión' });
+  jest.mocked(authenticate).mockImplementation(async () => {
+    jest.mocked(currentUser).mockResolvedValue(user);
+    return user;
+  });
+  fireEvent.change(screen.getByLabelText('Email *'), { target: { value: user.email } });
+  fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Password1!' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+  await screen.findByText('Hola, Anna');
+  await act(async () => {
+    window.location.hash = 'videos/15/edit';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  expect(await screen.findByLabelText('Título *')).toHaveValue('Draft after expiry');
+  expect(screen.getByLabelText('Descripción *')).toHaveValue('Draft description');
+  expect(screen.getByLabelText('Etiquetas (opcional)')).toHaveValue('draft tag');
+});
+
 beforeEach(() => {
   jest.resetAllMocks();
   window.history.replaceState(null, '', '/');

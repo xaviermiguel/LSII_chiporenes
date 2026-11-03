@@ -5,6 +5,8 @@ import { AuthForm } from './components/AuthForm';
 import { SessionProvider, useSession } from './SessionContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { VideoPublication } from './components/VideoPublication';
+import { VideoEditing } from './components/VideoEditing';
+import type { EditingDraft } from './components/VideoEditing';
 import type { PublicationDraft } from './videoPublication';
 import type { AuthUser } from './auth';
 import { VideoDetail } from './components/VideoDetail.tsx';
@@ -13,12 +15,22 @@ import { getEnv } from './utils/Env';
 function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [page, setPage] = useState(window.location.hash);
+  const [editingDrafts, setEditingDrafts] = useState<Record<string, EditingDraft | undefined>>({});
   const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
     title: '',
     description: '',
     hadFile: false,
   });
   const { user, loading, sessionError, loggingOut, authenticated: setAuthenticated, logout } = useSession();
+  const editingId = /^#videos\/([^/]+)\/edit$/.exec(page)?.[1];
+  const draftKey = `${user?.id}:${editingId}`;
+
+  function openVideo(id: number) {
+    window.history.replaceState(null, '', '#contenido');
+    setPage('#contenido');
+    setSelectedVideoId(Number.isSafeInteger(id) && id > 0 ? id : null);
+    document.getElementById('contenido')?.focus();
+  }
 
   useEffect(() => {
     const navigate = () => {
@@ -120,10 +132,18 @@ function AppContent() {
                   document.getElementById('contenido')?.focus();
                 }}
               />
+            ) : editingId ? (
+              <VideoEditing
+                key={draftKey}
+                videoId={editingId}
+                draft={editingDrafts[draftKey]}
+                onDraft={(value) => setEditingDrafts((previous) => ({ ...previous, [draftKey]: value }))}
+                onBack={openVideo}
+              />
             ) : (
               <section>
-                <h1>{page === '#profile' ? 'Mi cuenta' : 'Editar vídeo'}</h1>
-                <p>{page === '#profile' ? user?.email : 'Esta función estará disponible con la gestión de vídeos.'}</p>
+                <h1>Mi cuenta</h1>
+                <p>{user?.email}</p>
               </section>
             )}
           </ProtectedRoute>
@@ -132,7 +152,7 @@ function AppContent() {
         ) : selectedVideoId === null ? (
           <ContentApp onSelectedVideo={setSelectedVideoId} />
         ) : (
-          <VideoDetail videoId={selectedVideoId} onBack={() => setSelectedVideoId(null)} />
+          <VideoDetail videoId={selectedVideoId} userId={user?.id} onBack={() => setSelectedVideoId(null)} />
         )}
       </main>
     </div>
