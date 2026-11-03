@@ -107,5 +107,18 @@ for (const width of [320, 1440]) {
     expect(await player.evaluate((element) => (element as HTMLVideoElement).error)).toBeNull();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.screenshot({ path: testInfo.outputPath(`published-playback-${width}.png`), fullPage: true });
+    await page.getByRole('link', { name: 'Mis vídeos', exact: true }).click();
+    await expect(page.getByRole('button', { name: `Ver ${title}`, exact: true })).toBeVisible();
+    await page.getByRole('link', { name: `Editar ${title}`, exact: true }).click();
+    const updatedTitle = `${title} editado`;
+    await page.getByLabel('Título *').fill(updatedTitle);
+    await page.getByLabel('Descripción *').fill('Descripción actualizada.');
+    await page.getByRole('button', { name: 'Guardar vídeo' }).click();
+    await expect(page.getByRole('status')).toHaveText('Vídeo actualizado.');
+    await page.reload();
+    await expect(page.getByLabel('Título *')).toHaveValue(updatedTitle);
+    await expect(page.getByLabel('Descripción *')).toHaveValue('Descripción actualizada.');
+    await page.getByRole('link', { name: 'Volver a mis vídeos' }).click();
+    await expect(page.getByRole('button', { name: `Ver ${updatedTitle}`, exact: true })).toBeVisible();
   });
 }

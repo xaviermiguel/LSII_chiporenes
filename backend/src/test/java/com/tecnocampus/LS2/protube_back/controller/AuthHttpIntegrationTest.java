@@ -355,6 +355,65 @@ class AuthHttpIntegrationTest {
         return client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
+    @Test
+    void editsOnlyCurrentProfileWithCsrfAndPersistsNormalizedFields() throws Exception {
+        var anonymous = new Browser();
+        assertEquals(401, anonymous.get("/api/auth/profile").statusCode());
+        assertEquals(401, anonymous.get("/api/videos/me").statusCode());
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        var before = json(browser.get("/api/auth/profile"));
+        String email = UUID.randomUUID() + "@example.com";
+        var body = Map.of("displayName", " Updated user ", "email", email.toUpperCase(), "description", " About me ");
+        assertEquals(403, browser.send("PATCH", "/api/auth/profile", mapper.writeValueAsString(body), Map.of()).statusCode());
+        var token = browser.csrf();
+        var updated = browser.send("PATCH", "/api/auth/profile", mapper.writeValueAsString(body), Map.of(token.headerName(), token.token()));
+        assertEquals(200, updated.statusCode(), updated.body());
+        assertEquals(before.path("id"), json(updated).path("id"));
+        assertEquals("Updated user", json(updated).path("displayName").asText());
+        assertEquals(email, json(updated).path("email").asText());
+        assertEquals("About me", json(browser.get("/api/auth/profile")).path("description").asText());
+        assertFalse(updated.body().contains("password"));
+        assertEquals(email, json(browser.get("/api/auth/me")).path("email").asText());
+    }
+
+    @Test
+    void rejectsDuplicateEmailAndInvalidProfileWithoutChangingStoredValues() throws Exception {
+        var first = new Browser(); var second = new Browser();
+        String taken = UUID.randomUUID() + "@example.com";
+        first.register(taken); second.register(UUID.randomUUID() + "@example.com");
+        var before = json(second.get("/api/auth/profile"));
+        var token = second.csrf();
+        for (var candidate : java.util.List.of(
+                Map.of("displayName", "Changed", "email", taken, "description", ""),
+                Map.of("displayName", " ", "email", taken, "description", ""),
+                Map.of("displayName", "Changed", "email", "invalid", "description", ""),
+                Map.of("displayName", "Changed", "email", UUID.randomUUID() + "@example.com", "description", "x".repeat(2001)))) {
+            var result = second.send("PATCH", "/api/auth/profile", mapper.writeValueAsString(candidate), Map.of(token.headerName(), token.token()));
+            assertTrue(result.statusCode() == 400 || result.statusCode() == 409, result.body());
+            assertEquals(before, json(second.get("/api/auth/profile")));
+        }
+    }
+
+    @Test
+    void changesPasswordOnlyWithCurrentPasswordAndClosesCurrentSession() throws Exception {
+        var browser = new Browser();
+        String email = UUID.randomUUID() + "@example.com";
+        browser.register(email);
+        var body = Map.of("currentPassword", "incorrect", "newPassword", "New-password1!", "confirmPassword", "New-password1!");
+        assertEquals(403, browser.post("/api/auth/password", body, null).statusCode());
+        var rejected = browser.post("/api/auth/password", body, browser.csrf());
+        assertEquals(400, rejected.statusCode());
+        assertEquals("CURRENT_PASSWORD_INVALID", json(rejected).path("code").asText());
+        assertEquals(200, browser.get("/api/auth/me").statusCode());
+        var invalid = browser.post("/api/auth/password", Map.of("currentPassword", PASSWORD, "newPassword", "short", "confirmPassword", "short"), browser.csrf());
+        assertEquals(400, invalid.statusCode());
+        assertEquals(204, browser.post("/api/auth/password", Map.of("currentPassword", PASSWORD, "newPassword", "New-password1!", "confirmPassword", "New-password1!"), browser.csrf()).statusCode());
+        assertEquals(401, browser.get("/api/auth/me").statusCode());
+        assertEquals(401, browser.post("/api/auth/login", Map.of("email", email, "password", PASSWORD), browser.csrf()).statusCode());
+        assertEquals(200, browser.post("/api/auth/login", Map.of("email", email, "password", "New-password1!"), browser.csrf()).statusCode());
+    }
+
     private static Path createStore() {
         try {
             var store = Files.createTempDirectory("protube-auth-http-");

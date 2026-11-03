@@ -42,6 +42,8 @@ public class AuthExceptionHandler {
             case EMAIL -> new ApiError("INVALID_EMAIL", "Introduce un email válido de hasta 254 caracteres.");
             case PASSWORD -> new ApiError("INVALID_PASSWORD",
                     "La contraseña debe tener entre 8 y 72 caracteres ASCII imprimibles, sin espacios al principio ni al final.");
+            case DESCRIPTION -> new ApiError("INVALID_DESCRIPTION", "La descripción admite hasta 2000 caracteres.");
+            case CURRENT_PASSWORD -> new ApiError("CURRENT_PASSWORD_INVALID", "La contraseña actual no es correcta.");
             case PASSWORD_CONFIRMATION -> new ApiError("PASSWORD_MISMATCH", "Las contraseñas no coinciden.");
         });
     }

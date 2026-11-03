@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AuthError, currentUser, signOut, authenticatedRequest } from './auth';
 import type { AuthUser } from './auth';
@@ -8,7 +8,7 @@ type Session = {
   loading: boolean;
   loggingOut: boolean;
   sessionError: string;
-  authenticated: (user: AuthUser) => void;
+  authenticated: (user: AuthUser | null) => void;
   logout: () => Promise<void>;
   request: (path: string, init?: RequestInit) => Promise<Response>;
 };
@@ -52,7 +52,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  function authenticated(value: AuthUser) {
+  function authenticated(value: AuthUser | null) {
     ++version.current;
     setUser(value);
     setLoading(false);
@@ -79,7 +79,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function request(path: string, init?: RequestInit) {
+  const request = useCallback(async (path: string, init?: RequestInit) => {
     const revision = version.current;
     try {
       return await authenticatedRequest(path, init);
@@ -91,7 +91,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
       throw error;
     }
-  }
+  }, []);
 
   return (
     <SessionContext.Provider value={{ user, loading, loggingOut, sessionError, authenticated, logout, request }}>

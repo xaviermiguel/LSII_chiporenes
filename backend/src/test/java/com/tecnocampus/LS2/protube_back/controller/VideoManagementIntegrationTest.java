@@ -269,6 +269,19 @@ class VideoManagementIntegrationTest {
         assertTrue(Files.exists(STORE.resolve(video.getThumbnailPath())));
     }
 
+    @Test
+    void onlyOwnerCanLoadEditFormAndOwnListRequiresAuthentication() throws Exception {
+        var owner = registered(); var other = registered();
+        long id = upload(owner, "Private edit form").path("id").asLong();
+        mvc.perform(get("/api/videos/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/videos/" + id + "/edit")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/videos/" + id + "/edit").session(other.session)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/videos/" + id + "/edit").session(owner.session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Private edit form"))
+                .andExpect(jsonPath("$.description").value("Description"));
+        mvc.perform(get("/api/videos/999999999/edit").session(owner.session)).andExpect(status().isNotFound());
+    }
+
     private Client registered() throws Exception {
         var client = new Client();
         var csrf = csrf(client);

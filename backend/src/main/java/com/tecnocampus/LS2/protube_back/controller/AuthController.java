@@ -1,6 +1,9 @@
 package com.tecnocampus.LS2.protube_back.controller;
 
 import com.tecnocampus.LS2.protube_back.dto.auth.AuthUserResponse;
+import com.tecnocampus.LS2.protube_back.dto.auth.ProfileRequest;
+import com.tecnocampus.LS2.protube_back.dto.auth.ProfileResponse;
+import com.tecnocampus.LS2.protube_back.dto.auth.PasswordRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.LoginRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
 import com.tecnocampus.LS2.protube_back.security.SessionAuthentication;
@@ -50,6 +53,24 @@ public class AuthController {
     @GetMapping("/me")
     public AuthUserResponse me(@AuthenticationPrincipal Long id) {
         return users.current(id);
+    }
+
+    @GetMapping("/profile")
+    public ProfileResponse profile(@AuthenticationPrincipal Long id) {
+        return users.profile(id);
+    }
+
+    @PatchMapping("/profile")
+    public ProfileResponse updateProfile(@AuthenticationPrincipal Long id, @RequestBody ProfileRequest body) {
+        return users.updateProfile(id, body);
+    }
+
+    @PostMapping("/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@AuthenticationPrincipal Long id, @RequestBody PasswordRequest body,
+                               HttpServletRequest request, HttpServletResponse response) {
+        users.changePassword(id, body);
+        sessions.signOut(request, response);
     }
 
     @PostMapping("/logout")

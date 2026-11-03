@@ -1,6 +1,9 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.auth.AuthUserResponse;
+import com.tecnocampus.LS2.protube_back.dto.auth.ProfileRequest;
+import com.tecnocampus.LS2.protube_back.dto.auth.ProfileResponse;
+import com.tecnocampus.LS2.protube_back.dto.auth.PasswordRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.LoginRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
 import com.tecnocampus.LS2.protube_back.model.User;
@@ -101,6 +104,68 @@ public class AuthService {
         }
         return users.findById(id).filter(User::isEnabled).map(AuthService::response)
                 .orElseThrow(AuthenticationRequiredException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileResponse profile(Long id) {
+        return profileResponse(requireUser(id));
+    }
+
+    @Transactional
+    public ProfileResponse updateProfile(Long id, ProfileRequest request) {
+        User user = requireUser(id);
+        if (request == null || blank(request.displayName()) || blank(request.email()) || request.description() == null) {
+            throw new AuthValidationException(AuthValidationException.Reason.MISSING_FIELDS);
+        }
+        String name = request.displayName().strip();
+        if (name.codePointCount(0, name.length()) > 30) {
+            throw new AuthValidationException(AuthValidationException.Reason.DISPLAY_NAME);
+        }
+        String email = normalizeEmail(request.email());
+        validateEmail(email);
+        if (request.description().length() > 2000) {
+            throw new AuthValidationException(AuthValidationException.Reason.DESCRIPTION);
+        }
+        if (users.findByEmailIgnoreCase(email).filter(other -> !other.getId().equals(id)).isPresent()) {
+            throw new DuplicateEmailException();
+        }
+        user.setDisplayName(name);
+        user.setEmail(email);
+        user.setDescription(request.description().strip());
+        try {
+            return profileResponse(users.saveAndFlush(user));
+        } catch (DataIntegrityViolationException exception) {
+            if (isDuplicateEmail(exception)) throw new DuplicateEmailException();
+            throw exception;
+        }
+    }
+
+    @Transactional
+    public void changePassword(Long id, PasswordRequest request) {
+        User user = requireUser(id);
+        if (request == null || blank(request.currentPassword()) || blank(request.newPassword()) || blank(request.confirmPassword())) {
+            throw new AuthValidationException(AuthValidationException.Reason.MISSING_FIELDS);
+        }
+        boolean validCurrent = request.currentPassword().length() <= 72
+                && request.currentPassword().chars().allMatch(c -> c >= 0x20 && c <= 0x7e);
+        if (!validCurrent || !passwords.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new AuthValidationException(AuthValidationException.Reason.CURRENT_PASSWORD);
+        }
+        validatePassword(request.newPassword());
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw new AuthValidationException(AuthValidationException.Reason.PASSWORD_CONFIRMATION);
+        }
+        user.setPasswordHash(passwords.encode(request.newPassword()));
+        users.saveAndFlush(user);
+    }
+
+    private User requireUser(Long id) {
+        if (id == null) throw new AuthenticationRequiredException();
+        return users.findById(id).filter(User::isEnabled).orElseThrow(AuthenticationRequiredException::new);
+    }
+
+    private static ProfileResponse profileResponse(User user) {
+        return new ProfileResponse(user.getId(), user.getDisplayName(), user.getEmail(), user.getDescription());
     }
 
     private static boolean blank(String value) {
