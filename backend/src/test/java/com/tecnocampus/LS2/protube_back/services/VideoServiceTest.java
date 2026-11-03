@@ -40,33 +40,43 @@ class VideoServiceTest {
     }
 
     @Test
-    void readsStoredSummariesUsingDatabasePagination() {
+    void filtersMissingMediaBeforePaginating() throws Exception {
         var first = new Video();
         first.setOwner(owner);
         first.setTitle("First video");
         first.setId(10L);
         first.setThumbnailPath("covers/first #1.webp");
+        first.setVideoPath("first.mp4");
+        Files.createDirectories(store.resolve("covers"));
+        Files.createFile(store.resolve(first.getThumbnailPath()));
+        Files.createFile(store.resolve(first.getVideoPath()));
         var second = new Video();
         second.setOwner(owner);
         second.setTitle("Second video");
         second.setThumbnailPath("second.webp");
-        var page = org.springframework.data.domain.PageRequest.of(0, 2);
-        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
-                new org.springframework.data.domain.SliceImpl<>(List.of(first, second), page, true));
-        var result = videoService.getVideos(0, 2);
-        assertEquals(List.of("First video", "Second video"), result.items().stream().map(
-                com.tecnocampus.LS2.protube_back.dto.video.VideoSummary::title).toList());
+        second.setVideoPath("second.mp4");
+        Files.createFile(store.resolve(second.getThumbnailPath()));
+        Files.createFile(store.resolve(second.getVideoPath()));
+        var missing = new Video();
+        missing.setVideoPath("missing.mp4");
+        missing.setThumbnailPath("second.webp");
+        var missingCover = new Video();
+        missingCover.setVideoPath("second.mp4");
+        missingCover.setThumbnailPath("missing.webp");
+        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(missing, first, missingCover, second));
+        var result = videoService.getVideos(0, 1);
+        assertEquals(1, result.items().size());
         assertEquals(10L, result.items().getFirst().id());
         assertEquals("/media/covers/first%20%231.webp", result.items().getFirst().thumbnailUrl());
         org.junit.jupiter.api.Assertions.assertTrue(result.hasNext());
-        verify(repository).findAllByOrderByIdAsc(page);
+        var last = videoService.getVideos(1, 1);
+        assertEquals(List.of("Second video"), last.items().stream().map(item -> item.title()).toList());
+        assertFalse(last.hasNext());
     }
 
     @Test
     void returnsEmptyCatalogWithoutInventingData() {
-        var page = org.springframework.data.domain.PageRequest.of(0, 12);
-        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
-                new org.springframework.data.domain.SliceImpl<>(List.of(), page, false));
+        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of());
         var result = videoService.getVideos(0, 12);
         assertEquals(List.of(), result.items());
         org.junit.jupiter.api.Assertions.assertFalse(result.hasNext());
@@ -147,15 +157,14 @@ class VideoServiceTest {
     @Test
     void authorSelectionIsConsistentForSummaryAndDetail() throws Exception {
         Files.write(store.resolve("author.mp4"), new byte[]{1});
+        Files.createFile(store.resolve("author.webp"));
         var video = new Video();
         video.setOwner(owner);
         video.setId(91L);
         video.setVideoPath("author.mp4");
         video.setThumbnailPath("author.webp");
         video.setExternalAuthor("Original channel");
-        var page = org.springframework.data.domain.PageRequest.of(0, 12);
-        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
-                new org.springframework.data.domain.SliceImpl<>(List.of(video), page, false));
+        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(video));
         when(repository.findById(91L)).thenReturn(Optional.of(video));
         when(commentRepository.findByVideoIdOrderByCreatedAtAscIdAsc(91L)).thenReturn(List.of());
 

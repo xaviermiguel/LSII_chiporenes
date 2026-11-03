@@ -1,5 +1,13 @@
 # Layered API and PostgreSQL entities
 
+## Local catalog availability and playback (2026-11-03)
+
+Reuses the catalog and playback scope. The user requested hiding videos whose
+media files are unavailable and committing the result to `feat/backend_videos`.
+Filter before pagination using stored paths, preserving the database records.
+Resolve the detail player's media URL against the page origin for same-origin builds.
+Update existing catalog tests for missing files and pagination.
+
 ## Video management regression tests (2026-10-31)
 
 Reuses this prompt's approved layered API and backend testing scope.

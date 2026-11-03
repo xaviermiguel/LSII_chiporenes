@@ -77,7 +77,8 @@ export function VideoDetail({ videoId, onBack }: VideoDetailProps) {
     );
   }
 
-  const videoSrc = new URL(video.videoUrl, `${getEnv().MEDIA_BASE_URL}/`).href;
+  const mediaBase = new URL(`${getEnv().MEDIA_BASE_URL}/`, window.location.href);
+  const videoSrc = new URL(video.videoUrl, mediaBase).href;
 
   return (
     <section className="video-detail">

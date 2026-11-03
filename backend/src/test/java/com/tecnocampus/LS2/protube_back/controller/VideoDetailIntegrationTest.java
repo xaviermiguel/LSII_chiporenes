@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -242,7 +243,7 @@ class VideoDetailIntegrationTest {
         assertTrue(videos.findAll().stream().allMatch(video -> video.getOwner().getId().equals(1L)));
         var response = mvc.perform(get("/api/videos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items.length()").value(3))
+                .andExpect(jsonPath("$.items.length()").value(2))
                 .andExpect(jsonPath("$.items[0].user").value("Test channel"))
                 .andReturn().getResponse().getContentAsString();
         assertFalse(response.contains("password"));
@@ -262,8 +263,11 @@ class VideoDetailIntegrationTest {
     @Test
     void loadsAllPagesInIdOrderWithoutDuplicatesAndStopsAtTheEnd() throws Exception {
         var expected = new java.util.ArrayList<Long>();
+        videos.saveAndFlush(video("missing-page-video.mp4", "Unavailable video"));
         for (int i = 0; i < 5; i++) {
-            expected.add(videos.saveAndFlush(video("page-" + i + ".mp4", "Same title")).getId());
+            String path = "page-" + i + ".mp4";
+            Files.write(STORE.resolve(path), VIDEO_BYTES).toFile().deleteOnExit();
+            expected.add(videos.saveAndFlush(video(path, "Same title")).getId());
         }
         entityManager.clear();
         var actual = new java.util.ArrayList<Long>();
@@ -348,6 +352,10 @@ class VideoDetailIntegrationTest {
             Files.createDirectory(store.resolve("covers")).toFile().deleteOnExit();
             Files.write(store.resolve(VIDEO_PATH), VIDEO_BYTES).toFile().deleteOnExit();
             Files.write(store.resolve(THUMBNAIL_PATH), THUMBNAIL_BYTES).toFile().deleteOnExit();
+            for (String file : List.of("first-list-video.mp4", "second-list-video.mp4",
+                    "fixture.mp4", "fixture.mp4.second", "fixture.webp")) {
+                Files.createFile(store.resolve(file)).toFile().deleteOnExit();
+            }
             return store;
         } catch (IOException exception) {
             throw new ExceptionInInitializerError(exception);

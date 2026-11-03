@@ -39,11 +39,25 @@ public class VideoService {
 
     @Transactional(readOnly = true)
     public VideoPage getVideos(int page, int size) {
-        var videos = videoRepository.findAllByOrderByIdAsc(PageRequest.of(page, size));
-        var items = videos.map(video -> new VideoSummary(video.getId(), video.getTitle(),
-                displayedAuthor(video),
-                video.getDurationSeconds(), mediaUrl(video.getThumbnailPath()))).getContent();
-        return new VideoPage(items, page, size, videos.hasNext());
+        long offset = (long) page * size;
+
+        var items = videoRepository.findAllByOrderByIdAsc().stream()
+                .filter(this::hasAvailableMedia)
+                .skip(offset)
+                .limit((long) size + 1)
+                .map(video -> new VideoSummary(
+                        video.getId(),
+                        video.getTitle(),
+                        displayedAuthor(video),
+                        video.getDurationSeconds(),
+                        mediaUrl(video.getThumbnailPath())
+                ))
+                .toList();
+
+        boolean hasNext = items.size() > size;
+        var pageItems = hasNext ? items.subList(0, size) : items;
+
+        return new VideoPage(pageItems, page, size, hasNext);
     }
 
     private String mediaUrl(String relativePath) {
@@ -224,6 +238,31 @@ public class VideoService {
                 }
         );
     }
+    //Revisar que el video contiene al menos un archivo
+    private boolean isStoredFileAvailable(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return false;
+        }
+
+        try {
+            Path storedPath = Path.of(relativePath);
+            Path file = store.resolve(storedPath).normalize();
+
+            return !storedPath.isAbsolute()
+                    && file.startsWith(store)
+                    && Files.isRegularFile(file)
+                    && Files.isReadable(file)
+                    && file.toRealPath().startsWith(store.toRealPath());
+        } catch (IOException | InvalidPathException exception) {
+            return false;
+        }
+    }
+    //Coomporbación video completo
+    private boolean hasAvailableMedia(Video video) {
+        return isStoredFileAvailable(video.getVideoPath())
+                && isStoredFileAvailable(video.getThumbnailPath());
+    }
+
     private void deleteStoredFile(String relativePath) {
         try {
             Path storedPath = Path.of(relativePath);
