@@ -528,6 +528,7 @@ h2 {
 }
 
 .form-field input,
+.form-field select,
 .form-field textarea {
   width: 100%;
   min-width: 0;
@@ -540,6 +541,7 @@ h2 {
 }
 
 .form-field input[aria-invalid='true'],
+.form-field select[aria-invalid='true'],
 .form-field textarea[aria-invalid='true'] {
   border-color: var(--color-error);
 }
