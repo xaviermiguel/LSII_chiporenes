@@ -210,6 +210,8 @@ class VideoDetailIntegrationTest {
 
     @Test
     void listsPersistedPublicSummariesOrderedByIdWithoutAuthentication() throws Exception {
+        Files.write(STORE.resolve("first-list-video.mp4"), VIDEO_BYTES).toFile().deleteOnExit();
+        Files.write(STORE.resolve("second-list-video.mp4"), VIDEO_BYTES).toFile().deleteOnExit();
         var first = videos.saveAndFlush(video("first-list-video.mp4", "Z title saved first"));
         first.setOwner(user("catalog-owner@example.test", "Catalog owner"));
         videos.saveAndFlush(first);
@@ -238,11 +240,14 @@ class VideoDetailIntegrationTest {
     @Test
     @Sql("/e2e-data.sql")
     void e2eFixturesHaveOwnersAndExposeOnlyPublicAuthorData() throws Exception {
+        for (String filename : Set.of("fixture.mp4", "fixture.mp4.second", "fixture.webp")) {
+            Files.write(STORE.resolve(filename), VIDEO_BYTES).toFile().deleteOnExit();
+        }
         assertEquals(3, videos.count());
         assertTrue(videos.findAll().stream().allMatch(video -> video.getOwner().getId().equals(1L)));
         var response = mvc.perform(get("/api/videos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items.length()").value(3))
+                .andExpect(jsonPath("$.items.length()").value(2))
                 .andExpect(jsonPath("$.items[0].user").value("Test channel"))
                 .andReturn().getResponse().getContentAsString();
         assertFalse(response.contains("password"));
@@ -263,7 +268,9 @@ class VideoDetailIntegrationTest {
     void loadsAllPagesInIdOrderWithoutDuplicatesAndStopsAtTheEnd() throws Exception {
         var expected = new java.util.ArrayList<Long>();
         for (int i = 0; i < 5; i++) {
-            expected.add(videos.saveAndFlush(video("page-" + i + ".mp4", "Same title")).getId());
+            String path = "page-" + i + ".mp4";
+            Files.write(STORE.resolve(path), VIDEO_BYTES).toFile().deleteOnExit();
+            expected.add(videos.saveAndFlush(video(path, "Same title")).getId());
         }
         entityManager.clear();
         var actual = new java.util.ArrayList<Long>();

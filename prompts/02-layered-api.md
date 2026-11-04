@@ -1558,3 +1558,11 @@ Validation: Maven offline test -Dtest=VideoUploadServiceTest with Java 21:
 The tests exercise the user's pending service changes, which are not included
 in this test-only commit. File bytes are synthetic fixtures, not media decoding
 or format validation tests.
+
+## Public catalog availability fix (2026-11-04)
+
+Reuses this prompt's approved catalog API, service and testing scope.
+User request: "Osea, porque tengo algunos sin miniatura y sin video, solo con el titulo, quieor que no se muestren en frontend !"
+Exclude public catalog entries whose video or thumbnail is missing, unreadable or empty
+in the configured store. Apply pagination after checking availability, preserve the
+public response shape, and verify the behavior with isolated service and browser fixtures.

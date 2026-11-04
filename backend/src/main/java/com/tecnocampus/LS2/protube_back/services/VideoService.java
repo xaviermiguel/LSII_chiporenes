@@ -44,11 +44,18 @@ public class VideoService {
 
     @Transactional(readOnly = true)
     public VideoPage getVideos(int page, int size) {
-        var videos = videoRepository.findAllByOrderByIdAsc(PageRequest.of(page, size));
-        var items = videos.map(video -> new VideoSummary(video.getId(), video.getTitle(),
-                displayedAuthor(video),
-                video.getDurationSeconds(), mediaUrl(video.getThumbnailPath()))).getContent();
-        return new VideoPage(items, page, size, videos.hasNext());
+        long offset = PageRequest.of(page, size).getOffset();
+        var available = videoRepository.findAllByOrderByIdAsc().stream()
+                .filter(video -> isStoredFileAvailable(video.getVideoPath())
+                        && isStoredFileAvailable(video.getThumbnailPath()))
+                .skip(offset)
+                .limit(size + 1L)
+                .toList();
+        var items = available.stream().limit(size)
+                .map(video -> new VideoSummary(video.getId(), video.getTitle(), displayedAuthor(video),
+                        video.getDurationSeconds(), mediaUrl(video.getThumbnailPath())))
+                .toList();
+        return new VideoPage(items, page, size, available.size() > size);
     }
 
     private String mediaUrl(String relativePath) {
@@ -108,17 +115,24 @@ public class VideoService {
     }
 
     private void requireVideoFile(String relativePath) {
+        if (!isStoredFileAvailable(relativePath)) {
+            throw new VideoNotFoundException("El archivo del vídeo no está disponible.");
+        }
+    }
+
+    private boolean isStoredFileAvailable(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return false;
+        }
         try {
             Path storedPath = Path.of(relativePath);
             Path file = store.resolve(storedPath).normalize();
-            if (!storedPath.isAbsolute() && file.startsWith(store) && Files.isRegularFile(file)
-                    && Files.isReadable(file) && file.toRealPath().startsWith(store.toRealPath())) {
-                return;
-            }
+            return !storedPath.isAbsolute() && file.startsWith(store) && Files.isRegularFile(file)
+                    && Files.isReadable(file) && file.toRealPath().startsWith(store.toRealPath())
+                    && Files.size(file) > 0;
         } catch (IOException | InvalidPathException exception) {
-            // A missing, invalid or inaccessible resource is unavailable to the player.
+            return false;
         }
-        throw new VideoNotFoundException("El archivo del vídeo no está disponible.");
     }
 
 

@@ -40,38 +40,46 @@ class VideoServiceTest {
     }
 
     @Test
-    void readsStoredSummariesUsingDatabasePagination() {
-        var first = new Video();
-        first.setOwner(owner);
-        first.setTitle("First video");
-        first.setId(10L);
-        first.setThumbnailPath("covers/first #1.webp");
-        var second = new Video();
-        second.setOwner(owner);
-        second.setTitle("Second video");
-        second.setThumbnailPath("second.webp");
-        var page = org.springframework.data.domain.PageRequest.of(0, 2);
-        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
-                new org.springframework.data.domain.SliceImpl<>(List.of(first, second), page, true));
-        var result = videoService.getVideos(0, 2);
-        assertEquals(List.of("First video", "Second video"), result.items().stream().map(
-                com.tecnocampus.LS2.protube_back.dto.video.VideoSummary::title).toList());
-        assertEquals(10L, result.items().getFirst().id());
-        assertEquals("/media/covers/first%20%231.webp", result.items().getFirst().thumbnailUrl());
-        org.junit.jupiter.api.Assertions.assertTrue(result.hasNext());
-        verify(repository).findAllByOrderByIdAsc(page);
+    void paginatesOnlyVideosWithBothFiles() throws Exception {
+        Files.createDirectories(store.resolve("covers"));
+        Files.write(store.resolve("covers/first #1.webp"), new byte[]{1});
+        Files.write(store.resolve("video.mp4"), new byte[]{1});
+        Files.createFile(store.resolve("empty.webp"));
+
+        var first = catalogVideo(10L, "video.mp4", "covers/first #1.webp");
+        var missingVideo = catalogVideo(11L, "missing.mp4", "covers/first #1.webp");
+        var missingCover = catalogVideo(12L, "video.mp4", "missing.webp");
+        var emptyCover = catalogVideo(13L, "video.mp4", "empty.webp");
+        var second = catalogVideo(14L, "video.mp4", "covers/first #1.webp");
+        when(repository.findAllByOrderByIdAsc())
+                .thenReturn(List.of(first, missingVideo, missingCover, emptyCover, second));
+
+        var firstPage = videoService.getVideos(0, 1);
+        assertEquals(10L, firstPage.items().getFirst().id());
+        assertEquals("/media/covers/first%20%231.webp", firstPage.items().getFirst().thumbnailUrl());
+        assertTrue(firstPage.hasNext());
+
+        var secondPage = videoService.getVideos(1, 1);
+        assertEquals(14L, secondPage.items().getFirst().id());
+        assertFalse(secondPage.hasNext());
+    }
+
+    private Video catalogVideo(long id, String videoPath, String thumbnailPath) {
+        var video = new Video();
+        video.setId(id);
+        video.setOwner(owner);
+        video.setVideoPath(videoPath);
+        video.setThumbnailPath(thumbnailPath);
+        return video;
     }
 
     @Test
     void returnsEmptyCatalogWithoutInventingData() {
-        var page = org.springframework.data.domain.PageRequest.of(0, 12);
-        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
-                new org.springframework.data.domain.SliceImpl<>(List.of(), page, false));
+        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of());
         var result = videoService.getVideos(0, 12);
         assertEquals(List.of(), result.items());
-        org.junit.jupiter.api.Assertions.assertFalse(result.hasNext());
+        assertFalse(result.hasNext());
     }
-
 
     @Test
     void rejectsMissingVideoBeforeReadingComments() {
@@ -153,9 +161,8 @@ class VideoServiceTest {
         video.setVideoPath("author.mp4");
         video.setThumbnailPath("author.webp");
         video.setExternalAuthor("Original channel");
-        var page = org.springframework.data.domain.PageRequest.of(0, 12);
-        when(repository.findAllByOrderByIdAsc(page)).thenReturn(
-                new org.springframework.data.domain.SliceImpl<>(List.of(video), page, false));
+        Files.write(store.resolve("author.webp"), new byte[]{1});
+        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(video));
         when(repository.findById(91L)).thenReturn(Optional.of(video));
         when(commentRepository.findByVideoIdOrderByCreatedAtAscIdAsc(91L)).thenReturn(List.of());
 
