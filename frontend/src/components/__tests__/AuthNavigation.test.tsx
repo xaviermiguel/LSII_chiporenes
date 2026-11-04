@@ -153,7 +153,7 @@ test('waits for recovery before showing a protected screen and preserves session
   window.history.replaceState(null, '', '/#profile');
   render(<App />);
   expect(screen.getByText('Comprobando sesión…')).toBeInTheDocument();
-  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(user.email)).not.toBeInTheDocument();
   await act(async () => finish(user));
   expect(await screen.findByDisplayValue(user.email)).toBeInTheDocument();
   await act(async () => {
@@ -172,7 +172,7 @@ test('expiry removes protected content and redirects to login', async () => {
   jest.mocked(currentUser).mockResolvedValue(null);
   fireEvent(window, new Event('focus'));
   expect(await screen.findByRole('heading', { name: 'Inicia sesión' })).toBeInTheDocument();
-  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(user.email)).not.toBeInTheDocument();
 });
 
 test('recovery failure keeps public catalog accessible and retries on focus', async () => {

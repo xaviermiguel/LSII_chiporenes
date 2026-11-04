@@ -5,7 +5,7 @@ import { AuthForm } from './components/AuthForm';
 import { SessionProvider, useSession } from './SessionContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AccountProfile } from './components/AccountProfile';
-import { MyVideos, EditVideo } from './components/MyVideos';
+import { MyVideos } from './components/MyVideos';
 import { VideoPublication } from './components/VideoPublication';
 import { VideoEditing } from './components/VideoEditing';
 import type { EditingDraft } from './components/VideoEditing';
@@ -152,11 +152,17 @@ function AppContent() {
                 onDraft={(value) => setEditingDrafts((previous) => ({ ...previous, [draftKey]: value }))}
                 onBack={openVideo}
               />
+            ) : page === '#profile' ? (
+              <AccountProfile
+                onPasswordChanged={() => {
+                  setAuthenticated(null);
+                  setAccountNotice('Contraseña actualizada. Inicia sesión con tu nueva contraseña.');
+                  setPage('#login');
+                  window.location.hash = 'login';
+                }}
+              />
             ) : (
-              <section>
-                <h1>Mi cuenta</h1>
-                <p>{user?.email}</p>
-              </section>
+              <MyVideos onOpen={openVideo} />
             )}
           </ProtectedRoute>
         ) : page === '#login' || page === '#register' ? (

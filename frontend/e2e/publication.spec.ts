@@ -113,12 +113,12 @@ for (const width of [320, 1440]) {
     const updatedTitle = `${title} editado`;
     await page.getByLabel('Título *').fill(updatedTitle);
     await page.getByLabel('Descripción *').fill('Descripción actualizada.');
-    await page.getByRole('button', { name: 'Guardar vídeo' }).click();
-    await expect(page.getByRole('status')).toHaveText('Vídeo actualizado.');
+    await page.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(page.getByRole('status')).toHaveText('Cambios guardados correctamente.');
     await page.reload();
     await expect(page.getByLabel('Título *')).toHaveValue(updatedTitle);
     await expect(page.getByLabel('Descripción *')).toHaveValue('Descripción actualizada.');
-    await page.getByRole('link', { name: 'Volver a mis vídeos' }).click();
+    await page.getByRole('link', { name: 'Mis vídeos', exact: true }).click();
     await expect(page.getByRole('button', { name: `Ver ${updatedTitle}`, exact: true })).toBeVisible();
   });
 }

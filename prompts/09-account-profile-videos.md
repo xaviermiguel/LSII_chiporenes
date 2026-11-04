@@ -42,3 +42,12 @@ existe en esa instancia (5432); la configuración privada está preparada, pero
 su arranque local queda pendiente de recuperar la instancia o el rol correcto.
 No se han modificado usuarios, contraseñas ni configuración del servidor local.
 GitHub Actions no se ha ejecutado remotamente.
+
+## CI fixes after merging main (2026-11-04)
+
+Reuses the approved account, profile and own-videos scope above.
+User request: "Podrias hacer la solución comentada y hacer las comprobaciones pertinentes".
+Restore the VideoMapper import and the profile and own-videos routes dropped
+by the merge. Preserve the editor from main and align the navigation and
+publication assertions with the restored profile and current editor.
+Run frontend checks, Playwright and Maven verification with an isolated PostgreSQL.

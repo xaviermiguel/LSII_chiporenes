@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.video.*;
+import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.model.Category;
 import jakarta.persistence.EntityManager;
