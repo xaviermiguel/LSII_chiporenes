@@ -57,6 +57,7 @@ beforeEach(() => {
   jest.resetAllMocks();
   window.history.replaceState(null, '', '/');
   jest.mocked(currentUser).mockResolvedValue(null);
+  jest.mocked(authenticatedRequest).mockResolvedValue({ json: async () => ({ ...user, description: '' }) } as Response);
 });
 
 test.each(['login', 'register'])('%s navigates home and updates header after access', async (mode) => {
@@ -152,9 +153,9 @@ test('waits for recovery before showing a protected screen and preserves session
   window.history.replaceState(null, '', '/#profile');
   render(<App />);
   expect(screen.getByText('Comprobando sesión…')).toBeInTheDocument();
-  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(user.email)).not.toBeInTheDocument();
   await act(async () => finish(user));
-  expect(screen.getByText(user.email)).toBeInTheDocument();
+  expect(await screen.findByDisplayValue(user.email)).toBeInTheDocument();
   await act(async () => {
     window.location.hash = 'contenido';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -164,13 +165,14 @@ test('waits for recovery before showing a protected screen and preserves session
 });
 
 test('expiry removes protected content and redirects to login', async () => {
-  jest.mocked(currentUser).mockResolvedValueOnce(user).mockResolvedValue(null);
+  jest.mocked(currentUser).mockResolvedValue(user);
   window.history.replaceState(null, '', '/#profile');
   render(<App />);
-  await screen.findByText(user.email);
+  await screen.findByDisplayValue(user.email);
+  jest.mocked(currentUser).mockResolvedValue(null);
   fireEvent(window, new Event('focus'));
   expect(await screen.findByRole('heading', { name: 'Inicia sesión' })).toBeInTheDocument();
-  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(user.email)).not.toBeInTheDocument();
 });
 
 test('recovery failure keeps public catalog accessible and retries on focus', async () => {

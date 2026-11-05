@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.video.*;
+import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.model.Category;
 import jakarta.persistence.EntityManager;
@@ -124,6 +125,7 @@ public class VideoService {
 
     @Transactional(readOnly = true)
     public VideoPage getMyVideos(Long ownerId, int page, int size) {
+        if (ownerId == null) throw new AuthenticationRequiredException();
         var videos = videoRepository.findByOwnerIdOrderByIdDesc(
                 ownerId,
                 PageRequest.of(page, size)
@@ -139,6 +141,16 @@ public class VideoService {
 
         return new VideoPage(items, page, size, videos.hasNext());
     }
+    @Transactional(readOnly = true)
+    public VideoUploadResponse getOwnVideoForEdit(Long videoId, Long ownerId) {
+        if (ownerId == null) throw new AuthenticationRequiredException();
+        var video = videoRepository.findById(videoId).orElseThrow(VideoNotFoundException::new);
+        if (!video.getOwner().getId().equals(ownerId)) {
+            throw new VideoAccessDeniedException("Solo puedes editar vídeos propios.");
+        }
+        return VideoMapper.toUploadResponse(video);
+    }
+
     @Transactional
     public VideoDetailResponse updateVideo(
             Long videoId,

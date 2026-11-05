@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { AuthForm } from './components/AuthForm';
 import { SessionProvider, useSession } from './SessionContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AccountProfile } from './components/AccountProfile';
+import { MyVideos } from './components/MyVideos';
 import { VideoPublication } from './components/VideoPublication';
 import { VideoEditing } from './components/VideoEditing';
 import type { EditingDraft } from './components/VideoEditing';
@@ -14,6 +16,7 @@ import { getEnv } from './utils/Env';
 
 function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+  const [accountNotice, setAccountNotice] = useState('');
   const [page, setPage] = useState(window.location.hash);
   const [editingDrafts, setEditingDrafts] = useState<Record<string, EditingDraft | undefined>>({});
   const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
@@ -44,6 +47,7 @@ function AppContent() {
 
   function authenticated(value: AuthUser) {
     setAuthenticated(value);
+    setAccountNotice('');
     setSelectedVideoId(null);
     setPage('#contenido');
     window.location.hash = 'contenido';
@@ -89,6 +93,9 @@ function AppContent() {
                 <a className="nav-link" href="#upload">
                   Publicar vídeo
                 </a>
+                <a className="nav-link" href="#my-videos">
+                  Mis vídeos
+                </a>
                 <a className="nav-link" href="#profile">
                   Mi cuenta
                 </a>
@@ -114,12 +121,17 @@ function AppContent() {
         </div>
       </header>
       <main id="contenido" className="app-container main-content" tabIndex={-1}>
+        {accountNotice && (
+          <p className="status-message" role="status">
+            {accountNotice}
+          </p>
+        )}
         {sessionError && (
           <p className="status-message status-error" role="alert">
             {sessionError}
           </p>
         )}
-        {page === '#profile' || page === '#upload' || /^#videos\/[^/]+\/edit$/.test(page) ? (
+        {page === '#profile' || page === '#my-videos' || page === '#upload' || /^#videos\/[^/]+\/edit$/.test(page) ? (
           <ProtectedRoute>
             {page === '#upload' ? (
               <VideoPublication
@@ -140,11 +152,17 @@ function AppContent() {
                 onDraft={(value) => setEditingDrafts((previous) => ({ ...previous, [draftKey]: value }))}
                 onBack={openVideo}
               />
+            ) : page === '#profile' ? (
+              <AccountProfile
+                onPasswordChanged={() => {
+                  setAuthenticated(null);
+                  setAccountNotice('Contraseña actualizada. Inicia sesión con tu nueva contraseña.');
+                  setPage('#login');
+                  window.location.hash = 'login';
+                }}
+              />
             ) : (
-              <section>
-                <h1>Mi cuenta</h1>
-                <p>{user?.email}</p>
-              </section>
+              <MyVideos onOpen={openVideo} />
             )}
           </ProtectedRoute>
         ) : page === '#login' || page === '#register' ? (

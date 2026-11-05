@@ -589,3 +589,44 @@ h2 {
     padding: var(--space-4);
   }
 }
+
+.account-page > p {
+  margin-block: var(--space-4);
+}
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+}
+.account-panel {
+  min-width: 0;
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.account-panel fieldset {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin-top: var(--space-5);
+}
+.account-panel > p {
+  margin-top: var(--space-3);
+}
+.account-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  flex-wrap: wrap;
+}
+.owned-video {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}

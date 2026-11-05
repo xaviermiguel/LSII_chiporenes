@@ -100,6 +100,11 @@ public class VideosController {
                 videoService.getMyVideos(ownerId, page, size)
         );
     }
+    @GetMapping("/{id}/edit")
+    public VideoUploadResponse getOwnVideoForEdit(@PathVariable Long id, @AuthenticationPrincipal Long ownerId) {
+        return videoService.getOwnVideoForEdit(id, ownerId);
+    }
+
     @PatchMapping(
             value = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE
