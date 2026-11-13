@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecnocampus.LS2.protube_back.controller.exceptions.AuthExceptionHandler;
 import com.tecnocampus.LS2.protube_back.security.SessionAuthentication;
 import com.tecnocampus.LS2.protube_back.services.AuthService;
+import com.tecnocampus.LS2.protube_back.services.AvatarService;
 import com.tecnocampus.LS2.protube_back.services.exceptions.AuthValidationException;
 import com.tecnocampus.LS2.protube_back.services.exceptions.AuthenticationRequiredException;
 import com.tecnocampus.LS2.protube_back.services.exceptions.DuplicateEmailException;
@@ -16,6 +17,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -27,8 +30,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AuthExceptionHandlerTest {
     private final AuthService service = mock(AuthService.class);
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new AuthController(service,
-                    mock(SessionAuthentication.class), mock(AuthenticationManager.class)))
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(
+            new AuthController(
+                    service,
+                    mock(SessionAuthentication.class),
+                    mock(AuthenticationManager.class),
+                    mock (AvatarService.class)))
             .setControllerAdvice(new AuthExceptionHandler()).build();
 
     static Stream<Arguments> failures() {

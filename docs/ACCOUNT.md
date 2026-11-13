@@ -23,6 +23,8 @@ No incluye borrado ni cambios de archivos. Catálogo y reproducción siguen púb
 
 | Método | Ruta | Uso |
 |---|---|---|
+| GET | `/api/users/{id}` | Perfil público por ID de usuario. Devuelve 200 o 404 si la cuenta no existe. |
+| PUT | `/api/auth/profile/avatar` | Cambia el avatar de la cuenta autenticada. Recibe `avatar` en `multipart/form-data` y devuelve 204 si se guarda. |
 | GET | `/api/auth/profile` | Perfil privado del usuario actual |
 | PATCH | `/api/auth/profile` | `displayName`, `email`, `description` |
 | POST | `/api/auth/password` | `currentPassword`, `newPassword`, `confirmPassword`; 204 y logout |
@@ -30,8 +32,24 @@ No incluye borrado ni cambios de archivos. Catálogo y reproducción siguen púb
 | GET | `/api/videos/:id/edit` | Título y descripción; exclusivo del propietario |
 | PATCH | `/api/videos/:id` | Actualización existente, exclusiva del propietario |
 
-Todas requieren sesión. Las escrituras requieren CSRF. Las respuestas del perfil
-no incluyen hash ni contraseña. Los DTO se separan del modelo persistente.
+`GET /api/users/{id}` admite consultas sin sesión. Devuelve `id`,
+`displayName`, `description` y `avatarURL`. El perfil privado también incluye
+el correo de la cuenta. Las respuestas de perfil excluyen la contraseña, su hash
+y las credenciales de sesión. El resto de las rutas de la tabla requieren sesión
+y las escrituras requieren un token CSRF válido.
+
+Para cambiar el avatar, envía `PUT /api/auth/profile/avatar` con el campo
+`avatar` de tipo archivo. La API acepta imágenes JPEG o PNG válidas de hasta
+2 MiB y 4096 × 4096 píxeles. Guarda un PNG de hasta 256 × 256 píxeles con la
+proporción original. Un archivo ausente o inválido devuelve 400. El límite
+de 2 MiB del avatar devuelve 413 al superarse. Si se rechaza la subida, el
+perfil conserva el avatar anterior.
+
+La consulta pública devuelve la ruta relativa del avatar personalizado en
+`avatarURL`. Las cuentas sin avatar personalizado reciben
+`/assets/avatar-default.png`. PostgreSQL guarda la referencia y el archivo se
+almacena en la subcarpeta `avatars` de `ENV_PROTUBE_STORE_DIR`.
+
 Se reutiliza `useSession().request`, ampliado para admitir query strings de
 paginación sin permitir orígenes externos ni fragmentos.
 
@@ -56,3 +74,13 @@ y `npm run lint`. Los recorridos `npm run test:e2e` verifican las pantallas de
 cuenta a 320/1440 px, recarga, cambio de contraseña y nuevo login. El recorrido
 de publicación también comprueba listado propio y edición persistente del vídeo.
 Todas estas pruebas usan bases y archivos aislados.
+
+Las pruebas de integración de consulta pública, edición con dos cuentas y
+subida de avatar pasaron en Maven. La prueba del avatar cubre la subida
+válida, los rechazos con 400 y 413 y la conservación del avatar anterior.
+
+La descripción y la URL del avatar se conservaron en una comprobación manual
+tras reiniciar el backend conectado a PostgreSQL. La prueba automatizada
+`AuthPostgresTest#profileUpdateCommitsToPostgres` compila y queda pendiente
+de ejecución. El trabajo `postgres-tests` de CI configura su propia base
+PostgreSQL de pruebas y activa `RUN_POSTGRES_TESTS`.

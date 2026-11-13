@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import com.tecnocampus.LS2.protube_back.dto.auth.ProfileRequest;
 
 import java.sql.SQLException;
 import java.util.Locale;
@@ -263,4 +264,6 @@ class AuthServiceTest {
         var error = assertThrows(AuthValidationException.class, action);
         assertEquals(reason, error.reason());
     }
+
+
 }

@@ -12,6 +12,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @RestControllerAdvice(assignableTypes = AuthController.class)
 public class AuthExceptionHandler {
@@ -48,7 +50,11 @@ public class AuthExceptionHandler {
         });
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, HttpMediaTypeNotSupportedException.class})
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            HttpMediaTypeNotSupportedException.class,
+            MissingServletRequestPartException.class
+    })
     ResponseEntity<ApiError> malformed() {
         return ResponseEntity.badRequest().body(invalidRequestError());
     }
@@ -62,6 +68,15 @@ public class AuthExceptionHandler {
     private static ApiError invalidRequestError() {
         return new ApiError("INVALID_REQUEST",
                 "La solicitud contiene campos obligatorios ausentes o un formato incorrecto.");
+    }
+    @ExceptionHandler(ResponseStatusException.class)
+    ResponseEntity<ApiError> responseStatus(ResponseStatusException exception) {
+        if (exception.getStatusCode().is5xxServerError()) {
+            return unexpected();
+        }
+
+        return ResponseEntity.status(exception.getStatusCode())
+                .body(new ApiError("INVALID_REQUEST", exception.getReason()));
     }
 
 }

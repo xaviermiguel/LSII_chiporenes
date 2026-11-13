@@ -1,5 +1,6 @@
 package com.tecnocampus.LS2.protube_back.services;
 
+import com.tecnocampus.LS2.protube_back.dto.auth.ProfileRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
 import com.tecnocampus.LS2.protube_back.services.exceptions.DuplicateEmailException;
 import org.junit.jupiter.api.AfterEach;
@@ -160,5 +161,25 @@ class AuthPostgresTest {
 
     private long count(String email) {
         return jdbc.queryForObject("select count(*) from public.users where lower(email) = ?", Long.class, email);
+    }
+    //Subida y validacion del avatar
+    @Test
+    void profileUpdateCommitsToPostgres() {
+        assertTrue(jdbc.queryForObject("select version()", String.class).contains("PostgreSQL"));
+
+        String email = uniqueEmail();
+        var account = auth.register(request("Nombre inicial", email));
+
+        auth.updateProfile(account.id(),
+                new ProfileRequest(" Nombre actualizado ", email, " Descripción persistida "));
+
+        var stored = jdbc.queryForMap("""
+            select display_name, description
+            from public.users
+            where id = ?
+            """, account.id());
+
+        assertEquals("Nombre actualizado", stored.get("display_name"));
+        assertEquals("Descripción persistida", stored.get("description"));
     }
 }
