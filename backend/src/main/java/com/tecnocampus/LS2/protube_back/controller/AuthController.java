@@ -8,6 +8,7 @@ import com.tecnocampus.LS2.protube_back.dto.auth.LoginRequest;
 import com.tecnocampus.LS2.protube_back.dto.auth.RegisterRequest;
 import com.tecnocampus.LS2.protube_back.security.SessionAuthentication;
 import com.tecnocampus.LS2.protube_back.services.AuthService;
+import com.tecnocampus.LS2.protube_back.services.AvatarService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,11 +26,13 @@ public class AuthController {
     private final AuthService users;
     private final SessionAuthentication sessions;
     private final AuthenticationManager authentication;
+    private final AvatarService avatars;
 
-    public AuthController(AuthService users, SessionAuthentication sessions, AuthenticationManager authentication) {
+    public AuthController(AuthService users, SessionAuthentication sessions, AuthenticationManager authentication, AvatarService avatars) {
         this.users = users;
         this.sessions = sessions;
         this.authentication = authentication;
+        this.avatars = avatars;
     }
 
     @PostMapping("/register")
@@ -64,6 +69,12 @@ public class AuthController {
     public ProfileResponse updateProfile(@AuthenticationPrincipal Long id, @RequestBody ProfileRequest body) {
         return users.updateProfile(id, body);
     }
+    @PutMapping(path = "/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateAvatar(@AuthenticationPrincipal Long id,
+                             @RequestParam("avatar") MultipartFile avatar) {
+        avatars.updateAvatar(id, avatar);
+    }
 
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -85,4 +96,8 @@ public class AuthController {
     }
 
     public record CsrfResponse(String token, String headerName) {}
+
+
+
+
 }

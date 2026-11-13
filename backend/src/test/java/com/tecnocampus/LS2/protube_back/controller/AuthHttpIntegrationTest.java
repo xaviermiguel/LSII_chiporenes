@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -377,6 +379,128 @@ class AuthHttpIntegrationTest {
         assertEquals(email, json(browser.get("/api/auth/me")).path("email").asText());
     }
 
+    @Test //Test de consulta datos publicos cuenta
+    void exposesOnlyPublicProfileFieldsWithoutAuthentication() throws Exception {
+        var registered = new Browser();
+        registered.register(UUID.randomUUID() + "@example.com");
+
+        var currentUser = registered.get("/api/auth/me");
+        assertEquals(200, currentUser.statusCode(), currentUser.body());
+        long userId = json(currentUser).get("id").asLong();
+
+        var anonymous = new Browser();
+        var response = anonymous.get("/api/users/" + userId);
+
+        assertEquals(200, response.statusCode(), response.body());
+        var profile = json(response);
+
+        assertAll(
+                () -> assertEquals(4, profile.size(), response.body()),
+                () -> assertEquals(userId, profile.get("id").asLong()),
+                () -> assertEquals("Public user", profile.get("displayName").asText()),
+                () -> assertEquals("", profile.get("description").asText()),
+                () -> assertEquals("/assets/avatar-default.png", profile.get("avatarURL").asText())
+        );
+
+        var missing = anonymous.get("/api/users/" + Long.MAX_VALUE);
+        assertEquals(404, missing.statusCode(), missing.body());
+    }
+    //Test permisos entre cuentas
+    @Test
+    void updatesOnlyAuthenticatedProfileWhenBodyContainsAnotherUserId() throws Exception {
+        var accountA = new Browser();
+        accountA.register(UUID.randomUUID() + "@example.com");
+
+        var responseA = accountA.get("/api/auth/me");
+        assertEquals(200, responseA.statusCode(), responseA.body());
+        long idA = json(responseA).get("id").asLong();
+
+        var accountB = new Browser();
+        String emailB = UUID.randomUUID() + "@example.com";
+        accountB.register(emailB);
+
+        var responseB = accountB.get("/api/auth/me");
+        assertEquals(200, responseB.statusCode(), responseB.body());
+        long idB = json(responseB).get("id").asLong();
+        assertNotEquals(idA, idB);
+
+        var anonymous = new Browser();
+        var beforeA = anonymous.get("/api/users/" + idA);
+        assertEquals(200, beforeA.statusCode(), beforeA.body());
+
+        String newDescription = "Prueba de perfil B";
+        var body = Map.of(
+                "id", idA,
+                "displayName", "Public user",
+                "email", emailB,
+                "description", newDescription
+        );
+
+        var csrf = accountB.csrf();
+        var updated = accountB.send(
+                "PATCH",
+                "/api/auth/profile",
+                mapper.writeValueAsString(body),
+                Map.of(csrf.headerName(), csrf.token())
+        );
+
+        assertEquals(200, updated.statusCode(), updated.body());
+        assertEquals(idB, json(updated).get("id").asLong());
+
+        var afterB = anonymous.get("/api/users/" + idB);
+        assertEquals(200, afterB.statusCode(), afterB.body());
+        assertEquals(newDescription, json(afterB).get("description").asText());
+
+        var afterA = anonymous.get("/api/users/" + idA);
+        assertEquals(200, afterA.statusCode(), afterA.body());
+        assertEquals(json(beforeA), json(afterA));
+    }
+    //Test automatizacion subida y validación avatar
+    @Test
+    void uploadsAvatarAndPreservesItAfterRejectedUploads() throws Exception {
+        var accountA = new Browser();
+        accountA.register(UUID.randomUUID() + "@example.com");
+        long idA = json(accountA.get("/api/auth/me")).get("id").asLong();
+
+        var accountB = new Browser();
+        accountB.register(UUID.randomUUID() + "@example.com");
+        long idB = json(accountB.get("/api/auth/me")).get("id").asLong();
+
+        byte[] png;
+        try (var input = getClass().getResourceAsStream("/static/assets/avatar-default.png")) {
+            assertNotNull(input, "Falta el PNG de prueba");
+            png = input.readAllBytes();
+        }
+
+        var uploaded = accountB.putAvatar(png);
+        assertEquals(204, uploaded.statusCode(), uploaded.body());
+
+        var anonymous = new Browser();
+        var profileB = anonymous.get("/api/users/" + idB);
+        assertEquals(200, profileB.statusCode(), profileB.body());
+        String avatarUrl = json(profileB).get("avatarURL").asText();
+        assertTrue(avatarUrl.startsWith("/media/avatars/"), avatarUrl);
+
+        var image = anonymous.get(avatarUrl);
+        assertEquals(200, image.statusCode());
+        assertEquals("image/png", image.headers().firstValue("Content-Type").orElse(""));
+
+        var invalid = accountB.putAvatar("Esto no es un PNG".getBytes(StandardCharsets.UTF_8));
+        assertEquals(400, invalid.statusCode(), invalid.body());
+        assertEquals(avatarUrl,
+                json(anonymous.get("/api/users/" + idB)).get("avatarURL").asText());
+
+        byte[] oversized = Arrays.copyOf(png, 2 * 1024 * 1024 + 1);
+        var tooLarge = accountB.putAvatar(oversized);
+        assertEquals(413, tooLarge.statusCode(), tooLarge.body());
+        assertEquals(avatarUrl,
+                json(anonymous.get("/api/users/" + idB)).get("avatarURL").asText());
+
+        assertEquals("/assets/avatar-default.png",
+                json(anonymous.get("/api/users/" + idA)).get("avatarURL").asText());
+    }
+
+
     @Test
     void rejectsDuplicateEmailAndInvalidProfileWithoutChangingStoredValues() throws Exception {
         var first = new Browser(); var second = new Browser();
@@ -466,6 +590,30 @@ class AuthHttpIntegrationTest {
             var response = post("/api/auth/register", Map.of("displayName", "Public user", "email", email,
                     "password", PASSWORD, "confirmPassword", PASSWORD), csrf());
             assertEquals(201, response.statusCode(), response.body());
+        }
+
+        HttpResponse<String> putAvatar(byte[] bytes) throws IOException, InterruptedException {
+            var csrf = csrf();
+            String boundary = "avatar-" + UUID.randomUUID();
+            String prefix = "--" + boundary + "\r\n"
+                    + "Content-Disposition: form-data; name=\"avatar\"; filename=\"avatar.png\"\r\n"
+                    + "Content-Type: image/png\r\n\r\n";
+            String suffix = "\r\n--" + boundary + "--\r\n";
+
+            var body = HttpRequest.BodyPublishers.concat(
+                    HttpRequest.BodyPublishers.ofString(prefix),
+                    HttpRequest.BodyPublishers.ofByteArray(bytes),
+                    HttpRequest.BodyPublishers.ofString(suffix)
+            );
+
+            var request = HttpRequest.newBuilder(
+                            URI.create("http://localhost:" + port + "/api/auth/profile/avatar"))
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .header(csrf.headerName(), csrf.token())
+                    .PUT(body)
+                    .build();
+
+            return client.send(request, HttpResponse.BodyHandlers.ofString());
         }
     }
 
