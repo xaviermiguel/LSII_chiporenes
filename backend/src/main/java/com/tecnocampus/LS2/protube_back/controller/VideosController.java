@@ -4,16 +4,16 @@ import com.tecnocampus.LS2.protube_back.dto.video.*;
 import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import com.tecnocampus.LS2.protube_back.services.VideoUploadService;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoAccessDeniedException;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.*;
 import com.tecnocampus.LS2.protube_back.dto.ApiError;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUpdateException;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUploadException;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.tecnocampus.LS2.protube_back.services.CommentService;
 
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -23,10 +23,18 @@ import java.net.URI;
 @RequestMapping("/api/videos")
 public class VideosController {
 
-    @Autowired
-    VideoService videoService;
-    @Autowired
-    private VideoUploadService videoUploadService;
+    private final VideoService videoService;
+    private final VideoUploadService videoUploadService;
+    private final CommentService commentService;
+
+    public VideosController(
+            VideoService videoService,
+            VideoUploadService videoUploadService,
+            CommentService commentService) {
+        this.videoService = videoService;
+        this.videoUploadService = videoUploadService;
+        this.commentService = commentService;
+    }
 
     @GetMapping("")
     public ResponseEntity<?> getVideos(@RequestParam(defaultValue = "0") int page,
@@ -149,8 +157,30 @@ public class VideosController {
         videoService.deleteVideo(id, ownerId);
         return ResponseEntity.noContent().build();
     }
+    //Publicar comentarios
+    @PostMapping (path ="/{id}/comments", consumes =
+    MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity <CommentResponse> publishComment (
+            @PathVariable ("id") Long videoId,
+            @AuthenticationPrincipal Long authorId,
+            @RequestBody PublishCommentRequest request
+    ){
+        var comment = commentService.publishComment(videoId,authorId,request.text());
+        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
+    }
+    @ExceptionHandler (InvalidCommentException.class)
+    public ResponseEntity<ApiError> invalidComment(InvalidCommentException exception) {
+        return ResponseEntity.badRequest().body(
+                new ApiError("INVALID_COMMENT",exception.getMessage()));
+    }
 
-
-
+    @ExceptionHandler(AuthenticationRequiredException.class)
+    public ResponseEntity<ApiError> authenticationRequired() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiError(
+                        "AUTHENTICATION_REQUIRED",
+                        "Debes iniciar sesión para realizar esta operación."
+                ));
+    }
 
 }

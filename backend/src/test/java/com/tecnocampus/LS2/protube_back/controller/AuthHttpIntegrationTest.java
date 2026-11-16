@@ -3,7 +3,9 @@ package com.tecnocampus.LS2.protube_back.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecnocampus.LS2.protube_back.model.User;
+import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
+import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -68,6 +71,7 @@ class AuthHttpIntegrationTest {
     @Autowired ObjectMapper mapper;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
+    @Autowired VideoRepository videos;
 
     @Test
     void registersNormalizesPersistsHashAndAuthenticatesAcrossRealHttpRequests() throws Exception {
@@ -499,6 +503,168 @@ class AuthHttpIntegrationTest {
         assertEquals("/assets/avatar-default.png",
                 json(anonymous.get("/api/users/" + idA)).get("avatarURL").asText());
     }
+    //Test de publicar commentario y devovler detalles
+    @Test
+    void publishesCommentAndReturnsItInVideoDetail() throws Exception {
+        long videoId = createTestVideo();
+        String videoPath = "/api/videos/" + videoId;
+        String text = "Comentario de integración";
+
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+
+        var currentUser = browser.get("/api/auth/me");
+        assertEquals(200, currentUser.statusCode(), currentUser.body());
+        String authorName = json(currentUser).path("displayName").asText();
+
+        var published = browser.post(
+                videoPath + "/comments",
+                Map.of("text", text),
+                browser.csrf()
+        );
+
+        assertEquals(201, published.statusCode(), published.body());
+        var comment = json(published);
+        long commentId = comment.path("id").asLong();
+        assertTrue(commentId > 0, published.body());
+        assertEquals(text, comment.path("text").asText());
+        assertEquals(authorName, comment.path("user").asText());
+        assertTrue(comment.path("parentId").isNull());
+
+        var detail = new Browser().get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+
+        var comments = json(detail).path("comments");
+        for (var stored : comments) {
+            if (stored.path("id").asLong() == commentId) {
+                assertEquals(text, stored.path("text").asText());
+                assertEquals(authorName, stored.path("user").asText());
+                return;
+            }
+        }
+
+        fail("El comentario " + commentId + " no aparece en el vídeo " + videoId);
+    }
+
+    private long createTestVideo() throws Exception {
+    var ownerBrowser = new Browser();
+    var registration = ownerBrowser.post(
+            "/api/auth/register",
+            Map.of (
+                    "displayName", "Propietario del vídeo",
+                    "email",UUID.randomUUID() + "@example.com",
+                    "password", PASSWORD,
+                    "confirmPassword",PASSWORD
+            ),
+            ownerBrowser.csrf()
+    );
+    assertEquals(201,registration.statusCode(),registration.body());
+    long ownerId = json (registration).path("id").asLong();
+    var owner = users.findById(ownerId).orElseThrow();
+
+    String filename = "comment-test-" + UUID.randomUUID() + ".mp4";
+    Path videoFile = STORE.resolve(filename);
+    Files.writeString(videoFile, "synthetic video");
+    videoFile.toFile().deleteOnExit();
+
+    var video = new Video();
+    video.setOwner(owner);
+    video.setTitle("Vídeo de prueba para comentarios");
+    video.setDescription("Vídeo para probar la publicación de comentarios");
+    video.setVideoPath(filename);
+    video.setThumbnailPath("comment-test.webp");
+
+    return videos.saveAndFlush(video).getId();
+    }
+    @Test
+    void validatesCommentTextAndAcceptsTheLengthLimit() throws Exception {
+        String videoPath = "/api/videos/" + createTestVideo();
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        var csrf = browser.csrf();
+
+        for (String invalidText : List.of("", "   ", "a".repeat(301))) {
+            var rejected = browser.post(videoPath + "/comments", Map.of("text", invalidText), csrf);
+            assertError(rejected, 400, "INVALID_COMMENT");
+        }
+
+        var detail = new Browser().get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+        assertEquals(0, json(detail).path("comments").size());
+
+        String maxLengthText = "a".repeat(300);
+        var accepted = browser.post(videoPath + "/comments", Map.of("text", maxLengthText), csrf);
+        assertEquals(201, accepted.statusCode(), accepted.body());
+        assertEquals(maxLengthText, json(accepted).path("text").asText());
+    }
+
+    @Test
+    void rejectsCommentOnMissingVideo() throws Exception {
+        long missingVideoId = Long.MAX_VALUE;
+        assertFalse(videos.existsById(missingVideoId));
+
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        var rejected = browser.post(
+                "/api/videos/" + missingVideoId + "/comments",
+                Map.of("text", "Comentario para un vídeo inexistente"),
+                browser.csrf()
+        );
+
+        assertError(rejected, 404, "VIDEO_NOT_FOUND");
+    }
+
+    @Test
+    void rejectsAnonymousCommentWithValidCsrf() throws Exception {
+        String videoPath = "/api/videos/" + createTestVideo();
+        var anonymous = new Browser();
+
+        var rejected = anonymous.post(
+                videoPath + "/comments",
+                Map.of("text", "Comentario sin iniciar sesión"),
+                anonymous.csrf()
+        );
+        assertError(rejected, 401, "AUTHENTICATION_REQUIRED");
+
+        var detail = anonymous.get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+        assertEquals(0, json(detail).path("comments").size());
+    }
+
+    @Test
+    void rejectsCommentFromDisabledUserWithExistingSession() throws Exception {
+        long videoId = createTestVideo();
+        String videoPath = "/api/videos/" + videoId;
+
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+
+        var currentUser = browser.get("/api/auth/me");
+        assertEquals(200, currentUser.statusCode(), currentUser.body());
+        long authorId = json(currentUser).path("id").asLong();
+        var csrf = browser.csrf();
+
+        var reader = new Browser();
+        var before = reader.get(videoPath);
+        assertEquals(200, before.statusCode(), before.body());
+        int commentCount = json(before).path("comments").size();
+
+        var author = users.findById(authorId).orElseThrow();
+        author.setEnabled(false);
+        users.saveAndFlush(author);
+
+        var rejected = browser.post(
+                videoPath + "/comments",
+                Map.of("text", "Comentario desde una cuenta deshabilitada"),
+                csrf
+        );
+        assertError(rejected, 401, "AUTHENTICATION_REQUIRED");
+
+        var after = reader.get(videoPath);
+        assertEquals(200, after.statusCode(), after.body());
+        assertEquals(commentCount, json(after).path("comments").size());
+    }
+
 
 
     @Test
@@ -633,4 +799,6 @@ class AuthHttpIntegrationTest {
             return Map.of("scheduled", true);
         }
     }
+
+
 }

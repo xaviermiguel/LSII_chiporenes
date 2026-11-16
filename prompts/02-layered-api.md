@@ -1558,3 +1558,12 @@ Validation: Maven offline test -Dtest=VideoUploadServiceTest with Java 21:
 The tests exercise the user's pending service changes, which are not included
 in this test-only commit. File bytes are synthetic fixtures, not media decoding
 or format validation tests.
+
+
+## Task 35 comment publication (2026-11-16)
+
+Reuses the layered API and backend testing scope. Add authenticated comment
+publication using the existing comment entity, repository and detail query.
+Validate blank and oversized text, verify session and video errors, and
+document the request, response and reading order. The user requested the
+integration test cases, documentation and a commit.
