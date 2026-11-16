@@ -90,3 +90,10 @@ recarga de ruta privada y catálogo/reproducción públicos. Maven verify offlin
 142 pruebas reportadas, 20 omitidas, cero fallos y JaCoCo aprobado. El perfil
 coverage no existe en el POM actual; JaCoCo se ejecuta en verify por defecto.
 GitHub Actions no se ha ejecutado remotamente. Cambio local en vars.py preservado.
+
+## E2E de autenticación en el PR de la tarea 35
+
+Reutiliza el alcance de pruebas de registro e inicio de sesión. La petición
+informa de un fallo en Playwright al abrir el PR. Espera a que aparezca el
+formulario de inicio de sesión tras cambiar de página antes de rellenarlo.
+Validación local: 18 pruebas del proyecto regression pasaron.
