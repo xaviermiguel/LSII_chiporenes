@@ -37,6 +37,17 @@ public class VideosController {
         return ResponseEntity.ok(videoService.getVideos(page, size));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<?> searchVideos(@RequestParam(defaultValue = "") String q,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "12") int size) {
+        if (page < 0 || size < 1 || size > 50) {
+            return ResponseEntity.badRequest().body(new ApiError("INVALID_PAGINATION",
+                    "page must be a nonnegative integer and size an integer between 1 and 50."));
+        }
+        return ResponseEntity.ok(videoService.searchVideos(q, page, size));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> invalidPaginationType(MethodArgumentTypeMismatchException exception) {
         if (!"page".equals(exception.getName()) && !"size".equals(exception.getName())) {

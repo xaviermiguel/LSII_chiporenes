@@ -52,6 +52,21 @@ public class VideoService {
         return new VideoPage(items, page, size, videos.hasNext());
     }
 
+    @Transactional(readOnly = true)
+    public VideoPage searchVideos(String query, int page, int size) {
+        String phrase = query.strip().toLowerCase(java.util.Locale.ROOT);
+        if (phrase.isEmpty()) {
+            return new VideoPage(List.of(), page, size, false);
+        }
+        String pattern = "%" + phrase.replace("!", "!!").replace("%", "!%")
+                .replace("_", "!_") + "%";
+        var videos = videoRepository.search(pattern, PageRequest.of(page, size));
+        var items = videos.map(video -> new VideoSummary(video.getId(), video.getTitle(),
+                displayedAuthor(video), video.getDurationSeconds(),
+                mediaUrl(video.getThumbnailPath()))).getContent();
+        return new VideoPage(items, page, size, videos.hasNext());
+    }
+
     private String mediaUrl(String relativePath) {
         // Encode the stored filename as a URL path, never derive it from the database ID.
         return UriUtils.encodePath("/media/" + relativePath.replace('\\', '/'), StandardCharsets.UTF_8);
