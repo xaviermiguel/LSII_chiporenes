@@ -13,6 +13,15 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VideoRepository extends JpaRepository<Video, Long> {
+    @Query("""
+        select v from Video v
+        where lower(v.title) like :pattern escape '!'
+           or lower(v.description) like :pattern escape '!'
+        order by case when lower(v.title) like :pattern escape '!' then 0 else 1 end,
+                 v.id asc
+        """)
+    Slice<Video> search(@Param("pattern") String pattern, Pageable pageable);
+
     List<Video> findAllByOrderByIdAsc();
     Slice<Video> findAllByOrderByIdAsc(Pageable pageable);
     Optional<Video> findByVideoPath(String videoPath);
