@@ -17,8 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -27,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 
 class AuthExceptionHandlerTest {
     private final AuthService service = mock(AuthService.class);
@@ -87,4 +87,5 @@ class AuthExceptionHandlerTest {
         }
         verifyNoInteractions(service);
     }
+
 }

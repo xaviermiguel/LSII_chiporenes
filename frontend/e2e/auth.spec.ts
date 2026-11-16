@@ -40,6 +40,7 @@ for (const width of [320, 1440]) {
     await expect(page.getByLabel('Email *')).toHaveAttribute('aria-invalid', 'true');
     await expect(page.getByLabel('Contraseña *', { exact: true })).toHaveValue('');
     await page.getByRole('link', { name: 'Iniciar sesión', exact: true }).last().click();
+    await expect(page.getByRole('heading', { name: 'Inicia sesión', exact: true })).toBeVisible();
     await page.getByLabel('Email *').fill(email);
     await page.getByLabel('Contraseña *', { exact: true }).fill('wrong-password');
     await page.getByRole('button', { name: 'Entrar' }).click();
