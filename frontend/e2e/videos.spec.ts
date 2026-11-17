@@ -17,7 +17,11 @@ test('real API returns video detail, comments and HTTP media ranges', async ({ r
   const response = await request.get(`${api}/api/videos/101`);
   expect(response.ok()).toBeTruthy();
   const detail = await response.json();
-  expect(detail).toMatchObject({ id: 101, title: 'E2E first video', comments: [{ text: 'E2E comment' }] });
+  expect(detail).toMatchObject({
+    id: 101,
+    title: 'E2E first video',
+    comments: expect.arrayContaining([expect.objectContaining({ text: 'E2E comment' })]),
+  });
   const media = await request.get(`${api}${detail.videoUrl}`, { headers: { Range: 'bytes=0-2' } });
   expect(media.status()).toBe(206);
   expect((await media.body()).toString()).toBe('syn');
@@ -100,4 +104,47 @@ test('anonymous visitor searches the real API by keyboard and opens the player a
   await result.press('Enter');
   await expect(page.getByRole('heading', { name: 'E2E first video' })).toBeVisible();
   await expect(page.locator('video')).toHaveAttribute('src', `${api}/media/fixture.mp4`);
+});
+
+test('signs in to reply with the keyboard and sees the saved reply after reload', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  const email = `reply-${Date.now()}-${testInfo.retry}@example.com`;
+  const password = 'Test-password1!';
+  const author = 'Violeta';
+  const text = `<script>Respuesta ${email}</script>`;
+  await page.goto('/#register');
+  await page.getByLabel('Nombre de usuario *').fill(author);
+  await page.getByLabel('Email *').fill(email);
+  await page.getByLabel('Contraseña *', { exact: true }).fill(password);
+  await page.getByLabel('Confirmar contraseña *').fill(password);
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Iniciar sesión' })).toBeVisible();
+
+  const video = page.getByRole('button', { name: 'E2E first video' });
+  await video.click();
+  const reply = page.getByRole('button', { name: 'Responder a Test commenter' });
+  await reply.press('Enter');
+  await expect(page.getByText('Inicia sesión para responder a este comentario.')).toBeFocused();
+  await page.getByLabel('Email *').fill(email);
+  await page.getByLabel('Contraseña *', { exact: true }).fill(password);
+  await page.getByLabel('Contraseña *', { exact: true }).press('Enter');
+  const editor = page.getByRole('textbox', { name: 'Responder a Test commenter' });
+  await expect(editor).toBeFocused();
+  await editor.fill(text);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  const response = page.waitForResponse((result) => result.url().endsWith('/replies') && result.status() === 201);
+  await editor.press('Tab');
+  const send = page.getByRole('button', { name: 'Enviar respuesta' });
+  await expect(send).toBeFocused();
+  await page.keyboard.press('Enter');
+  expect(await (await response).json()).toMatchObject({ user: author, text, parentId: expect.any(Number) });
+
+  const thread = page.getByRole('list', { name: 'Respuestas a Test commenter' });
+  const saved = thread.getByRole('listitem').filter({ hasText: text });
+  await expect(saved).toContainText(author);
+  await expect(saved.locator('script')).toHaveCount(0);
+  await page.reload();
+  await video.click();
+  await expect(saved).toContainText(author);
 });
