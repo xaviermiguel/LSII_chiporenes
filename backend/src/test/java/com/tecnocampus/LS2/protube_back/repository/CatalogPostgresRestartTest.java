@@ -2,6 +2,7 @@ package com.tecnocampus.LS2.protube_back.repository;
 
 import com.tecnocampus.LS2.protube_back.ProtubeBackApplication;
 import com.tecnocampus.LS2.protube_back.model.User;
+import com.tecnocampus.LS2.protube_back.services.CommentService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import org.junit.jupiter.api.Test;
@@ -32,13 +33,14 @@ class CatalogPostgresRestartTest {
     }
 
     @Test
-    void committedUserOwnershipVideoAndCommentSurviveApplicationRestart() {
+    void committedUserOwnershipVideoCommentAndReplySurviveApplicationRestart() {
         String path = "restart-test-" + UUID.randomUUID() + ".mp4";
         String email = "restart-" + UUID.randomUUID() + "@example.com";
         String hash = new BCryptPasswordEncoder(12).encode("Restart-test-password");
         Long videoId;
         Long commentId;
         Long ownerId;
+        Long replyId;
         try (var first = start()) {
             var transaction = new TransactionTemplate(first.getBean(PlatformTransactionManager.class));
             var ids = transaction.execute(status -> {
@@ -56,6 +58,8 @@ class CatalogPostgresRestartTest {
             videoId = ids[0];
             commentId = ids[1];
             ownerId = ids[2];
+            replyId = first.getBean(CommentService.class)
+                    .publishReply(videoId, commentId, ownerId, "Reply committed before restart").id();
         }
         // A new connection pool and EntityManagerFactory must read committed PostgreSQL data.
         try (var second = start()) {
@@ -78,6 +82,11 @@ class CatalogPostgresRestartTest {
                     assertEquals(videoId, comment.getVideo().getId());
                     assertEquals("Committed before restart", comment.getText());
                     assertEquals(3, comment.getSourceMetadata().get("like_count"));
+                    var reply = comments.findById(replyId).orElseThrow();
+                    assertEquals(commentId, reply.getParent().getId());
+                    assertEquals(videoId, reply.getVideoId());
+                    assertEquals(ownerId, reply.getAuthor().getId());
+                    assertEquals("Reply committed before restart", reply.getText());
                     var service = second.getBean(VideoService.class);
                     int page = 0;
                     boolean found = false;
@@ -92,6 +101,8 @@ class CatalogPostgresRestartTest {
             } finally {
                 // Only records inserted by this test; never truncate, drop, or delete another user's data.
                 transaction.executeWithoutResult(status -> {
+                    comments.deleteById(replyId);
+                    comments.flush();
                     comments.deleteById(commentId);
                     comments.flush();
                     videos.deleteById(videoId);

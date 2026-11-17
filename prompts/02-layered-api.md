@@ -1,5 +1,64 @@
 # Layered API and PostgreSQL entities
 
+## API de respuestas a comentarios (US-10)
+
+**Approved on:** 2026-11-17
+**Approved by:** El equipo, según confirmación del solicitante en esta conversación.
+**Used for:** Publicar, consultar y verificar la persistencia de respuestas a comentarios principales en el backend.
+
+### Prompt
+
+Implementa la funcionalidad de responder a comentarios principales en el backend
+de ProTube. Antes de modificar archivos, revisa los AGENTS.md aplicables y la
+documentación de comentarios, autenticación, persistencia, API, testing, prompts
+y Git. Inspecciona entidades, repositorios, servicios, controladores, DTOs,
+seguridad, pruebas y el modelo previsto para likes. Comprueba la rama y el
+estado local. Crea una rama exclusiva desde main actualizado, salvo dependencia
+justificada, y preserva cambios ajenos.
+
+Permite a un usuario autenticado publicar una respuesta asociada al autor de
+la sesión, al comentario principal y a su vídeo. Rechaza texto vacío, en blanco
+o demasiado largo, ausencia de autenticación válida, comentarios inexistentes,
+relaciones entre vídeos distintos e intentos de responder a otra respuesta.
+Devuelve los datos necesarios para mostrar las respuestas en orden estable,
+mantén compatible la consulta de comentarios principales y comprueba que las
+respuestas siguen disponibles después de reiniciar.
+
+Limita el alcance al backend. Reutiliza el modelo, seguridad, validaciones y
+contratos existentes. Excluye frontend, likes, edición, eliminación, varios
+niveles de anidación, refactors generales y dependencias innecesarias. Usa el
+sistema de migraciones existente si hace falta cambiar el esquema y conserva
+los datos anteriores. Consulta las decisiones de contrato imprescindibles que
+no puedan deducirse de la documentación o el código.
+
+Prueba publicación, autor autenticado, padre, vídeo, texto inválido,
+autenticación, padre inexistente o de otro vídeo, anidación, lectura ordenada,
+persistencia tras reinicio y compatibilidad de lectura y publicación de
+comentarios principales. Verifica PostgreSQL cuando la infraestructura lo
+permita. Ejecuta las comprobaciones del backend y CI, incluidas regresiones
+de comentarios, autenticación y vídeos. Corrige los fallos propios y verifica
+y documenta los ajenos sin ampliar el alcance.
+
+Actualiza solo la documentación necesaria y registra el prompt según
+`prompts/README.md`. Revisa la rama y el diff antes del commit. Aplica
+`commit-ai-change`, incluye US-10, el prompt y el uso de IA en el commit,
+haz push y abre un PR a main con la plantilla del repositorio. Respeta las
+aprobaciones y deja el PR pendiente de CI y revisión, sin merge. Resume
+documentación revisada, ramas, contrato, modelo, validaciones, persistencia,
+orden, compatibilidad, archivos, pruebas, limitaciones, prompt, commit, push,
+PR y estado de CI.
+
+### Contrato confirmado
+
+- `POST /api/videos/{videoId}/comments/{commentId}/replies` con `{"text":"…"}`,
+  sesión autenticada y CSRF. Devuelve `201 Created` con el DTO existente.
+- Aplica el límite de los comentarios principales (300 unidades UTF-16) y
+  las convenciones de errores HTTP existentes.
+- Usa `comments.parent_id` y conserva `GET /api/videos/{videoId}`, con
+  `createdAt` e `id` ascendentes. Admite únicamente padres de primer nivel.
+- Mantén `feat/comment-replies-api` y usa la infraestructura actual para
+  persistencia y lectura sin nuevos modelos, endpoints de lectura ni migraciones.
+
 ## Video management regression tests (2026-10-31)
 
 Reuses this prompt's approved layered API and backend testing scope.

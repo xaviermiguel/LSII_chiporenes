@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.model.Video;
+import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -72,6 +73,7 @@ class AuthHttpIntegrationTest {
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
     @Autowired VideoRepository videos;
+    @Autowired CommentRepository comments;
 
     @Test
     void registersNormalizesPersistsHashAndAuthenticatesAcrossRealHttpRequests() throws Exception {
@@ -544,6 +546,100 @@ class AuthHttpIntegrationTest {
         }
 
         fail("El comentario " + commentId + " no aparece en el vídeo " + videoId);
+    }
+
+    @Test
+    void publishesRepliesWithSessionAuthorAndReturnsThemInStableOrder() throws Exception {
+        long videoId = createTestVideo();
+        String videoPath = "/api/videos/" + videoId;
+        var parentAuthor = new Browser();
+        parentAuthor.register(UUID.randomUUID() + "@example.com");
+        long parentId = publishParent(parentAuthor, videoPath);
+        long parentAuthorId = json(parentAuthor.get("/api/auth/me")).path("id").asLong();
+
+        var replyAuthor = new Browser();
+        replyAuthor.register(UUID.randomUUID() + "@example.com");
+        var author = json(replyAuthor.get("/api/auth/me"));
+        String replyPath = videoPath + "/comments/" + parentId + "/replies";
+        String text = "😀".repeat(150);
+        var csrf = replyAuthor.csrf();
+        var first = replyAuthor.post(replyPath, Map.of("text", text, "authorId", parentAuthorId), csrf);
+        var second = replyAuthor.post(replyPath, Map.of("text", "Second reply"), csrf);
+        assertEquals(201, first.statusCode(), first.body());
+        assertEquals(201, second.statusCode(), second.body());
+        var reply = json(first);
+        long firstId = reply.path("id").asLong();
+        long secondId = json(second).path("id").asLong();
+        assertEquals(text, reply.path("text").asText());
+        assertEquals(author.path("displayName").asText(), reply.path("user").asText());
+        assertTrue(reply.path("createdAt").isTextual());
+        assertEquals(parentId, reply.path("parentId").asLong());
+
+        var stored = comments.findById(firstId).orElseThrow();
+        assertEquals(author.path("id").asLong(), stored.getAuthor().getId());
+        assertEquals(videoId, stored.getVideoId());
+        assertEquals(parentId, stored.getParentId());
+        var storedSecond = comments.findById(secondId).orElseThrow();
+        storedSecond.setCreatedAt(stored.getCreatedAt());
+        comments.saveAndFlush(storedSecond);
+
+        var detail = new Browser().get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+        var entries = json(detail).path("comments");
+        assertEquals(3, entries.size());
+        assertEquals(parentId, entries.get(0).path("id").asLong());
+        assertTrue(entries.get(0).path("parentId").isNull());
+        assertEquals(firstId, entries.get(1).path("id").asLong());
+        assertEquals(secondId, entries.get(2).path("id").asLong());
+        assertEquals(entries.get(1).path("createdAt"), entries.get(2).path("createdAt"));
+        assertEquals(parentId, entries.get(2).path("parentId").asLong());
+    }
+
+    @Test
+    void rejectsInvalidReplyRequestsWithoutCreatingComments() throws Exception {
+        long videoId = createTestVideo();
+        String videoPath = "/api/videos/" + videoId;
+        String otherVideoPath = "/api/videos/" + createTestVideo();
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        long parentId = publishParent(browser, videoPath);
+        String replyPath = videoPath + "/comments/" + parentId + "/replies";
+        var csrf = browser.csrf();
+        var body = Map.of("text", "A reply");
+
+        for (String invalid : List.of("", " \t\n", "😀".repeat(150) + "a")) {
+            assertError(browser.post(replyPath, Map.of("text", invalid), csrf), 400, "INVALID_COMMENT");
+        }
+        assertError(browser.post(replyPath, Map.of(), csrf), 400, "INVALID_COMMENT");
+        assertError(browser.post(replyPath, body, null), 403, "INVALID_CSRF_TOKEN");
+        var anonymous = new Browser();
+        assertError(anonymous.post(replyPath, body, anonymous.csrf()), 401, "AUTHENTICATION_REQUIRED");
+        assertError(browser.post(videoPath + "/comments/" + Long.MAX_VALUE + "/replies", body, csrf),
+                404, "COMMENT_NOT_FOUND");
+        assertError(browser.post(otherVideoPath + "/comments/" + parentId + "/replies", body, csrf),
+                404, "COMMENT_NOT_FOUND");
+        assertError(browser.post("/api/videos/" + Long.MAX_VALUE + "/comments/" + parentId + "/replies", body, csrf),
+                404, "VIDEO_NOT_FOUND");
+        var published = browser.post(replyPath, body, csrf);
+        assertEquals(201, published.statusCode(), published.body());
+        long replyId = json(published).path("id").asLong();
+        assertError(browser.post(videoPath + "/comments/" + replyId + "/replies", body, csrf),
+                400, "INVALID_COMMENT");
+
+        var author = users.findById(json(browser.get("/api/auth/me")).path("id").asLong()).orElseThrow();
+        author.setEnabled(false);
+        users.saveAndFlush(author);
+        assertError(browser.post(replyPath, body, csrf), 401, "AUTHENTICATION_REQUIRED");
+        assertEquals(2, json(anonymous.get(videoPath)).path("comments").size());
+        assertEquals(0, json(anonymous.get(otherVideoPath)).path("comments").size());
+    }
+
+    private long publishParent(Browser browser, String videoPath) throws Exception {
+        var response = browser.post(videoPath + "/comments", Map.of("text", "Parent comment"), browser.csrf());
+        assertEquals(201, response.statusCode(), response.body());
+        var parent = json(response);
+        assertTrue(parent.path("parentId").isNull());
+        return parent.path("id").asLong();
     }
 
     private long createTestVideo() throws Exception {
