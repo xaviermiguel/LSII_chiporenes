@@ -5,7 +5,7 @@ import type { VideoSummary, VideoListResponse } from './types/Video';
 
 type LoadingState = 'loading' | 'success' | 'error';
 
-export function useAllVideos() {
+export function useAllVideos(query?: string) {
   const [value, setValue] = useState<VideoSummary[]>([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState<LoadingState>('loading');
@@ -23,8 +23,10 @@ export function useAllVideos() {
     setMessage('');
 
     try {
-      const response = await axios.get<VideoListResponse>(`${getEnv().API_BASE_URL}/videos`, {
-        params: { page: nextPage.current, size: 12 },
+      const path = query === undefined ? '/videos' : '/videos/search';
+      const pagination = { page: nextPage.current, size: 12 };
+      const response = await axios.get<VideoListResponse>(`${getEnv().API_BASE_URL}${path}`, {
+        params: query === undefined ? pagination : { ...pagination, q: query },
         signal: controller.signal,
       });
 
@@ -43,13 +45,17 @@ export function useAllVideos() {
       if (controller.signal.aborted) return;
 
       setMessage(
-        axios.isAxiosError(error) ? `Error al cargar los vídeos: ${error.message}` : 'Error al cargar los vídeos'
+        query !== undefined
+          ? 'No se pudo realizar la búsqueda. Inténtalo de nuevo.'
+          : axios.isAxiosError(error)
+            ? `Error al cargar los vídeos: ${error.message}`
+            : 'Error al cargar los vídeos'
       );
       setLoading('error');
     } finally {
       if (request.current === controller) request.current = null;
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
     void loadMore();
