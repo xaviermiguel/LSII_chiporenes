@@ -214,6 +214,59 @@ class VideoManagementIntegrationTest {
     }
 
     @Test
+    void editTagsAndCategoryReturnsAuthoritativeDetailAndPreservesOtherMetadata() throws Exception {
+        var owner = registered();
+        long id = upload(owner, "Metadata").path("id").asLong();
+        long categoryId = new TransactionTemplate(transactions).execute(status -> {
+            var category = new com.tecnocampus.LS2.protube_back.model.Category();
+            category.setName("Editing-" + UUID.randomUUID());
+            var entityManager = org.springframework.orm.jpa.EntityManagerFactoryUtils
+                    .getTransactionalEntityManager(entityManagerFactory);
+            entityManager.persist(category);
+            var video = videos.findById(id).orElseThrow();
+            video.setSourceMetadata(new java.util.LinkedHashMap<>(Map.of("original", "preserved")));
+            return category.getId();
+        });
+        mvc.perform(get("/api/videos/categories"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.id == " + categoryId + ")]").exists());
+        mutate(owner, patch("/api/videos/" + id).content(mapper.writeValueAsString(Map.of(
+                "title", "Updated", "description", "Changed", "tags", java.util.List.of(" Java ", "Java", "", "a,b"),
+                "categoryId", categoryId))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ownerId").isNumber())
+                .andExpect(jsonPath("$.category.id").value(categoryId))
+                .andExpect(jsonPath("$.tags[0]").value("Java"))
+                .andExpect(jsonPath("$.tags[1]").value("a,b"))
+                .andExpect(jsonPath("$.tags.length()").value(2));
+        assertEquals("preserved", videos.findById(id).orElseThrow().getSourceMetadata().get("original"));
+        mutate(owner, patch("/api/videos/" + id).content("{\"title\":\"Partial\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.category.id").value(categoryId));
+        mvc.perform(get("/api/videos/" + id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Partial"))
+                .andExpect(jsonPath("$.tags[1]").value("a,b"));
+        mutate(owner, patch("/api/videos/" + id).content("{\"tags\":[],\"categoryId\":null}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.tags").isEmpty())
+                .andExpect(jsonPath("$.category").isEmpty());
+    }
+
+    @Autowired jakarta.persistence.EntityManagerFactory entityManagerFactory;
+
+    @Test
+    void invalidMetadataIsAtomicAndDoesNotBypassOwnership() throws Exception {
+        var owner = registered();
+        var other = registered();
+        long id = upload(owner, "Unchanged").path("id").asLong();
+        for (String body : new String[]{"{\"title\":\"Changed\",\"categoryId\":9223372036854775807}",
+                "{\"tags\":[null]}", "{\"tags\":[1]}", "{\"tags\":\"text\"}",
+                "{\"categoryId\":1.5}", "{\"categoryId\":\"1\"}", "{\"title\":false}"}) {
+            mutate(owner, patch("/api/videos/" + id).content(body)).andExpect(status().isBadRequest());
+        }
+        mutate(other, patch("/api/videos/" + id).content("{\"tags\":[\"forbidden\"],\"categoryId\":null}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("VIDEO_ACCESS_DENIED"));
+        assertEquals("Unchanged", videos.findById(id).orElseThrow().getTitle());
+    }
+
+    @Test
     void deleteRemovesDependentRowsAndFilesButPreservesOtherVideosAndUsers() throws Exception {
         var owner = registered();
         long id = upload(owner, "Delete").path("id").asLong();
@@ -267,6 +320,19 @@ class VideoManagementIntegrationTest {
         assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM public.video_views WHERE video_id=?", Integer.class, id));
         assertTrue(Files.exists(STORE.resolve(video.getVideoPath())));
         assertTrue(Files.exists(STORE.resolve(video.getThumbnailPath())));
+    }
+
+    @Test
+    void onlyOwnerCanLoadEditFormAndOwnListRequiresAuthentication() throws Exception {
+        var owner = registered(); var other = registered();
+        long id = upload(owner, "Private edit form").path("id").asLong();
+        mvc.perform(get("/api/videos/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/videos/" + id + "/edit")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/videos/" + id + "/edit").session(other.session)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/videos/" + id + "/edit").session(owner.session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Private edit form"))
+                .andExpect(jsonPath("$.description").value("Description"));
+        mvc.perform(get("/api/videos/999999999/edit").session(owner.session)).andExpect(status().isNotFound());
     }
 
     private Client registered() throws Exception {

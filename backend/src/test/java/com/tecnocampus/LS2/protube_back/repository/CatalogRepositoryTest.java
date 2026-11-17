@@ -119,6 +119,46 @@ class CatalogRepositoryTest {
     }
 
     @Test
+    void searchesPersistedPhrasesWithTitlePriorityAndStableDatabasePagination() {
+        var description = video("search-description.mp4", defaultOwner);
+        description.setTitle("Other");
+        description.setDescription("A blue sky today");
+        videos.saveAndFlush(description);
+        var first = video("search-first.mp4", defaultOwner);
+        first.setTitle("BLUE SKY");
+        first.setDescription("blue sky");
+        videos.saveAndFlush(first);
+        var second = video("search-second.mp4", defaultOwner);
+        second.setTitle("A blue sky today");
+        videos.saveAndFlush(second);
+        entityManager.clear();
+
+        var page = videos.search("%blue sky%", org.springframework.data.domain.PageRequest.of(0, 2));
+        assertEquals(java.util.List.of(first.getId(), second.getId()),
+                page.stream().map(Video::getId).toList());
+        assertTrue(page.hasNext());
+        var next = videos.search("%blue sky%", org.springframework.data.domain.PageRequest.of(1, 2));
+        assertEquals(java.util.List.of(description.getId()), next.stream().map(Video::getId).toList());
+        assertFalse(next.hasNext());
+        assertTrue(videos.search("%absent%", org.springframework.data.domain.PageRequest.of(0, 2)).isEmpty());
+    }
+
+    @Test
+    void searchPreservesAccentsAndEscapesSqlWildcards() {
+        var literal = video("search-literal.mp4", defaultOwner);
+        literal.setTitle("Café 100%_! ' OR 1=1 --");
+        videos.saveAndFlush(literal);
+        videos.saveAndFlush(video("search-unrelated.mp4", defaultOwner));
+        entityManager.clear();
+        var request = org.springframework.data.domain.PageRequest.of(0, 12);
+        for (String pattern : java.util.List.of("%café%", "%100!%!_!!%", "%' or 1=1 --%")) {
+            assertEquals(java.util.List.of(literal.getId()),
+                    videos.search(pattern, request).stream().map(Video::getId).toList());
+        }
+        assertTrue(videos.search("%cafe%", request).isEmpty());
+    }
+
+    @Test
     void rejectsVideoWithoutOwnerEvenWithExternalAuthor() {
         var video = video("missing-owner.mp4", null);
         assertNotNull(video.getExternalAuthor());

@@ -13,6 +13,15 @@ const detail = videoDetailsFixture[0];
 describe('Video detail under the shared visual standard', () => {
   beforeEach(() => jest.resetAllMocks());
 
+  it.each([1, 2, undefined])('only owner sees editing link (viewer %s)', async (userId) => {
+    get.mockResolvedValue({ data: { ...detail, ownerId: 1 } });
+    render(<VideoDetail videoId={detail.id} userId={userId} onBack={jest.fn()} />);
+    await screen.findByRole('heading', { name: detail.title });
+    if (userId === 1)
+      expect(screen.getByRole('link', { name: 'Editar vídeo' })).toHaveAttribute('href', `#videos/${detail.id}/edit`);
+    else expect(screen.queryByRole('link', { name: 'Editar vídeo' })).not.toBeInTheDocument();
+  });
+
   it('announces loading and keeps the back control available', () => {
     get.mockReturnValue(new Promise(() => {}));
     const back = jest.fn();

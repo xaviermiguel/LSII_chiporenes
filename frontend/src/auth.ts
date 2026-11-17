@@ -13,6 +13,8 @@ const messages: Record<string, string> = {
   PASSWORD_MISMATCH: 'Las contraseñas no coinciden.',
   INVALID_REQUEST: 'Revisa los campos obligatorios y su formato.',
   INVALID_CSRF_TOKEN: 'La sesión de seguridad ha caducado. Vuelve a enviar el formulario.',
+  INVALID_DESCRIPTION: 'La descripción admite hasta 2000 caracteres.',
+  CURRENT_PASSWORD_INVALID: 'La contraseña actual no es correcta.',
   ACCESS_DENIED: 'No tienes permiso para realizar esta operación.',
 };
 
@@ -65,7 +67,7 @@ export async function signOut(): Promise<void> {
 
 // Relative API paths only: never send cookies or CSRF tokens to a caller supplied origin.
 export async function authenticatedRequest(path: string, init: RequestInit = {}): Promise<Response> {
-  if (!/^\/[a-zA-Z0-9]/.test(path) || path.includes('..') || path.includes('\\') || /[?#]/.test(path)) {
+  if (!/^\/[a-zA-Z0-9]/.test(path) || path.includes('..') || path.includes('\\') || /[#]/.test(path)) {
     throw new Error('Expected a relative API path');
   }
   const headers = new Headers(init.headers);

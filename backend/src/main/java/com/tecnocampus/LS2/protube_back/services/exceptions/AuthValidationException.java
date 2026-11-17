@@ -2,7 +2,7 @@ package com.tecnocampus.LS2.protube_back.services.exceptions;
 
 public class AuthValidationException extends RuntimeException {
     public enum Reason {
-        MISSING_FIELDS, DISPLAY_NAME, EMAIL, PASSWORD, PASSWORD_CONFIRMATION
+        MISSING_FIELDS, DISPLAY_NAME, EMAIL, PASSWORD, PASSWORD_CONFIRMATION, DESCRIPTION, CURRENT_PASSWORD
     }
 
     private final Reason reason;

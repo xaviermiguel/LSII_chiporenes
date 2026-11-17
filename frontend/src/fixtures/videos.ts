@@ -24,6 +24,8 @@ export const videoListFixture: VideoListResponse = {
 export const videoDetailsFixture: VideoDetail[] = [
   {
     ...videoListFixture.items[0],
+    ownerId: 1,
+    category: null,
     description: 'Description first video',
     videoUrl: '/media/0.mp4',
     tags: [],
@@ -31,6 +33,8 @@ export const videoDetailsFixture: VideoDetail[] = [
   },
   {
     ...videoListFixture.items[1],
+    ownerId: 2,
+    category: null,
     description: 'Description second video',
     videoUrl: '/media/1.mp4',
     tags: [],

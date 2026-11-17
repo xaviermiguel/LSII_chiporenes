@@ -63,7 +63,8 @@ un usuario obsoleto. Un error de red conserva la sesión conocida; un 401 la lim
 `ProtectedRoute` espera la recuperación y redirige visitantes a `#login`.
 Se aplica a `#profile`, `#upload` y `#videos/:id/edit`. Mi cuenta muestra el email;
 `#upload` contiene el [formulario de publicación](VIDEO_PUBLICATION.md);
-edición mantiene su pantalla reservada. Catálogo y reproducción siguen públicos.
+`#videos/:id/edit` contiene el [editor de metadatos](VIDEO_EDITING.md),
+disponible únicamente para el propietario. Catálogo y reproducción siguen públicos.
 
 Para implementar subida o edición, usar `const { request } = useSession()` y
 `await request('/videos', { method: 'POST', body: formData })` o
@@ -74,3 +75,10 @@ relativas a la API. Incluye cookies y un CSRF nuevo para cada mutación.
 Un 401 limpia el contexto; un 403 de permisos lo conserva. Ante CSRF inválido
 se comprueba la sesión y no se repite automáticamente la escritura.
 La autorización y la propiedad del vídeo siguen siendo responsabilidad del backend.
+
+## Cuenta editable
+
+La pantalla de cuenta, contraseña y vídeos propios está documentada en
+[ACCOUNT.md](ACCOUNT.md). La API del perfil complementa `/auth/me`; las respuestas
+siguen sin exponer credenciales. El cliente autenticado admite los parámetros
+de paginación del listado propio.

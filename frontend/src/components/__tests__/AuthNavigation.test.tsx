@@ -18,10 +18,46 @@ jest.mock('../../videoPublication', () => ({
 jest.mock('../../useAllVideos', () => ({ useAllVideos: () => ({ value: [], loading: 'loaded', hasNext: false }) }));
 const user = { id: 1, displayName: 'Anna', email: 'anna@example.com' };
 
+test('edit route loads owner form and preserves draft through expiry and login', async () => {
+  const video = { id: 15, ownerId: 1, title: 'Original', description: 'Description', tags: ['tag'], category: null };
+  jest.mocked(currentUser).mockResolvedValue(user);
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, init) => {
+    if (init?.method === 'PATCH') {
+      jest.mocked(currentUser).mockResolvedValue(null);
+      throw new AuthError('AUTHENTICATION_REQUIRED', 401);
+    }
+    return { json: async () => (path === '/videos/categories' ? [] : video) } as Response;
+  });
+  window.history.replaceState(null, '', '/#videos/15/edit');
+  render(<App />);
+  expect(await screen.findByLabelText('Título *')).toHaveValue('Original');
+  fireEvent.change(screen.getByLabelText('Título *'), { target: { value: 'Draft after expiry' } });
+  fireEvent.change(screen.getByLabelText('Descripción *'), { target: { value: 'Draft description' } });
+  fireEvent.change(screen.getByLabelText('Etiquetas (opcional)'), { target: { value: 'draft tag' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+  await screen.findByRole('heading', { name: 'Inicia sesión' });
+  jest.mocked(authenticate).mockImplementation(async () => {
+    jest.mocked(currentUser).mockResolvedValue(user);
+    return user;
+  });
+  fireEvent.change(screen.getByLabelText('Email *'), { target: { value: user.email } });
+  fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Password1!' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+  await screen.findByText('Hola, Anna');
+  await act(async () => {
+    window.location.hash = 'videos/15/edit';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  });
+  expect(await screen.findByLabelText('Título *')).toHaveValue('Draft after expiry');
+  expect(screen.getByLabelText('Descripción *')).toHaveValue('Draft description');
+  expect(screen.getByLabelText('Etiquetas (opcional)')).toHaveValue('draft tag');
+});
+
 beforeEach(() => {
   jest.resetAllMocks();
   window.history.replaceState(null, '', '/');
   jest.mocked(currentUser).mockResolvedValue(null);
+  jest.mocked(authenticatedRequest).mockResolvedValue({ json: async () => ({ ...user, description: '' }) } as Response);
 });
 
 test.each(['login', 'register'])('%s navigates home and updates header after access', async (mode) => {
@@ -117,9 +153,9 @@ test('waits for recovery before showing a protected screen and preserves session
   window.history.replaceState(null, '', '/#profile');
   render(<App />);
   expect(screen.getByText('Comprobando sesión…')).toBeInTheDocument();
-  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(user.email)).not.toBeInTheDocument();
   await act(async () => finish(user));
-  expect(screen.getByText(user.email)).toBeInTheDocument();
+  expect(await screen.findByDisplayValue(user.email)).toBeInTheDocument();
   await act(async () => {
     window.location.hash = 'contenido';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -129,13 +165,14 @@ test('waits for recovery before showing a protected screen and preserves session
 });
 
 test('expiry removes protected content and redirects to login', async () => {
-  jest.mocked(currentUser).mockResolvedValueOnce(user).mockResolvedValue(null);
+  jest.mocked(currentUser).mockResolvedValue(user);
   window.history.replaceState(null, '', '/#profile');
   render(<App />);
-  await screen.findByText(user.email);
+  await screen.findByDisplayValue(user.email);
+  jest.mocked(currentUser).mockResolvedValue(null);
   fireEvent(window, new Event('focus'));
   expect(await screen.findByRole('heading', { name: 'Inicia sesión' })).toBeInTheDocument();
-  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue(user.email)).not.toBeInTheDocument();
 });
 
 test('recovery failure keeps public catalog accessible and retries on focus', async () => {

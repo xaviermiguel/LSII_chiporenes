@@ -4,16 +4,16 @@ import com.tecnocampus.LS2.protube_back.dto.video.*;
 import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import com.tecnocampus.LS2.protube_back.services.VideoUploadService;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoAccessDeniedException;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.*;
 import com.tecnocampus.LS2.protube_back.dto.ApiError;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUpdateException;
-import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUploadException;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.tecnocampus.LS2.protube_back.services.CommentService;
 
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -23,10 +23,18 @@ import java.net.URI;
 @RequestMapping("/api/videos")
 public class VideosController {
 
-    @Autowired
-    VideoService videoService;
-    @Autowired
-    private VideoUploadService videoUploadService;
+    private final VideoService videoService;
+    private final VideoUploadService videoUploadService;
+    private final CommentService commentService;
+
+    public VideosController(
+            VideoService videoService,
+            VideoUploadService videoUploadService,
+            CommentService commentService) {
+        this.videoService = videoService;
+        this.videoUploadService = videoUploadService;
+        this.commentService = commentService;
+    }
 
     @GetMapping("")
     public ResponseEntity<?> getVideos(@RequestParam(defaultValue = "0") int page,
@@ -35,6 +43,17 @@ public class VideosController {
             return invalidPagination();
         }
         return ResponseEntity.ok(videoService.getVideos(page, size));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchVideos(@RequestParam(defaultValue = "") String q,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "12") int size) {
+        if (page < 0 || size < 1 || size > 50) {
+            return ResponseEntity.badRequest().body(new ApiError("INVALID_PAGINATION",
+                    "page must be a nonnegative integer and size an integer between 1 and 50."));
+        }
+        return ResponseEntity.ok(videoService.searchVideos(q, page, size));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -51,6 +70,10 @@ public class VideosController {
     @GetMapping("/{id}")
     public ResponseEntity<VideoDetailResponse> getVideoId(@PathVariable Long id) {
         return ResponseEntity.ok(videoService.getVideoById(id));
+    }
+    @GetMapping("/categories")
+    public ResponseEntity<java.util.List<CategoryResponse>> getCategories() {
+        return ResponseEntity.ok(videoService.getCategories());
     }
     @ExceptionHandler(VideoNotFoundException.class)
     public ResponseEntity<ApiError> videoNotFound(VideoNotFoundException exception) {
@@ -96,11 +119,16 @@ public class VideosController {
                 videoService.getMyVideos(ownerId, page, size)
         );
     }
+    @GetMapping("/{id}/edit")
+    public VideoUploadResponse getOwnVideoForEdit(@PathVariable Long id, @AuthenticationPrincipal Long ownerId) {
+        return videoService.getOwnVideoForEdit(id, ownerId);
+    }
+
     @PatchMapping(
             value = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<VideoUploadResponse> updateVideo(
+    public ResponseEntity<VideoDetailResponse> updateVideo(
             @PathVariable Long id,
             @AuthenticationPrincipal Long ownerId,
             @RequestBody VideoUpdateRequest request
@@ -116,6 +144,12 @@ public class VideosController {
         return ResponseEntity.badRequest().body(
                 new ApiError("INVALID_VIDEO_UPDATE", exception.getMessage())
         );
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> invalidRequest() {
+        return ResponseEntity.badRequest().body(new ApiError("INVALID_REQUEST",
+                "La solicitud contiene campos con un formato incorrecto."));
     }
 
     @ExceptionHandler(VideoAccessDeniedException.class)
@@ -134,8 +168,30 @@ public class VideosController {
         videoService.deleteVideo(id, ownerId);
         return ResponseEntity.noContent().build();
     }
+    //Publicar comentarios
+    @PostMapping (path ="/{id}/comments", consumes =
+    MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity <CommentResponse> publishComment (
+            @PathVariable ("id") Long videoId,
+            @AuthenticationPrincipal Long authorId,
+            @RequestBody PublishCommentRequest request
+    ){
+        var comment = commentService.publishComment(videoId,authorId,request.text());
+        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
+    }
+    @ExceptionHandler (InvalidCommentException.class)
+    public ResponseEntity<ApiError> invalidComment(InvalidCommentException exception) {
+        return ResponseEntity.badRequest().body(
+                new ApiError("INVALID_COMMENT",exception.getMessage()));
+    }
 
-
-
+    @ExceptionHandler(AuthenticationRequiredException.class)
+    public ResponseEntity<ApiError> authenticationRequired() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiError(
+                        "AUTHENTICATION_REQUIRED",
+                        "Debes iniciar sesión para realizar esta operación."
+                ));
+    }
 
 }

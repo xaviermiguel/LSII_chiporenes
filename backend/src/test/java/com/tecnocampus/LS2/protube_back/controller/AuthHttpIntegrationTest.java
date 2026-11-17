@@ -3,7 +3,9 @@ package com.tecnocampus.LS2.protube_back.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecnocampus.LS2.protube_back.model.User;
+import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
+import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import java.io.IOException;
 import java.net.CookieManager;
@@ -30,6 +34,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -66,6 +71,7 @@ class AuthHttpIntegrationTest {
     @Autowired ObjectMapper mapper;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
+    @Autowired VideoRepository videos;
 
     @Test
     void registersNormalizesPersistsHashAndAuthenticatesAcrossRealHttpRequests() throws Exception {
@@ -355,6 +361,349 @@ class AuthHttpIntegrationTest {
         return client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
+    @Test
+    void editsOnlyCurrentProfileWithCsrfAndPersistsNormalizedFields() throws Exception {
+        var anonymous = new Browser();
+        assertEquals(401, anonymous.get("/api/auth/profile").statusCode());
+        assertEquals(401, anonymous.get("/api/videos/me").statusCode());
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        var before = json(browser.get("/api/auth/profile"));
+        String email = UUID.randomUUID() + "@example.com";
+        var body = Map.of("displayName", " Updated user ", "email", email.toUpperCase(), "description", " About me ");
+        assertEquals(403, browser.send("PATCH", "/api/auth/profile", mapper.writeValueAsString(body), Map.of()).statusCode());
+        var token = browser.csrf();
+        var updated = browser.send("PATCH", "/api/auth/profile", mapper.writeValueAsString(body), Map.of(token.headerName(), token.token()));
+        assertEquals(200, updated.statusCode(), updated.body());
+        assertEquals(before.path("id"), json(updated).path("id"));
+        assertEquals("Updated user", json(updated).path("displayName").asText());
+        assertEquals(email, json(updated).path("email").asText());
+        assertEquals("About me", json(browser.get("/api/auth/profile")).path("description").asText());
+        assertFalse(updated.body().contains("password"));
+        assertEquals(email, json(browser.get("/api/auth/me")).path("email").asText());
+    }
+
+    @Test //Test de consulta datos publicos cuenta
+    void exposesOnlyPublicProfileFieldsWithoutAuthentication() throws Exception {
+        var registered = new Browser();
+        registered.register(UUID.randomUUID() + "@example.com");
+
+        var currentUser = registered.get("/api/auth/me");
+        assertEquals(200, currentUser.statusCode(), currentUser.body());
+        long userId = json(currentUser).get("id").asLong();
+
+        var anonymous = new Browser();
+        var response = anonymous.get("/api/users/" + userId);
+
+        assertEquals(200, response.statusCode(), response.body());
+        var profile = json(response);
+
+        assertAll(
+                () -> assertEquals(4, profile.size(), response.body()),
+                () -> assertEquals(userId, profile.get("id").asLong()),
+                () -> assertEquals("Public user", profile.get("displayName").asText()),
+                () -> assertEquals("", profile.get("description").asText()),
+                () -> assertEquals("/assets/avatar-default.png", profile.get("avatarURL").asText())
+        );
+
+        var missing = anonymous.get("/api/users/" + Long.MAX_VALUE);
+        assertEquals(404, missing.statusCode(), missing.body());
+    }
+    //Test permisos entre cuentas
+    @Test
+    void updatesOnlyAuthenticatedProfileWhenBodyContainsAnotherUserId() throws Exception {
+        var accountA = new Browser();
+        accountA.register(UUID.randomUUID() + "@example.com");
+
+        var responseA = accountA.get("/api/auth/me");
+        assertEquals(200, responseA.statusCode(), responseA.body());
+        long idA = json(responseA).get("id").asLong();
+
+        var accountB = new Browser();
+        String emailB = UUID.randomUUID() + "@example.com";
+        accountB.register(emailB);
+
+        var responseB = accountB.get("/api/auth/me");
+        assertEquals(200, responseB.statusCode(), responseB.body());
+        long idB = json(responseB).get("id").asLong();
+        assertNotEquals(idA, idB);
+
+        var anonymous = new Browser();
+        var beforeA = anonymous.get("/api/users/" + idA);
+        assertEquals(200, beforeA.statusCode(), beforeA.body());
+
+        String newDescription = "Prueba de perfil B";
+        var body = Map.of(
+                "id", idA,
+                "displayName", "Public user",
+                "email", emailB,
+                "description", newDescription
+        );
+
+        var csrf = accountB.csrf();
+        var updated = accountB.send(
+                "PATCH",
+                "/api/auth/profile",
+                mapper.writeValueAsString(body),
+                Map.of(csrf.headerName(), csrf.token())
+        );
+
+        assertEquals(200, updated.statusCode(), updated.body());
+        assertEquals(idB, json(updated).get("id").asLong());
+
+        var afterB = anonymous.get("/api/users/" + idB);
+        assertEquals(200, afterB.statusCode(), afterB.body());
+        assertEquals(newDescription, json(afterB).get("description").asText());
+
+        var afterA = anonymous.get("/api/users/" + idA);
+        assertEquals(200, afterA.statusCode(), afterA.body());
+        assertEquals(json(beforeA), json(afterA));
+    }
+    //Test automatizacion subida y validación avatar
+    @Test
+    void uploadsAvatarAndPreservesItAfterRejectedUploads() throws Exception {
+        var accountA = new Browser();
+        accountA.register(UUID.randomUUID() + "@example.com");
+        long idA = json(accountA.get("/api/auth/me")).get("id").asLong();
+
+        var accountB = new Browser();
+        accountB.register(UUID.randomUUID() + "@example.com");
+        long idB = json(accountB.get("/api/auth/me")).get("id").asLong();
+
+        byte[] png;
+        try (var input = getClass().getResourceAsStream("/static/assets/avatar-default.png")) {
+            assertNotNull(input, "Falta el PNG de prueba");
+            png = input.readAllBytes();
+        }
+
+        var uploaded = accountB.putAvatar(png);
+        assertEquals(204, uploaded.statusCode(), uploaded.body());
+
+        var anonymous = new Browser();
+        var profileB = anonymous.get("/api/users/" + idB);
+        assertEquals(200, profileB.statusCode(), profileB.body());
+        String avatarUrl = json(profileB).get("avatarURL").asText();
+        assertTrue(avatarUrl.startsWith("/media/avatars/"), avatarUrl);
+
+        var image = anonymous.get(avatarUrl);
+        assertEquals(200, image.statusCode());
+        assertEquals("image/png", image.headers().firstValue("Content-Type").orElse(""));
+
+        var invalid = accountB.putAvatar("Esto no es un PNG".getBytes(StandardCharsets.UTF_8));
+        assertEquals(400, invalid.statusCode(), invalid.body());
+        assertEquals(avatarUrl,
+                json(anonymous.get("/api/users/" + idB)).get("avatarURL").asText());
+
+        byte[] oversized = Arrays.copyOf(png, 2 * 1024 * 1024 + 1);
+        var tooLarge = accountB.putAvatar(oversized);
+        assertEquals(413, tooLarge.statusCode(), tooLarge.body());
+        assertEquals(avatarUrl,
+                json(anonymous.get("/api/users/" + idB)).get("avatarURL").asText());
+
+        assertEquals("/assets/avatar-default.png",
+                json(anonymous.get("/api/users/" + idA)).get("avatarURL").asText());
+    }
+    //Test de publicar commentario y devovler detalles
+    @Test
+    void publishesCommentAndReturnsItInVideoDetail() throws Exception {
+        long videoId = createTestVideo();
+        String videoPath = "/api/videos/" + videoId;
+        String text = "Comentario de integración";
+
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+
+        var currentUser = browser.get("/api/auth/me");
+        assertEquals(200, currentUser.statusCode(), currentUser.body());
+        String authorName = json(currentUser).path("displayName").asText();
+
+        var published = browser.post(
+                videoPath + "/comments",
+                Map.of("text", text),
+                browser.csrf()
+        );
+
+        assertEquals(201, published.statusCode(), published.body());
+        var comment = json(published);
+        long commentId = comment.path("id").asLong();
+        assertTrue(commentId > 0, published.body());
+        assertEquals(text, comment.path("text").asText());
+        assertEquals(authorName, comment.path("user").asText());
+        assertTrue(comment.path("parentId").isNull());
+
+        var detail = new Browser().get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+
+        var comments = json(detail).path("comments");
+        for (var stored : comments) {
+            if (stored.path("id").asLong() == commentId) {
+                assertEquals(text, stored.path("text").asText());
+                assertEquals(authorName, stored.path("user").asText());
+                return;
+            }
+        }
+
+        fail("El comentario " + commentId + " no aparece en el vídeo " + videoId);
+    }
+
+    private long createTestVideo() throws Exception {
+    var ownerBrowser = new Browser();
+    var registration = ownerBrowser.post(
+            "/api/auth/register",
+            Map.of (
+                    "displayName", "Propietario del vídeo",
+                    "email",UUID.randomUUID() + "@example.com",
+                    "password", PASSWORD,
+                    "confirmPassword",PASSWORD
+            ),
+            ownerBrowser.csrf()
+    );
+    assertEquals(201,registration.statusCode(),registration.body());
+    long ownerId = json (registration).path("id").asLong();
+    var owner = users.findById(ownerId).orElseThrow();
+
+    String filename = "comment-test-" + UUID.randomUUID() + ".mp4";
+    Path videoFile = STORE.resolve(filename);
+    Files.writeString(videoFile, "synthetic video");
+    videoFile.toFile().deleteOnExit();
+
+    var video = new Video();
+    video.setOwner(owner);
+    video.setTitle("Vídeo de prueba para comentarios");
+    video.setDescription("Vídeo para probar la publicación de comentarios");
+    video.setVideoPath(filename);
+    video.setThumbnailPath("comment-test.webp");
+
+    return videos.saveAndFlush(video).getId();
+    }
+    @Test
+    void validatesCommentTextAndAcceptsTheLengthLimit() throws Exception {
+        String videoPath = "/api/videos/" + createTestVideo();
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        var csrf = browser.csrf();
+
+        for (String invalidText : List.of("", "   ", "a".repeat(301))) {
+            var rejected = browser.post(videoPath + "/comments", Map.of("text", invalidText), csrf);
+            assertError(rejected, 400, "INVALID_COMMENT");
+        }
+
+        var detail = new Browser().get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+        assertEquals(0, json(detail).path("comments").size());
+
+        String maxLengthText = "a".repeat(300);
+        var accepted = browser.post(videoPath + "/comments", Map.of("text", maxLengthText), csrf);
+        assertEquals(201, accepted.statusCode(), accepted.body());
+        assertEquals(maxLengthText, json(accepted).path("text").asText());
+    }
+
+    @Test
+    void rejectsCommentOnMissingVideo() throws Exception {
+        long missingVideoId = Long.MAX_VALUE;
+        assertFalse(videos.existsById(missingVideoId));
+
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+        var rejected = browser.post(
+                "/api/videos/" + missingVideoId + "/comments",
+                Map.of("text", "Comentario para un vídeo inexistente"),
+                browser.csrf()
+        );
+
+        assertError(rejected, 404, "VIDEO_NOT_FOUND");
+    }
+
+    @Test
+    void rejectsAnonymousCommentWithValidCsrf() throws Exception {
+        String videoPath = "/api/videos/" + createTestVideo();
+        var anonymous = new Browser();
+
+        var rejected = anonymous.post(
+                videoPath + "/comments",
+                Map.of("text", "Comentario sin iniciar sesión"),
+                anonymous.csrf()
+        );
+        assertError(rejected, 401, "AUTHENTICATION_REQUIRED");
+
+        var detail = anonymous.get(videoPath);
+        assertEquals(200, detail.statusCode(), detail.body());
+        assertEquals(0, json(detail).path("comments").size());
+    }
+
+    @Test
+    void rejectsCommentFromDisabledUserWithExistingSession() throws Exception {
+        long videoId = createTestVideo();
+        String videoPath = "/api/videos/" + videoId;
+
+        var browser = new Browser();
+        browser.register(UUID.randomUUID() + "@example.com");
+
+        var currentUser = browser.get("/api/auth/me");
+        assertEquals(200, currentUser.statusCode(), currentUser.body());
+        long authorId = json(currentUser).path("id").asLong();
+        var csrf = browser.csrf();
+
+        var reader = new Browser();
+        var before = reader.get(videoPath);
+        assertEquals(200, before.statusCode(), before.body());
+        int commentCount = json(before).path("comments").size();
+
+        var author = users.findById(authorId).orElseThrow();
+        author.setEnabled(false);
+        users.saveAndFlush(author);
+
+        var rejected = browser.post(
+                videoPath + "/comments",
+                Map.of("text", "Comentario desde una cuenta deshabilitada"),
+                csrf
+        );
+        assertError(rejected, 401, "AUTHENTICATION_REQUIRED");
+
+        var after = reader.get(videoPath);
+        assertEquals(200, after.statusCode(), after.body());
+        assertEquals(commentCount, json(after).path("comments").size());
+    }
+
+
+
+    @Test
+    void rejectsDuplicateEmailAndInvalidProfileWithoutChangingStoredValues() throws Exception {
+        var first = new Browser(); var second = new Browser();
+        String taken = UUID.randomUUID() + "@example.com";
+        first.register(taken); second.register(UUID.randomUUID() + "@example.com");
+        var before = json(second.get("/api/auth/profile"));
+        var token = second.csrf();
+        for (var candidate : java.util.List.of(
+                Map.of("displayName", "Changed", "email", taken, "description", ""),
+                Map.of("displayName", " ", "email", taken, "description", ""),
+                Map.of("displayName", "Changed", "email", "invalid", "description", ""),
+                Map.of("displayName", "Changed", "email", UUID.randomUUID() + "@example.com", "description", "x".repeat(2001)))) {
+            var result = second.send("PATCH", "/api/auth/profile", mapper.writeValueAsString(candidate), Map.of(token.headerName(), token.token()));
+            assertTrue(result.statusCode() == 400 || result.statusCode() == 409, result.body());
+            assertEquals(before, json(second.get("/api/auth/profile")));
+        }
+    }
+
+    @Test
+    void changesPasswordOnlyWithCurrentPasswordAndClosesCurrentSession() throws Exception {
+        var browser = new Browser();
+        String email = UUID.randomUUID() + "@example.com";
+        browser.register(email);
+        var body = Map.of("currentPassword", "incorrect", "newPassword", "New-password1!", "confirmPassword", "New-password1!");
+        assertEquals(403, browser.post("/api/auth/password", body, null).statusCode());
+        var rejected = browser.post("/api/auth/password", body, browser.csrf());
+        assertEquals(400, rejected.statusCode());
+        assertEquals("CURRENT_PASSWORD_INVALID", json(rejected).path("code").asText());
+        assertEquals(200, browser.get("/api/auth/me").statusCode());
+        var invalid = browser.post("/api/auth/password", Map.of("currentPassword", PASSWORD, "newPassword", "short", "confirmPassword", "short"), browser.csrf());
+        assertEquals(400, invalid.statusCode());
+        assertEquals(204, browser.post("/api/auth/password", Map.of("currentPassword", PASSWORD, "newPassword", "New-password1!", "confirmPassword", "New-password1!"), browser.csrf()).statusCode());
+        assertEquals(401, browser.get("/api/auth/me").statusCode());
+        assertEquals(401, browser.post("/api/auth/login", Map.of("email", email, "password", PASSWORD), browser.csrf()).statusCode());
+        assertEquals(200, browser.post("/api/auth/login", Map.of("email", email, "password", "New-password1!"), browser.csrf()).statusCode());
+    }
+
     private static Path createStore() {
         try {
             var store = Files.createTempDirectory("protube-auth-http-");
@@ -408,6 +757,30 @@ class AuthHttpIntegrationTest {
                     "password", PASSWORD, "confirmPassword", PASSWORD), csrf());
             assertEquals(201, response.statusCode(), response.body());
         }
+
+        HttpResponse<String> putAvatar(byte[] bytes) throws IOException, InterruptedException {
+            var csrf = csrf();
+            String boundary = "avatar-" + UUID.randomUUID();
+            String prefix = "--" + boundary + "\r\n"
+                    + "Content-Disposition: form-data; name=\"avatar\"; filename=\"avatar.png\"\r\n"
+                    + "Content-Type: image/png\r\n\r\n";
+            String suffix = "\r\n--" + boundary + "--\r\n";
+
+            var body = HttpRequest.BodyPublishers.concat(
+                    HttpRequest.BodyPublishers.ofString(prefix),
+                    HttpRequest.BodyPublishers.ofByteArray(bytes),
+                    HttpRequest.BodyPublishers.ofString(suffix)
+            );
+
+            var request = HttpRequest.newBuilder(
+                            URI.create("http://localhost:" + port + "/api/auth/profile/avatar"))
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .header(csrf.headerName(), csrf.token())
+                    .PUT(body)
+                    .build();
+
+            return client.send(request, HttpResponse.BodyHandlers.ofString());
+        }
     }
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -426,4 +799,6 @@ class AuthHttpIntegrationTest {
             return Map.of("scheduled", true);
         }
     }
+
+
 }

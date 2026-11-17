@@ -79,8 +79,9 @@ ni metadatos internos.
 
 `comments` contiene únicamente los comentarios del ID persistido solicitado,
 ordenados por `createdAt` ascendente e `id` ascendente para resolver empates.
-Es una lista plana: `parentId` conserva las respuestas existentes sin añadir
-operaciones de escritura. Si no hay comentarios, devuelve `comments: []`.
+La lista es plana y `parentId` identifica el comentario padre de las respuestas
+existentes. Los comentarios importados conservan su autor externo cuando carecen
+de autor local. Si el vídeo carece de comentarios, devuelve `comments: []`.
 
 `videoUrl` y `thumbnailUrl` se construyen con las rutas persistidas, con caracteres
 especiales codificados para URL. No se deducen a partir de `id`. El detalle y los
@@ -95,6 +96,60 @@ legible o está fuera del almacén, devuelve `404` con el mismo código y el men
 consultar ni reproducir un vídeo cuyo archivo esté disponible.
 
 El frontend mostrará la información y utilizará `videoUrl` para reproducir el vídeo. Las rutas relativas se resolverán contra el dominio de medios configurado. El servidor permitirá las peticiones parciales necesarias para avanzar y retroceder durante la reproducción.
+
+## Publicar un comentario (tarea 35)
+
+`POST /api/videos/{id}/comments`
+
+Usa el ID persistido del vídeo. Envía la cookie de una sesión autenticada,
+`Content-Type: application/json` y el encabezado `X-CSRF-TOKEN` asociado a esa
+sesión. Después de iniciar sesión, solicita el token con
+`GET /api/auth/csrf`. Consulta el [flujo de sesión y CSRF](AUTHENTICATION.md#cors-y-csrf).
+
+```json
+{
+  "text": "Me ha gustado el vídeo."
+}
+```
+
+`text` es obligatorio y debe contener texto visible según la validación
+`String.isBlank()` de Java. El máximo es de 300 unidades UTF-16 con la
+configuración del proyecto (`protube.comments.max-length`). Se conserva el texto
+original y los espacios iniciales y finales cuentan para el límite.
+
+El servidor guarda el comentario asociado al vídeo y al usuario habilitado de
+la sesión. Devuelve `201 Created` con el comentario guardado. `user` contiene el
+nombre público del autor y `parentId` es `null` para las publicaciones de este
+endpoint, que crea comentarios de primer nivel.
+
+```json
+{
+  "id": 16,
+  "text": "Me ha gustado el vídeo.",
+  "user": "Ana García",
+  "createdAt": "2026-11-16T10:00:00Z",
+  "parentId": null
+}
+```
+
+Puedes mostrar el comentario con este cuerpo o volver a solicitar
+`GET /api/videos/{id}` para obtener la lista actualizada. El detalle incluye los
+comentarios guardados por fecha ascendente y usa el ID ascendente para desempatar.
+
+| Estado HTTP | Código | Situación |
+|---|---|---|
+| `400` | `INVALID_COMMENT` | Texto ausente en el objeto JSON, nulo, vacío, compuesto solo por espacios en blanco o por encima del límite |
+| `400` | `INVALID_REQUEST` | Cuerpo ausente o JSON que el servidor no puede leer |
+| `401` | `AUTHENTICATION_REQUIRED` | Sesión sin usuario autenticado o cuenta eliminada o deshabilitada |
+| `403` | `INVALID_CSRF_TOKEN` | Token CSRF ausente o inválido. Este control puede ejecutarse antes de la comprobación de sesión |
+| `404` | `VIDEO_NOT_FOUND` | El ID del vídeo no existe en la base de datos |
+
+```json
+{
+  "code": "INVALID_COMMENT",
+  "message": "Escribe un comentario antes de publicar"
+}
+```
 
 ## Errores
 
