@@ -82,3 +82,22 @@ test('browser displays a controlled request failure (mock API)', async ({ page }
   await expect(page.getByRole('alert')).toContainText('Error al cargar los vídeos');
   await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible();
 });
+
+test('anonymous visitor searches the real API by keyboard and opens the player at mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto('/');
+  await page.getByRole('navigation').getByRole('link', { name: 'Buscar' }).click();
+  const query = page.getByRole('searchbox', { name: 'Título o descripción' });
+  await query.fill('first video');
+  const search = page.waitForResponse((response) => response.url().includes('/api/videos/search?') && response.ok());
+  await query.press('Enter');
+  expect(new URL((await search).url()).searchParams.get('q')).toBe('first video');
+  const results = page.getByRole('list', { name: 'Resultados para «first video»' });
+  const result = results.getByRole('button', { name: 'E2E first video' });
+  await expect(results.getByRole('listitem')).toHaveCount(1);
+  await expect(result.locator('img')).toHaveAttribute('src', `${api}/media/fixture.webp`);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  await result.press('Enter');
+  await expect(page.getByRole('heading', { name: 'E2E first video' })).toBeVisible();
+  await expect(page.locator('video')).toHaveAttribute('src', `${api}/media/fixture.mp4`);
+});
