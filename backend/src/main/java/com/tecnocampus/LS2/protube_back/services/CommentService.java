@@ -6,6 +6,7 @@ import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import com.tecnocampus.LS2.protube_back.services.exceptions.AuthenticationRequiredException;
+import com.tecnocampus.LS2.protube_back.services.exceptions.CommentNotFoundException;
 import com.tecnocampus.LS2.protube_back.services.exceptions.InvalidCommentException;
 import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
 import jakarta.transaction.Transactional;
@@ -33,7 +34,16 @@ public class CommentService {
         this.maxLength = maxLength;
     }
     @Transactional
-    public  CommentResponse publishComment(Long videoId, Long authorId, String text) {
+    public CommentResponse publishComment(Long videoId, Long authorId, String text) {
+        return publish(videoId, null, authorId, text);
+    }
+
+    @Transactional
+    public CommentResponse publishReply(Long videoId, Long commentId, Long authorId, String text) {
+        return publish(videoId, commentId, authorId, text);
+    }
+
+    private CommentResponse publish(Long videoId, Long parentId, Long authorId, String text) {
         if (authorId == null) {
             throw new AuthenticationRequiredException();
         }
@@ -55,6 +65,15 @@ public class CommentService {
         }
         var comment = new Comment();
         comment.setVideoId(videoId);
+        if (parentId != null) {
+            var parent = commentRepository.findById(parentId)
+                    .filter(candidate -> videoId.equals(candidate.getVideoId()))
+                    .orElseThrow(CommentNotFoundException::new);
+            if (parent.getParentId() != null) {
+                throw new InvalidCommentException("Solo se puede responder a comentarios principales.");
+            }
+            comment.setParentId(parent.getId());
+        }
         comment.setAuthor(author);
         comment.setText(text);
 
