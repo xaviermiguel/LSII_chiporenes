@@ -108,10 +108,12 @@ class VideoDetailIntegrationTest {
                 .andExpect(jsonPath("$.comments[0].id").value(first.getId().intValue()))
                 .andExpect(jsonPath("$.comments[0].text").value("First by date"))
                 .andExpect(jsonPath("$.comments[0].user").value("Imported commenter"))
+                .andExpect(jsonPath("$.comments[0].authorId").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.comments[0].createdAt").value("2026-10-19T10:00:00Z"))
                 .andExpect(jsonPath("$.comments[1].id").value(middle.getId().intValue()))
                 .andExpect(jsonPath("$.comments[2].id").value(parent.getId().intValue()))
                 .andExpect(jsonPath("$.comments[2].user").value("Registered commenter"))
+                .andExpect(jsonPath("$.comments[2].authorId").value(author.getId().intValue()))
                 .andExpect(jsonPath("$.comments[3].id").value(reply.getId().intValue()))
                 .andExpect(jsonPath("$.comments[3].parentId").value(parent.getId().intValue()))
                 .andReturn().getResponse().getContentAsString();
@@ -119,10 +121,12 @@ class VideoDetailIntegrationTest {
         var json = objectMapper.readTree(response);
         assertEquals(
                 Set.of("id", "title", "user", "duration", "description",
-                        "thumbnailUrl", "videoUrl", "tags", "comments", "ownerId", "category"),
+                        "thumbnailUrl", "videoUrl", "tags", "comments", "ownerId", "authorId", "viewCount", "likeCount",
+                        "channel", "channelFollowerCount", "category"),
                 fieldNames(json));
+        assertEquals(json.path("ownerId").asLong(), json.path("authorId").asLong());
         for (var comment : json.path("comments")) {
-            assertEquals(Set.of("id", "text", "user", "createdAt", "parentId"), fieldNames(comment));
+            assertEquals(Set.of("id", "text", "user", "createdAt", "parentId", "authorId"), fieldNames(comment));
             assertTrue(comment.path("user").isTextual());
         }
         assertTrue(json.path("comments").get(0).path("parentId").isNull());
@@ -141,6 +145,11 @@ class VideoDetailIntegrationTest {
         mvc.perform(get("/api/videos/{id}", requested.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user").value("Imported channel"))
+                .andExpect(jsonPath("$.authorId").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.viewCount").value(5914109773L))
+                .andExpect(jsonPath("$.likeCount").value(23585179))
+                .andExpect(jsonPath("$.channel").value("Imported channel"))
+                .andExpect(jsonPath("$.channelFollowerCount").value(7240000))
                 .andExpect(jsonPath("$.comments").isArray())
                 .andExpect(jsonPath("$.comments").isEmpty());
     }
@@ -320,7 +329,9 @@ class VideoDetailIntegrationTest {
         video.setDurationSeconds(new BigDecimal("72.25"));
         video.setExternalAuthor("Imported channel");
         video.setPublishedAt(Instant.parse("2026-10-19T08:00:00Z"));
-        video.setSourceMetadata(Map.of("video_grabber_id", 8701, "private_metadata", "not public"));
+        video.setSourceMetadata(Map.of("video_grabber_id", 8701, "private_metadata", "not public",
+                "view_count", 5914109773L, "like_count", 23585179,
+                "channel", "Imported channel", "channel_follower_count", 7240000));
         return video;
     }
 

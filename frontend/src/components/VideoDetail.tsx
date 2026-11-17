@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getEnv } from '../utils/Env';
+import { VideoEngagement } from './VideoEngagement';
+import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../userProfile';
 import type { VideoDetail as VideoDetailData } from '../types/Video';
 
 type VideoDetailProps = {
@@ -14,6 +16,7 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [playbackError, setPlaybackError] = useState(false);
+  const [commentAvatars, setCommentAvatars] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const controller = new AbortController();
@@ -22,6 +25,7 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
     setVideo(null);
     setError('');
     setPlaybackError(false);
+    setCommentAvatars({});
 
     async function loadVideo() {
       try {
@@ -52,6 +56,24 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
     return () => controller.abort();
   }, [videoId]);
 
+  useEffect(() => {
+    if (!video) return;
+    const controller = new AbortController();
+    const authors = new Set(video.comments.flatMap(({ authorId }) => (authorId == null ? [] : [authorId])));
+    for (const authorId of authors) {
+      void getPublicProfile(authorId, controller.signal)
+        .then(({ avatarURL }) => {
+          if (!controller.signal.aborted && avatarURL) {
+            setCommentAvatars((previous) => ({ ...previous, [authorId]: avatarURL }));
+          }
+        })
+        .catch(() => {
+          // Fall back to the generic avatar if the public profile cannot be loaded.
+        });
+    }
+    return () => controller.abort();
+  }, [video]);
+
   if (loading) {
     return (
       <section className="video-detail state-panel">
@@ -78,7 +100,10 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
     );
   }
 
+  const defaultAvatar = resolveAvatarURL(defaultAvatarPath);
   const videoSrc = new URL(video.videoUrl, `${getEnv().MEDIA_BASE_URL}/`).href;
+  const channelRoute =
+    video.user === 'Mark Ronson' ? '#channels/mark-ronson' : `#channels/name/${encodeURIComponent(video.user)}`;
 
   return (
     <section className="video-detail">
@@ -95,7 +120,16 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
       <div className="detail-heading">
         <p className="eyebrow">Ahora en ProTube</p>
         <h1>{video.title}</h1>
-        <p>{video.user}</p>
+        <p>
+          {video.authorId != null ? (
+            <a href={`#users/${video.authorId}`}>{video.user}</a>
+          ) : video.authorId === null ? (
+            <a href={channelRoute}>{video.user}</a>
+          ) : (
+            video.user
+          )}
+        </p>
+        {video.channel && video.channel !== video.user && <p>Canal de origen: {video.channel}</p>}
       </div>
 
       <video
@@ -109,6 +143,14 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
       >
         Tu navegador no permite reproducir este vídeo.
       </video>
+
+      <VideoEngagement
+        key={`engagement-${video.id}`}
+        videoId={video.id}
+        userId={userId}
+        viewCount={video.viewCount}
+        likeCount={video.likeCount}
+      />
 
       {playbackError && (
         <p className="status-message status-error" role="alert">
@@ -147,7 +189,34 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
           <ul className="video-comments">
             {video.comments.map((comment) => (
               <li key={comment.id}>
-                <strong>{comment.user}</strong>
+                <div className="comment-author">
+                  <img
+                    className="profile-avatar"
+                    src={
+                      comment.authorId != null && commentAvatars[comment.authorId]
+                        ? resolveAvatarURL(commentAvatars[comment.authorId])
+                        : defaultAvatar
+                    }
+                    onError={({ currentTarget }) => {
+                      if (currentTarget.src !== defaultAvatar) currentTarget.src = defaultAvatar;
+                    }}
+                    alt=""
+                    width={32}
+                    height={32}
+                    loading="lazy"
+                  />
+                  <strong>
+                    <a
+                      href={
+                        comment.authorId != null
+                          ? `#users/${comment.authorId}`
+                          : `#videos/${video.id}/comments/${comment.id}/author`
+                      }
+                    >
+                      {comment.user}
+                    </a>
+                  </strong>
+                </div>
                 <p>{comment.text}</p>
                 <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString()}</time>
               </li>

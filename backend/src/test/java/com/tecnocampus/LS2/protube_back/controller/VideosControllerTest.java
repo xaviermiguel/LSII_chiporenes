@@ -50,13 +50,14 @@ class VideosControllerTest {
         var detail = new VideoDetailResponse(
                 45L, "Video", "Author", null, "1.webp",
                 "Description", "1.mp4", List.of("music"),
-                List.of(new CommentResponse(349L, "Comment", "Reader", Instant.EPOCH,null)), 7L, null);
+                List.of(new CommentResponse(349L, "Comment", "Reader", Instant.EPOCH, null, 8L)), 7L, 7L, null, null, null, null, null);
         when(videoService.getVideoById(45L)).thenReturn(detail);
 
         MockMvcBuilders.standaloneSetup(videosController).build()
                 .perform(get("/api/videos/45"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(45))
+                .andExpect(jsonPath("$.authorId").value(7))
                 .andExpect(jsonPath("$.videoUrl").value("1.mp4"))
                 .andExpect(jsonPath("$.tags[0]").value("music"))
                 .andExpect(jsonPath("$.comments[0].text").value("Comment"));

@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.dto.video.CommentResponse;
+import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.model.Comment;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
@@ -58,14 +59,7 @@ public class CommentService {
         comment.setAuthor(author);
         comment.setText(text);
 
-        var saved = commentRepository.save(comment);
-        return new CommentResponse(
-                saved.getId(),
-                saved.getText(),
-                saved.getAuthor().getDisplayName(),
-                saved.getCreatedAt(),
-                saved.getParentId()
-        );
+        return VideoMapper.toCommentResponse(commentRepository.save(comment));
     }
 
 
