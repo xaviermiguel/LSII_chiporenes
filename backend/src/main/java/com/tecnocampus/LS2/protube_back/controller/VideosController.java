@@ -179,6 +179,23 @@ public class VideosController {
         var comment = commentService.publishComment(videoId,authorId,request.text());
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);
     }
+    @PostMapping(path = "/{videoId}/comments/{commentId}/replies", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CommentResponse> publishReply(
+            @PathVariable Long videoId,
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal Long authorId,
+            @RequestBody PublishCommentRequest request
+    ) {
+        var reply = commentService.publishReply(videoId, commentId, authorId, request.text());
+        return ResponseEntity.status(HttpStatus.CREATED).body(reply);
+    }
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    public ResponseEntity<ApiError> commentNotFound(CommentNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiError("COMMENT_NOT_FOUND", exception.getMessage()));
+    }
+
     @ExceptionHandler (InvalidCommentException.class)
     public ResponseEntity<ApiError> invalidComment(InvalidCommentException exception) {
         return ResponseEntity.badRequest().body(
