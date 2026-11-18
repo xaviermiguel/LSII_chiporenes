@@ -254,3 +254,100 @@ it.each([
     window.history.replaceState(null, '', '/');
   }
 });
+
+describe('Public video search', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    window.history.replaceState(null, '', '#buscar');
+  });
+
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  function search(query: string) {
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Título o descripción' }), { target: { value: query } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+  }
+
+  it('does not request an empty query and leaves existing results visible', async () => {
+    get.mockResolvedValueOnce({ data: videoListFixture });
+    render(<App />);
+    expect(screen.getByRole('link', { name: 'Buscar' })).toHaveAttribute('href', '#buscar');
+    search('   ');
+    expect(get).not.toHaveBeenCalled();
+    search('  video & café  ');
+    expect(get).toHaveBeenCalledWith('other/videos/search', {
+      params: { q: 'video & café', page: 0, size: 12 },
+      signal: expect.any(AbortSignal),
+    });
+    await screen.findByRole('button', { name: 'First video' });
+    search('');
+    expect(screen.getByRole('button', { name: 'First video' })).toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows loading, no matches, and errors with a retry', async () => {
+    const pending = pendingPage();
+    get.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ data: { ...videoListFixture, items: [] } });
+    render(<App />);
+    search('ausente');
+    expect(screen.getByRole('status')).toHaveTextContent('Buscando vídeos');
+    await act(async () => pending.reject(new Error('Offline')));
+    expect(screen.getByRole('alert')).toHaveTextContent('No se pudo realizar la búsqueda');
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByText('No se encontraron vídeos para «ausente».')).toBeInTheDocument();
+    expect(get.mock.calls.map(([, config]) => config?.params)).toEqual([
+      { q: 'ausente', page: 0, size: 12 },
+      { q: 'ausente', page: 0, size: 12 },
+    ]);
+  });
+
+  it('ignores an old additional page after submitting a different query', async () => {
+    const oldPage = pendingPage();
+    get
+      .mockResolvedValueOnce({ data: { ...videoListFixture, items: [videoListFixture.items[0]], hasNext: true } })
+      .mockReturnValueOnce(oldPage.promise)
+      .mockResolvedValueOnce({ data: { ...videoListFixture, items: [videoListFixture.items[1]] } });
+    render(<App />);
+    search('primera');
+    fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
+    search('segunda');
+    expect(screen.queryByRole('button', { name: 'First video' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Second video' })).toBeInTheDocument();
+    expect(get.mock.calls[1][1]?.signal?.aborted).toBe(true);
+    await act(async () => oldPage.resolve({ data: { ...videoListFixture, page: 1 } }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(get.mock.calls.map(([, config]) => config?.params)).toEqual([
+      { q: 'primera', page: 0, size: 12 },
+      { q: 'primera', page: 1, size: 12 },
+      { q: 'segunda', page: 0, size: 12 },
+    ]);
+  });
+
+  it('appends results in API order and retains the first page when a later request fails', async () => {
+    get
+      .mockResolvedValueOnce({ data: { ...videoListFixture, items: [videoListFixture.items[1]], hasNext: true } })
+      .mockRejectedValueOnce(new Error('Offline'))
+      .mockResolvedValueOnce({ data: { ...videoListFixture, items: [videoListFixture.items[0]], page: 1 } });
+    render(<App />);
+    search('video');
+    fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Second video' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    await screen.findByRole('button', { name: 'First video' });
+    const results = within(screen.getByRole('list', { name: 'Resultados para «video»' }));
+    expect(results.getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Second video',
+      'First video',
+    ]);
+    expect(within(results.getByRole('button', { name: 'Second video' })).getByAltText('')).toHaveAttribute(
+      'src',
+      'http://media.example/media/1.webp'
+    );
+    expect(get).toHaveBeenLastCalledWith(
+      'other/videos/search',
+      expect.objectContaining({ params: { q: 'video', page: 1, size: 12 } })
+    );
+    expect(screen.queryByRole('button', { name: 'Cargar más' })).not.toBeInTheDocument();
+  });
+});

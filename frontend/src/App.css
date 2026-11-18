@@ -447,6 +447,25 @@ h2 {
   list-style: none;
 }
 
+.video-replies {
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 0;
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-width) solid var(--color-border);
+  list-style: none;
+}
+
+.comment-actions,
+.reply-composer {
+  margin-top: var(--space-3);
+}
+
+.reply-composer form > .button,
+.reply-composer > .button {
+  margin-top: var(--space-3);
+}
+
 .video-comments p {
   margin-block: var(--space-3);
 }
@@ -521,6 +540,19 @@ h2 {
 .form-field {
   display: grid;
   gap: var(--space-2);
+}
+
+.video-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.video-search .form-field {
+  flex: 1 1 16rem;
+  min-width: 0;
 }
 
 .form-field label {

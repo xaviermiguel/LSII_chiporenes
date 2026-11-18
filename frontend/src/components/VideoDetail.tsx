@@ -4,6 +4,7 @@ import { getEnv } from '../utils/Env';
 import { VideoEngagement } from './VideoEngagement';
 import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../userProfile';
 import type { VideoDetail as VideoDetailData } from '../types/Video';
+import { VideoComments } from './VideoComments';
 
 type VideoDetailProps = {
   videoId: number;
@@ -181,49 +182,48 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
           </ul>
         )}
       </section>
-      <section className="detail-section" aria-label="Comentarios">
-        <h2>Comentarios ({video.comments.length})</h2>
-        {video.comments.length === 0 ? (
-          <p className="status-message">Este vídeo todavía no tiene comentarios.</p>
-        ) : (
-          <ul className="video-comments">
-            {video.comments.map((comment) => (
-              <li key={comment.id}>
-                <div className="comment-author">
-                  <img
-                    className="profile-avatar"
-                    src={
-                      comment.authorId != null && commentAvatars[comment.authorId]
-                        ? resolveAvatarURL(commentAvatars[comment.authorId])
-                        : defaultAvatar
-                    }
-                    onError={({ currentTarget }) => {
-                      if (currentTarget.src !== defaultAvatar) currentTarget.src = defaultAvatar;
-                    }}
-                    alt=""
-                    width={32}
-                    height={32}
-                    loading="lazy"
-                  />
-                  <strong>
-                    <a
-                      href={
-                        comment.authorId != null
-                          ? `#users/${comment.authorId}`
-                          : `#videos/${video.id}/comments/${comment.id}/author`
-                      }
-                    >
-                      {comment.user}
-                    </a>
-                  </strong>
-                </div>
-                <p>{comment.text}</p>
-                <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString()}</time>
-              </li>
-            ))}
-          </ul>
+      <VideoComments
+        key={`comments-${video.id}`}
+        videoId={video.id}
+        comments={video.comments}
+        renderAuthor={(comment) => (
+          <div className="comment-author">
+            <img
+              className="profile-avatar"
+              src={
+                comment.authorId != null && commentAvatars[comment.authorId]
+                  ? resolveAvatarURL(commentAvatars[comment.authorId])
+                  : defaultAvatar
+              }
+              onError={({ currentTarget }) => {
+                if (currentTarget.src !== defaultAvatar) currentTarget.src = defaultAvatar;
+              }}
+              alt=""
+              width={32}
+              height={32}
+              loading="lazy"
+            />
+            <strong>
+              <a
+                href={
+                  comment.authorId != null
+                    ? `#users/${comment.authorId}`
+                    : `#videos/${video.id}/comments/${comment.id}/author`
+                }
+              >
+                {comment.user}
+              </a>
+            </strong>
+          </div>
         )}
-      </section>
+        onReply={(reply) =>
+          setVideo((current) =>
+            current?.id === video.id && !current.comments.some((comment) => comment.id === reply.id)
+              ? { ...current, comments: [...current.comments, reply] }
+              : current
+          )
+        }
+      />
     </section>
   );
 }

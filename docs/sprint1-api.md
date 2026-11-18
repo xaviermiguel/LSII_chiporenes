@@ -151,6 +151,26 @@ comentarios guardados por fecha ascendente y usa el ID ascendente para desempata
 }
 ```
 
+## Responder a un comentario principal (US-10)
+
+`POST /api/videos/{videoId}/comments/{commentId}/replies`
+
+Usa los IDs persistidos del vídeo y del comentario principal. Envía
+`{"text":"Gracias por el comentario."}` con la misma sesión, token CSRF y
+validación de texto que al publicar un comentario principal (300 unidades UTF-16
+con la configuración del proyecto). El autor se obtiene de la sesión.
+
+La respuesta `201 Created` devuelve `id`, `text`, `user`, `createdAt` y
+`parentId`, que contiene el ID del comentario principal. Los nuevos comentarios
+y respuestas se guardan en la tabla `comments`. El detalle
+`GET /api/videos/{videoId}` devuelve ambos en la misma lista plana, ordenada por
+`createdAt` e `id` ascendentes, y permite agrupar las respuestas mediante
+`parentId`.
+
+Se aplican los errores de publicación de comentarios. Además, un comentario
+inexistente o de otro vídeo devuelve `404 COMMENT_NOT_FOUND`. Un intento de
+responder a una respuesta devuelve `400 INVALID_COMMENT`.
+
 ## Errores
 
 Los errores de la API tendrán un formato común:

@@ -20,8 +20,17 @@ const errorFields: Record<string, Field> = {
 const emailPattern =
   /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 
-export function AuthForm({ mode, onSuccess }: { mode: 'login' | 'register'; onSuccess: (user: AuthUser) => void }) {
+export function AuthForm({
+  mode,
+  onSuccess,
+  embedded = false,
+}: {
+  mode: 'login' | 'register';
+  onSuccess: (user: AuthUser) => void;
+  embedded?: boolean;
+}) {
   const registering = mode === 'register';
+  const Heading = embedded ? 'h3' : 'h1';
   const fields: Field[] = registering ? ['displayName', 'email', 'password', 'confirmPassword'] : ['email', 'password'];
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [message, setMessage] = useState('');
@@ -91,8 +100,8 @@ export function AuthForm({ mode, onSuccess }: { mode: 'login' | 'register'; onSu
 
   return (
     <section className="auth-panel" aria-labelledby="auth-title">
-      <p className="eyebrow">Comunidad ProTube</p>
-      <h1 id="auth-title">{registering ? 'Crea tu cuenta' : 'Inicia sesión'}</h1>
+      {!embedded && <p className="eyebrow">Comunidad ProTube</p>}
+      <Heading id="auth-title">{registering ? 'Crea tu cuenta' : 'Inicia sesión'}</Heading>
       <p>Todos los campos son obligatorios (*).</p>
       <form ref={form} onSubmit={(event) => void submit(event)} noValidate aria-busy={pending}>
         <fieldset disabled={pending}>
