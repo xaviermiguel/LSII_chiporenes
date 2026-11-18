@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getEnv } from '../utils/Env';
 import type { VideoDetail as VideoDetailData } from '../types/Video';
+import { VideoComments } from './VideoComments';
 
 type VideoDetailProps = {
   videoId: number;
@@ -139,22 +140,18 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
           </ul>
         )}
       </section>
-      <section className="detail-section" aria-label="Comentarios">
-        <h2>Comentarios ({video.comments.length})</h2>
-        {video.comments.length === 0 ? (
-          <p className="status-message">Este vídeo todavía no tiene comentarios.</p>
-        ) : (
-          <ul className="video-comments">
-            {video.comments.map((comment) => (
-              <li key={comment.id}>
-                <strong>{comment.user}</strong>
-                <p>{comment.text}</p>
-                <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString()}</time>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <VideoComments
+        key={`comments-${video.id}`}
+        videoId={video.id}
+        comments={video.comments}
+        onReply={(reply) =>
+          setVideo((current) =>
+            current?.id === video.id && !current.comments.some((comment) => comment.id === reply.id)
+              ? { ...current, comments: [...current.comments, reply] }
+              : current
+          )
+        }
+      />
     </section>
   );
 }
