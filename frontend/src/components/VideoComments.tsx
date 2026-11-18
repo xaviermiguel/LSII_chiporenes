@@ -5,23 +5,31 @@ import { ReplyForm } from './ReplyForm';
 
 type CommentListProps = {
   comments: VideoComment[];
+  renderAuthor?: (comment: VideoComment) => ReactNode;
   repliesByParent: Map<number, VideoComment[]>;
   parent?: VideoComment;
   renderAction?: (comment: VideoComment) => ReactNode;
 };
 
-function CommentList({ comments, repliesByParent, parent, renderAction }: CommentListProps) {
+function CommentList({ comments, repliesByParent, parent, renderAction, renderAuthor }: CommentListProps) {
   return (
     <ul className={parent ? 'video-replies' : 'video-comments'} aria-label={parent && `Respuestas a ${parent.user}`}>
       {comments.map((comment) => {
         const replies = repliesByParent.get(comment.id);
         return (
           <li key={comment.id}>
-            <strong>{comment.user}</strong>
+            {renderAuthor ? renderAuthor(comment) : <strong>{comment.user}</strong>}
             <p>{comment.text}</p>
             <time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString()}</time>
             {comment.parentId === null && renderAction?.(comment)}
-            {replies && <CommentList comments={replies} repliesByParent={repliesByParent} parent={comment} />}
+            {replies && (
+              <CommentList
+                comments={replies}
+                repliesByParent={repliesByParent}
+                parent={comment}
+                renderAuthor={renderAuthor}
+              />
+            )}
           </li>
         );
       })}
@@ -32,10 +40,11 @@ function CommentList({ comments, repliesByParent, parent, renderAction }: Commen
 type VideoCommentsProps = {
   videoId: number;
   comments: VideoComment[];
+  renderAuthor?: (comment: VideoComment) => ReactNode;
   onReply: (reply: VideoComment) => void;
 };
 
-export function VideoComments({ videoId, comments, onReply }: VideoCommentsProps) {
+export function VideoComments({ videoId, comments, onReply, renderAuthor }: VideoCommentsProps) {
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const trigger = useRef<HTMLButtonElement>(null);
@@ -68,6 +77,7 @@ export function VideoComments({ videoId, comments, onReply }: VideoCommentsProps
       ) : (
         <CommentList
           comments={rootComments}
+          renderAuthor={renderAuthor}
           repliesByParent={repliesByParent}
           renderAction={(comment) => (
             <div className="comment-actions">

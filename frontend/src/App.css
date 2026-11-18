@@ -662,3 +662,52 @@ h2 {
   gap: var(--space-3);
   align-content: start;
 }
+
+.profile-avatar {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.channel-avatar {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.video-engagement,
+.video-view-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.video-engagement {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+}
+
+.video-view-count img {
+  flex: none;
+}
+
+.comment-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.comment-author img {
+  flex: none;
+}

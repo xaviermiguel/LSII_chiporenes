@@ -51,3 +51,27 @@ Restore the VideoMapper import and the profile and own-videos routes dropped
 by the merge. Preserve the editor from main and align the navigation and
 publication assertions with the restored profile and current editor.
 Run frontend checks, Playwright and Maven verification with an isolated PostgreSQL.
+
+## Integración de main y resolución del PR #29 (2026-11-18)
+
+Se reutiliza el alcance de integración del perfil y de correcciones tras
+fusionar main documentado en este prompt.
+
+Solicitud del usuario conservada literalmente.
+
+> necessito ayuda , he hecho un pull request pero tengo merge conflicts en videoDetail.tsx, VideoDetailTest.tsx i app.test.tsx
+
+Integrar origin/main en la rama del PR. Conservar la búsqueda pública, las
+respuestas a comentarios, los enlaces a perfiles, los avatares actuales y las
+reacciones existentes. Resolver los tres conflictos y verificar el build,
+ESLint, Jest y las pruebas de integración del backend afectadas.
+
+Validación de la resolución.
+
+- Build Vite y TypeScript correctos.
+- Jest completo con 157 pruebas y 16 suites correctas.
+- Comprobación posterior de VideoDetail con 20 pruebas correctas, incluido el
+  enlace de autor dentro de las respuestas.
+- ESLint sin errores, con el aviso existente de Fast Refresh.
+- Maven con 46 pruebas correctas de AuthHttpIntegrationTest,
+  VideoDetailIntegrationTest, VideosControllerTest y VideoServiceTest.

@@ -161,10 +161,12 @@ class VideoServiceTest {
 
         // Normal owners retain their public name even if imported metadata exists.
         assertAuthor("Test owner");
+        assertEquals(owner.getId(), videoService.getVideoById(91L).authorId());
         // Only the reserved account selects the external author, case-insensitively.
         owner.setEmail("DEMO@PROTUBE.INVALID");
         owner.setDisplayName("ProTube Demo");
         assertAuthor("Original channel");
+        assertNull(videoService.getVideoById(91L).authorId());
         video.setExternalAuthor(null);
         assertAuthor("ProTube Demo");
         video.setExternalAuthor("   ");
