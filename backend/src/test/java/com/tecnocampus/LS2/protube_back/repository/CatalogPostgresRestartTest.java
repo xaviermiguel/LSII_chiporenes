@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.repository;
 
 import com.tecnocampus.LS2.protube_back.ProtubeBackApplication;
+import com.tecnocampus.LS2.protube_back.dto.video.CommentLikesResponse;
 import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.services.CommentService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -9,10 +10,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,7 +39,7 @@ class CatalogPostgresRestartTest {
     }
 
     @Test
-    void committedUserOwnershipVideoCommentAndReplySurviveApplicationRestart() {
+    void committedUserOwnershipVideoCommentReplyAndLikeSurviveApplicationRestart() throws Exception {
         String path = "restart-test-" + UUID.randomUUID() + ".mp4";
         String email = "restart-" + UUID.randomUUID() + "@example.com";
         String hash = new BCryptPasswordEncoder(12).encode("Restart-test-password");
@@ -60,6 +66,25 @@ class CatalogPostgresRestartTest {
             ownerId = ids[2];
             replyId = first.getBean(CommentService.class)
                     .publishReply(videoId, commentId, ownerId, "Reply committed before restart").id();
+
+            var reactions = first.getBean(CommentService.class);
+            var startTogether = new CyclicBarrier(2);
+            try (var executor = Executors.newFixedThreadPool(2)) {
+                var firstRequest = executor.submit(() -> {
+                    startTogether.await(10, TimeUnit.SECONDS);
+                    return reactions.setLike(videoId, commentId, ownerId, true);
+                });
+                var secondRequest = executor.submit(() -> {
+                    startTogether.await(10, TimeUnit.SECONDS);
+                    return reactions.setLike(videoId, commentId, ownerId, true);
+                });
+                var expected = new CommentLikesResponse(1, true);
+                assertEquals(expected, firstRequest.get(15, TimeUnit.SECONDS));
+                assertEquals(expected, secondRequest.get(15, TimeUnit.SECONDS));
+            }
+            var jdbc = first.getBean(JdbcTemplate.class);
+            assertThrows(DuplicateKeyException.class, () -> jdbc.update(
+                    "INSERT INTO public.comment_likes (comment_id, user_id) VALUES (?, ?)", commentId, ownerId));
         }
         // A new connection pool and EntityManagerFactory must read committed PostgreSQL data.
         try (var second = start()) {
@@ -67,6 +92,9 @@ class CatalogPostgresRestartTest {
             var comments = second.getBean(CommentRepository.class);
             var transaction = new TransactionTemplate(second.getBean(PlatformTransactionManager.class));
             try {
+                var reactions = second.getBean(CommentService.class);
+                assertEquals(new CommentLikesResponse(1, true), reactions.getLikes(videoId, commentId, ownerId));
+                assertEquals(new CommentLikesResponse(1, false), reactions.getLikes(videoId, commentId, null));
                 transaction.executeWithoutResult(status -> {
                     var video = videos.findById(videoId).orElseThrow();
                     var comment = comments.findById(commentId).orElseThrow();
@@ -101,6 +129,7 @@ class CatalogPostgresRestartTest {
             } finally {
                 // Only records inserted by this test; never truncate, drop, or delete another user's data.
                 transaction.executeWithoutResult(status -> {
+                    second.getBean(CommentLikeRepository.class).removeLike(commentId, ownerId);
                     comments.deleteById(replyId);
                     comments.flush();
                     comments.deleteById(commentId);

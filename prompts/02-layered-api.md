@@ -1,5 +1,27 @@
 # Layered API and PostgreSQL entities
 
+## Reutilización para likes en comentarios principales (US-10)
+
+Reutiliza el alcance aprobado de API por capas, modelo PostgreSQL, unicidad de
+`comment_likes` y pruebas de persistencia de este prompt. El solicitante
+confirmó el contrato técnico en la conversación.
+
+Implementa solo el backend en `feat/comment-likes-api` desde `main`
+actualizado. Usa `GET`, `PUT` y `DELETE` en
+`/api/videos/{videoId}/comments/{commentId}/likes`, con respuesta `200` y
+`{"likeCount":3,"likedByMe":true}`. `GET` es público y devuelve
+`likedByMe: false` a visitantes. `PUT` y `DELETE` son idempotentes y requieren
+sesión y CSRF. La identidad se toma de la sesión. Devuelve
+`404 COMMENT_NOT_FOUND` para un comentario inexistente o de otro vídeo y
+`400 INVALID_COMMENT` para una respuesta.
+
+Usa la clave primaria existente `(comment_id, user_id)` y garantiza la
+consistencia ante escrituras concurrentes. Conserva la lectura de comentarios
+y respuestas. Verifica errores, permisos, idempotencia, concurrencia real,
+unicidad y persistencia tras reiniciar con PostgreSQL. Ejecuta las validaciones
+del repositorio, documenta el contrato y aplica `commit-ai-change`, con push
+y PR hacia `main` para revisión y CI.
+
 ## API de respuestas a comentarios (US-10)
 
 **Approved on:** 2026-11-17
