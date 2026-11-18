@@ -14,6 +14,11 @@ public record VideoDetailResponse(
         List<String> tags,
         List<CommentResponse> comments,
         Long ownerId,
+        Long authorId,
+        Long viewCount,
+        Long likeCount,
+        String channel,
+        Long channelFollowerCount,
         CategoryResponse category
 ) {
 }

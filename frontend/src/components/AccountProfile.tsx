@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useSession } from '../SessionContext';
 import { AuthError } from '../auth';
+import { AccountAvatar } from './AccountAvatar';
 
 type Profile = { id: number; displayName: string; email: string; description: string };
 const profileFields = ['displayName', 'email', 'description'] as const;
@@ -122,6 +123,9 @@ export function AccountProfile({ onPasswordChanged }: { onPasswordChanged: () =>
         </a>
       </div>
       <p>Actualiza tus datos y la seguridad de tu cuenta. Los campos con * son obligatorios.</p>
+      <p>
+        <a href={`#users/${profile.id}`}>Ver mi perfil público</a>
+      </p>
       {notice && (
         <p className="status-message" role="status">
           {notice}
@@ -131,6 +135,7 @@ export function AccountProfile({ onPasswordChanged }: { onPasswordChanged: () =>
         {error}
       </p>
       <div className="account-grid">
+        <AccountAvatar key={profile.id} userId={profile.id} />
         <form
           className="account-panel"
           onSubmit={(event) => void submit(event, 'profile')}

@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AccountProfile } from '../AccountProfile';
 import { MyVideos, EditVideo } from '../MyVideos';
 import { AuthError } from '../../auth';
+import { getPublicProfile } from '../../userProfile';
+jest.mock('../../userProfile', () => ({ ...jest.requireActual('../../userProfile'), getPublicProfile: jest.fn() }));
 
 const mockRequest = jest.fn();
 const mockAuthenticated = jest.fn();
@@ -13,6 +15,7 @@ const response = (value: unknown) => ({ json: async () => value });
 beforeEach(() => {
   jest.resetAllMocks();
   mockRequest.mockResolvedValue(response(profile));
+  jest.mocked(getPublicProfile).mockResolvedValue({ ...profile, avatarURL: '/assets/avatar-default.png' });
 });
 
 test('loads and saves profile and updates the shared mockAuthenticated user', async () => {
@@ -144,4 +147,65 @@ test('does not display an edit form for another owner or an unavailable video', 
   expect(screen.queryByRole('button', { name: 'Guardar vídeo' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('ya no está disponible'));
+});
+
+test('uploads a PNG as multipart and refreshes the current avatar', async () => {
+  const file = new File(['image bytes'], 'avatar.png', { type: 'image/png' });
+  jest
+    .mocked(getPublicProfile)
+    .mockResolvedValueOnce({ ...profile, avatarURL: '/assets/avatar-default.png' })
+    .mockResolvedValueOnce({ ...profile, avatarURL: '/media/avatars/new.png' });
+  let finish!: (value: unknown) => void;
+  mockRequest.mockResolvedValueOnce(response(profile)).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    })
+  );
+  render(<AccountProfile onPasswordChanged={jest.fn()} />);
+
+  expect(await screen.findByRole('img', { name: 'Tu avatar actual' })).toHaveAttribute(
+    'src',
+    expect.stringContaining('/assets/avatar-default.png')
+  );
+  const save = screen.getByRole('button', { name: 'Guardar avatar' });
+  await waitFor(() => expect(save).toBeEnabled());
+  fireEvent.change(screen.getByLabelText('Imagen del avatar'), { target: { files: [file] } });
+  fireEvent.click(save);
+  const pending = screen.getByRole('button', { name: 'Subiendo avatar…' });
+  expect(pending).toBeDisabled();
+  fireEvent.click(pending);
+  expect(mockRequest).toHaveBeenCalledTimes(2);
+  const [path, options] = mockRequest.mock.lastCall!;
+  expect(path).toBe('/auth/profile/avatar');
+  expect(options.method).toBe('PUT');
+  expect(options.body.get('avatar')).toEqual(file);
+  expect(options.headers).toBeUndefined();
+  finish({ status: 204 });
+
+  expect(await screen.findByText('Avatar guardado.')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Tu avatar actual' })).toHaveAttribute(
+    'src',
+    expect.stringContaining('/media/avatars/new.png')
+  );
+});
+
+test('keeps the existing avatar and selected JPEG when the backend rejects the file', async () => {
+  const file = new File(['invalid image'], 'avatar.jpeg', { type: 'image/jpeg' });
+  jest.mocked(getPublicProfile).mockResolvedValue({ ...profile, avatarURL: '/media/avatars/previous.png' });
+  mockRequest.mockResolvedValueOnce(response(profile)).mockRejectedValueOnce(new AuthError('INVALID_REQUEST', 400));
+  render(<AccountProfile onPasswordChanged={jest.fn()} />);
+
+  const save = await screen.findByRole('button', { name: 'Guardar avatar' });
+  await waitFor(() => expect(save).toBeEnabled());
+  const input = screen.getByLabelText<HTMLInputElement>('Imagen del avatar');
+  fireEvent.change(input, { target: { files: [file] } });
+  fireEvent.click(save);
+
+  expect(await screen.findByText(/Selecciona un JPEG o PNG válido/)).toBeInTheDocument();
+  expect(input.files?.[0]).toBe(file);
+  expect(screen.getByRole('img', { name: 'Tu avatar actual' })).toHaveAttribute(
+    'src',
+    expect.stringContaining('/media/avatars/previous.png')
+  );
+  expect(getPublicProfile).toHaveBeenCalledTimes(1);
 });

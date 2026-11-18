@@ -164,6 +164,97 @@ describe('Public video catalog', () => {
   });
 });
 
+it('opens the public profile of a local video author without signing in', async () => {
+  const video = videoDetailsFixture[0];
+  get
+    .mockResolvedValueOnce({ data: videoListFixture })
+    .mockResolvedValueOnce({ data: { ...video, authorId: 8 } })
+    .mockResolvedValueOnce({
+      data: { id: 8, displayName: video.user, description: '', avatarURL: '/assets/avatar-default.png' },
+    })
+    .mockResolvedValueOnce({ data: videoListFixture })
+    .mockResolvedValueOnce({ data: { ...video, authorId: 8 } });
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: video.title }));
+  const author = await screen.findByRole('link', { name: video.user });
+  expect(author).toHaveAttribute('href', '#users/8');
+  fireEvent.click(author);
+  expect(await screen.findByRole('heading', { name: video.user })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Editar mi perfil' })).not.toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: video.title })).toBeInTheDocument();
+  window.history.replaceState(null, '', '/');
+});
+
+it('shows the Mark Ronson channel and plays its imported video inside ProTube', async () => {
+  const video = { ...videoDetailsFixture[0], user: 'Mark Ronson', authorId: null };
+  const other = { ...video, id: 99, title: 'Vídeo de otra cuenta', authorId: 20 };
+  get
+    .mockResolvedValueOnce({ data: videoListFixture })
+    .mockResolvedValueOnce({ data: video })
+    .mockResolvedValueOnce({ data: { ...videoListFixture, items: [video, other], hasNext: false } })
+    .mockResolvedValueOnce({ data: video })
+    .mockResolvedValueOnce({ data: other })
+    .mockResolvedValueOnce({ data: video });
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: video.title }));
+  fireEvent.click(await screen.findByRole('link', { name: 'Mark Ronson' }));
+  try {
+    expect(await screen.findByRole('heading', { name: 'Mark Ronson' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Avatar de Mark Ronson' })).toBeInTheDocument();
+    expect(screen.getByText(/DJ y productor musical/)).toBeInTheDocument();
+    const channelVideo = await screen.findByRole('button', { name: video.title });
+    expect(screen.queryByRole('button', { name: other.title })).not.toBeInTheDocument();
+    fireEvent.click(channelVideo);
+    expect(await screen.findByRole('heading', { name: video.title })).toBeInTheDocument();
+  } finally {
+    window.history.replaceState(null, '', '/');
+  }
+});
+
+it.each([
+  ['Ana', 'Miembro de la comunidad de ProTube.'],
+  ['Autor importado', 'Participa en la conversación de este vídeo del catálogo de ProTube.'],
+])('opens the public profile of commenter %s', async (name, description) => {
+  const video = videoDetailsFixture[0];
+  const comment = { id: 23, user: 'Ana', text: 'Un comentario', createdAt: '2026-10-25T10:00:00Z', parentId: null };
+  get.mockImplementation(async (url) => {
+    if (url.endsWith('/users/8')) {
+      return { data: { id: 8, displayName: 'Ana', description: '', avatarURL: '/assets/avatar-default.png' } };
+    }
+    if (url.endsWith('/videos/' + video.id)) {
+      return {
+        data: {
+          ...video,
+          comments: [
+            { ...comment, authorId: 8 },
+            { ...comment, id: 24, user: 'Autor importado', authorId: null },
+          ],
+        },
+      };
+    }
+    return { data: videoListFixture };
+  });
+  render(<App />);
+  try {
+    fireEvent.click(await screen.findByRole('button', { name: video.title }));
+    const comments = await screen.findByRole('region', { name: 'Comentarios' });
+    const author = within(comments).getByRole('link', { name: 'Ana' });
+    expect(author).toHaveAttribute('href', '#users/8');
+    expect(within(comments).getAllByAltText('')[0]).toHaveAttribute(
+      'src',
+      expect.stringContaining('/assets/avatar-default.png')
+    );
+    const importedAuthor = within(comments).getByRole('link', { name: 'Autor importado' });
+    expect(importedAuthor).toHaveAttribute('href', `#videos/${video.id}/comments/24/author`);
+
+    fireEvent.click(within(comments).getByRole('link', { name }));
+    expect(await screen.findByRole('heading', { name })).toBeInTheDocument();
+    expect(screen.getByText(description)).toBeInTheDocument();
+  } finally {
+    window.history.replaceState(null, '', '/');
+  }
+});
+
 describe('Public video search', () => {
   beforeEach(() => {
     jest.resetAllMocks();
