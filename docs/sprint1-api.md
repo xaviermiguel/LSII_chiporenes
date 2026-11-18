@@ -171,6 +171,39 @@ Se aplican los errores de publicación de comentarios. Además, un comentario
 inexistente o de otro vídeo devuelve `404 COMMENT_NOT_FOUND`. Un intento de
 responder a una respuesta devuelve `400 INVALID_COMMENT`.
 
+## Likes en comentarios principales (US-10)
+
+La ruta es `/api/videos/{videoId}/comments/{commentId}/likes`. Utiliza los IDs
+persistidos del vídeo y del comentario. Las peticiones se envían sin cuerpo.
+
+| Método | Acceso | Operación |
+|---|---|---|
+| `GET` | Público | Consulta el estado actual. `likedByMe` es `false` para visitantes sin sesión. |
+| `PUT` | Sesión y CSRF | Añade el like del usuario de la sesión si aún no existe. |
+| `DELETE` | Sesión y CSRF | Retira el like del usuario de la sesión si existe. |
+
+Los tres métodos devuelven `200 OK` con el total de likes activos y el estado
+individual. Las escrituras devuelven el estado resultante y son idempotentes.
+
+```json
+{
+  "likeCount": 3,
+  "likedByMe": true
+}
+```
+
+Un comentario inexistente o perteneciente a otro vídeo devuelve
+`404 COMMENT_NOT_FOUND`. Consultar o modificar likes de una respuesta devuelve
+`400 INVALID_COMMENT`. Las escrituras aplican los errores existentes
+`401 AUTHENTICATION_REQUIRED` y `403 INVALID_CSRF_TOKEN`.
+
+PostgreSQL guarda los likes en `comment_likes`. La clave primaria existente
+`(comment_id, user_id)` garantiza un único like activo por usuario y comentario.
+Las escrituras concurrentes se serializan con un bloqueo de fila sobre el
+comentario durante la transacción. El total y el estado individual se calculan
+juntos a partir de las filas activas. El detalle del vídeo conserva su contrato
+de lectura de comentarios y respuestas.
+
 ## Errores
 
 Los errores de la API tendrán un formato común:

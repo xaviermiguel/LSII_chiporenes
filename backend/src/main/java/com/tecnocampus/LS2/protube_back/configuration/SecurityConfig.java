@@ -116,6 +116,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/videos/me").authenticated()
                         .requestMatchers(HttpMethod.HEAD, "/api/videos/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/*", "/api/hello").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/videos/*/comments/*/likes").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/api/videos/*/comments/*/likes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.ico", "/media/**").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/api/videos", "/api/videos/*", "/api/hello", "/media/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/users/{id:[0-9]+}").permitAll()

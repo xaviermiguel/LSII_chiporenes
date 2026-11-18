@@ -190,6 +190,26 @@ public class VideosController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reply);
     }
 
+    private static final String COMMENT_LIKES = "/{videoId}/comments/{commentId}/likes";
+
+    @GetMapping(COMMENT_LIKES)
+    public CommentLikesResponse getCommentLikes(@PathVariable Long videoId, @PathVariable Long commentId,
+                                                @AuthenticationPrincipal Long userId) {
+        return commentService.getLikes(videoId, commentId, userId);
+    }
+
+    @PutMapping(COMMENT_LIKES)
+    public CommentLikesResponse likeComment(@PathVariable Long videoId, @PathVariable Long commentId,
+                                             @AuthenticationPrincipal Long userId) {
+        return commentService.setLike(videoId, commentId, userId, true);
+    }
+
+    @DeleteMapping(COMMENT_LIKES)
+    public CommentLikesResponse unlikeComment(@PathVariable Long videoId, @PathVariable Long commentId,
+                                               @AuthenticationPrincipal Long userId) {
+        return commentService.setLike(videoId, commentId, userId, false);
+    }
+
     @ExceptionHandler(CommentNotFoundException.class)
     public ResponseEntity<ApiError> commentNotFound(CommentNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)

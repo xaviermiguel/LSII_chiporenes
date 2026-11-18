@@ -279,6 +279,8 @@ public class VideoService {
         String thumbnailPath = video.getThumbnailPath();
 
         // Pendiente: eliminar las relaciones del vídeo.
+        // Prevent a like from being inserted between deleting the likes and their comments.
+        commentRepository.lockMainCommentsForVideoDeletion(videoId);
         commentRepository.deleteLikesByVideoId(videoId);
         commentRepository.deleteCommentsByVideoId(videoId);
         // Pendiente: eliminar el registro del vídeo.
