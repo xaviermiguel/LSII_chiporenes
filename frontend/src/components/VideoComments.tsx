@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { VideoComment } from '../types/Video';
 import { ReplyForm } from './ReplyForm';
+import { CommentLikes } from './CommentLikes';
 
 type CommentListProps = {
   comments: VideoComment[];
@@ -81,6 +82,7 @@ export function VideoComments({ videoId, comments, onReply, renderAuthor }: Vide
           repliesByParent={repliesByParent}
           renderAction={(comment) => (
             <div className="comment-actions">
+              <CommentLikes videoId={videoId} commentId={comment.id} author={comment.user} />
               <button
                 className="button button-secondary"
                 type="button"
