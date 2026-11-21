@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render as renderWithProviders, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import axios from 'axios';
 import { VideoDetail } from '../VideoDetail';
 import { videoDetailsFixture } from '../../fixtures/videos';
@@ -18,10 +19,14 @@ jest.mock('../../utils/Env', () => ({
 }));
 const get = jest.mocked(axios.get);
 const detail = videoDetailsFixture[0];
+const render = (element: ReactElement) => renderWithProviders(element, { wrapper: SessionProvider });
+
+beforeEach(() => {
+  jest.resetAllMocks();
+  jest.mocked(currentUser).mockResolvedValue(null);
+});
 
 describe('Video detail under the shared visual standard', () => {
-  beforeEach(() => jest.resetAllMocks());
-
   it.each([1, 2, undefined])('only owner sees editing link (viewer %s)', async (userId) => {
     get.mockResolvedValue({ data: { ...detail, ownerId: 1 } });
     render(<VideoDetail videoId={detail.id} userId={userId} onBack={jest.fn()} />);
@@ -211,11 +216,7 @@ describe('Replying from the video detail', () => {
   });
 
   async function openReply() {
-    render(
-      <SessionProvider>
-        <VideoDetail videoId={detail.id} userId={account.id} onBack={jest.fn()} />
-      </SessionProvider>
-    );
+    render(<VideoDetail videoId={detail.id} userId={account.id} onBack={jest.fn()} />);
     const trigger = await screen.findByRole('button', { name: 'Responder a Ana' });
     fireEvent.click(trigger);
     return trigger;
@@ -250,7 +251,9 @@ describe('Replying from the video detail', () => {
     });
     expect(screen.getByRole('button', { name: 'Enviando respuesta…' })).toBeDisabled();
     await act(async () => {
-      finish(new Response(JSON.stringify({ id: 9, user: 'Pau', text: ' Gracias ', createdAt, parentId: 2 })));
+      finish(
+        new Response(JSON.stringify({ id: 9, user: 'Pau', text: ' Gracias ', createdAt, parentId: 2 }), { status: 201 })
+      );
     });
     const thread = await screen.findByRole('list', { name: 'Respuestas a Ana' });
     expect(within(thread).getByText('Pau')).toBeInTheDocument();
@@ -296,5 +299,150 @@ describe('Replying from the video detail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
     expect(await screen.findByRole('textbox', { name: 'Responder a Ana' })).toHaveValue('Borrador conservado');
     expect(request).toHaveBeenCalledTimes(1);
+  });
+});
+describe('Publicar un comentario de primer nivel', () => {
+  const account = { id: 5, displayName: 'Pau', email: 'pau@example.com' };
+  const saved = {
+    id: 8,
+    user: 'Pau del servidor',
+    authorId: 5,
+    createdAt: '2026-11-17T10:00:00.000001Z',
+    parentId: null,
+  };
+  const request = jest.mocked(authenticatedRequest);
+  const button = () => screen.getByRole('button', { name: 'Publicar comentario' });
+
+  beforeEach(() => {
+    jest.mocked(currentUser).mockResolvedValue(account);
+    get.mockResolvedValue({ data: { ...detail, comments: [] } });
+  });
+
+  async function editor() {
+    render(<VideoDetail videoId={detail.id} onBack={jest.fn()} />);
+    return screen.findByRole('textbox', { name: 'Escribe un comentario' });
+  }
+
+  it('ofrece acceso al visitante incluso en un vídeo sin comentarios', async () => {
+    jest.mocked(currentUser).mockResolvedValue(null);
+    render(<VideoDetail videoId={detail.id} onBack={jest.fn()} />);
+    expect(await screen.findByRole('link', { name: 'Inicia sesión para comentar' })).toHaveAttribute('href', '#login');
+    expect(screen.getByText('Este vídeo todavía no tiene comentarios.')).toBeVisible();
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it.each(['', '   ', '\t\u001c\u2003\u3000', '😀'.repeat(150) + ' '])('rechaza texto inválido (%#)', async (text) => {
+    const input = await editor();
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.click(button());
+    expect(screen.getByRole('alert')).toBeVisible();
+    expect(input).toHaveFocus();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it.each(['\u00a0', '\u2007', '\u202f', '\ufeff', ' ' + '😀'.repeat(149) + ' '])(
+    'envía el texto original permitido por Java (%#)',
+    async (text) => {
+      request.mockResolvedValue(new Response(JSON.stringify({ ...saved, text }), { status: 201 }));
+      const input = await editor();
+      fireEvent.change(input, { target: { value: text } });
+      fireEvent.click(button());
+      await screen.findByRole('heading', { name: 'Comentarios (1)' });
+      expect(request).toHaveBeenCalledWith(
+        `/videos/${detail.id}/comments`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ text }),
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      expect(input).toHaveValue('');
+      expect(screen.queryByText('Este vídeo todavía no tiene comentarios.')).toBeNull();
+    }
+  );
+
+  it('bloquea envíos simultáneos y coloca una sola copia de la confirmación en su orden', async () => {
+    const existing = [
+      { ...saved, id: 7, text: 'Antes' },
+      { ...saved, id: 10, text: 'Después' },
+      { ...saved, id: 1, text: 'Más tarde', createdAt: '2026-11-17T10:00:00.000002Z' },
+    ];
+    get.mockResolvedValue({ data: { ...detail, comments: existing } });
+    let finish!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+    const text = '<b>hola</b>';
+    const input = await editor();
+    fireEvent.change(input, { target: { value: text } });
+    const form = input.closest('form')!;
+    act(() => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Publicando…' })).toBeDisabled();
+    expect(input).toHaveValue(text);
+    expect(screen.getByRole('heading', { name: 'Comentarios (3)' })).toBeVisible();
+    const confirmation = () => new Response(JSON.stringify({ ...saved, text }), { status: 201 });
+    await act(async () => finish(confirmation()));
+    const list = within(screen.getByRole('region', { name: 'Comentarios' })).getByRole('list');
+    expect(Array.from(list.querySelectorAll('li > p'), (p) => p.textContent)).toEqual([
+      'Antes',
+      text,
+      'Después',
+      'Más tarde',
+    ]);
+    expect(list.querySelector('b')).toBeNull();
+    expect(within(screen.getByText(text).closest('li')!).getByRole('link', { name: saved.user })).toHaveAttribute(
+      'href',
+      '#users/5'
+    );
+    request.mockResolvedValueOnce(confirmation());
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.click(button());
+    await waitFor(() => expect(input).toHaveValue(''));
+    expect(screen.getAllByText(text)).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Comentarios (4)' })).toBeVisible();
+  });
+
+  it.each([
+    [new AuthError('INVALID_COMMENT', 400, 'Comentario no válido'), 'Comentario no válido'],
+    [new AuthError('INVALID_REQUEST', 400), 'Revisa los campos'],
+    [new AuthError('INVALID_CSRF_TOKEN', 403), 'Vuelve a enviar'],
+    [new AuthError('VIDEO_NOT_FOUND', 404), 'El vídeo ya no está disponible'],
+    [new AuthError('UNKNOWN', 500), 'Inténtalo de nuevo'],
+    [new TypeError('offline'), 'Comprueba tu conexión'],
+  ])('conserva el borrador y la lista tras un error (%#)', async (failure, message) => {
+    get.mockResolvedValue({ data: { ...detail, comments: [{ ...saved, text: 'Comentario anterior' }] } });
+    request.mockRejectedValueOnce(failure);
+    const input = await editor();
+    fireEvent.change(input, { target: { value: 'Mi borrador' } });
+    fireEvent.click(button());
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(input).toHaveValue('Mi borrador');
+    expect(screen.getByText('Comentario anterior')).toBeVisible();
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(button()).toBeEnabled();
+  });
+
+  it('mantiene el borrador ante una sesión caducada y deja que el usuario reanude el envío', async () => {
+    request.mockRejectedValueOnce(new AuthError('AUTHENTICATION_REQUIRED', 401));
+    jest.mocked(authenticate).mockResolvedValue(account);
+    const input = await editor();
+    const text = 'Pendiente de publicar';
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.click(button());
+    expect(await screen.findByText(/Tu sesión ha caducado/)).toHaveFocus();
+    fireEvent.change(screen.getByLabelText('Email *'), { target: { value: account.email } });
+    fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Test-password1!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    const recovered = await screen.findByRole('textbox', { name: 'Escribe un comentario' });
+    expect(recovered).toHaveValue(text);
+    expect(recovered).toHaveFocus();
+    expect(request).toHaveBeenCalledTimes(1);
+    request.mockResolvedValueOnce(new Response(JSON.stringify({ ...saved, text }), { status: 201 }));
+    fireEvent.click(button());
+    const list = within(screen.getByRole('region', { name: 'Comentarios' }));
+    expect(within(await list.findByRole('list')).getByText(text)).toBeVisible();
+    expect(recovered).toHaveValue('');
   });
 });

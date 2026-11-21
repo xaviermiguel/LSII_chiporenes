@@ -149,6 +149,42 @@ test('signs in to reply with the keyboard and sees the saved reply after reload'
   await expect(saved).toContainText(author);
 });
 
+test('publishes a top-level comment as a viewer and finds it once after reload', async ({ page }) => {
+  const email = `comment-${Date.now()}@example.com`;
+  const author = 'Lector de ProTube';
+  const text = `<b>Comentario de ${email}</b>`;
+  await page.goto('/#register');
+  await page.getByLabel('Nombre de usuario *').fill(author);
+  await page.getByLabel('Email *').fill(email);
+  await page.getByLabel('Contraseña *', { exact: true }).fill('Test-password1!');
+  await page.getByLabel('Confirmar contraseña *').fill('Test-password1!');
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  const video = page.getByRole('button', { name: 'E2E first video', exact: true });
+  const detailResponse = page.waitForResponse(`${api}/api/videos/101`);
+  await video.click();
+  const { ownerId } = await (await detailResponse).json();
+  const input = page.getByRole('textbox', { name: 'Escribe un comentario' });
+  await input.fill(text);
+  const confirmation = page.waitForResponse(
+    (response) => response.url() === `${api}/api/videos/101/comments` && response.request().method() === 'POST'
+  );
+  await page.getByRole('button', { name: 'Publicar comentario' }).click();
+  const response = await confirmation;
+  expect(response.status()).toBe(201);
+  const saved = await response.json();
+  expect(saved).toMatchObject({ text, user: author, authorId: expect.any(Number), parentId: null });
+  expect(saved.authorId).not.toBe(ownerId);
+  const rendered = page.locator('.video-comments > li').filter({ has: page.getByText(text, { exact: true }) });
+  await expect(rendered).toHaveCount(1);
+  await expect(rendered.getByRole('link', { name: author })).toHaveAttribute('href', `#users/${saved.authorId}`);
+  await expect(input).toHaveValue('');
+  await page.reload();
+  await video.click();
+  await expect(rendered).toHaveCount(1);
+  await expect(rendered.getByRole('link', { name: author })).toBeVisible();
+  await expect(rendered.locator('b')).toHaveCount(0);
+});
+
 test('adds and removes a comment like with the real API and restores it after reload', async ({ page }, testInfo) => {
   await page.goto('/#register');
   await page.getByLabel('Nombre de usuario *').fill('Violeta');
