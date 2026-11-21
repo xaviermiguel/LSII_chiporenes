@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { VideoComment } from '../types/Video';
-import { ReplyForm } from './ReplyForm';
+import { CommentForm } from './CommentForm';
 
 type CommentListProps = {
   comments: VideoComment[];
@@ -41,10 +41,10 @@ type VideoCommentsProps = {
   videoId: number;
   comments: VideoComment[];
   renderAuthor?: (comment: VideoComment) => ReactNode;
-  onReply: (reply: VideoComment) => void;
+  onPublished: (comment: VideoComment) => void;
 };
 
-export function VideoComments({ videoId, comments, onReply, renderAuthor }: VideoCommentsProps) {
+export function VideoComments({ videoId, comments, onPublished, renderAuthor }: VideoCommentsProps) {
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const trigger = useRef<HTMLButtonElement>(null);
@@ -72,6 +72,13 @@ export function VideoComments({ videoId, comments, onReply, renderAuthor }: Vide
   return (
     <section className="detail-section" aria-label="Comentarios">
       <h2>Comentarios ({comments.length})</h2>
+      <CommentForm
+        videoId={videoId}
+        onPublished={(comment) => {
+          onPublished(comment);
+          setAnnouncement(`Comentario publicado por ${comment.user}.`);
+        }}
+      />
       {comments.length === 0 ? (
         <p className="status-message">Este vídeo todavía no tiene comentarios.</p>
       ) : (
@@ -97,12 +104,12 @@ export function VideoComments({ videoId, comments, onReply, renderAuthor }: Vide
                 Responder
               </button>
               {replyTo === comment.id && (
-                <ReplyForm
+                <CommentForm
                   videoId={videoId}
                   parent={comment}
                   onCancel={closeReply}
                   onPublished={(reply) => {
-                    onReply(reply);
+                    onPublished(reply);
                     setAnnouncement('Respuesta publicada.');
                     closeReply();
                   }}
