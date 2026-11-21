@@ -183,6 +183,8 @@ test('publishes a top-level comment as a viewer and finds it once after reload',
   await expect(rendered).toHaveCount(1);
   await expect(rendered.getByRole('link', { name: author })).toBeVisible();
   await expect(rendered.locator('b')).toHaveCount(0);
+});
+
 test('adds and removes a comment like with the real API and restores it after reload', async ({ page }, testInfo) => {
   await page.goto('/#register');
   await page.getByLabel('Nombre de usuario *').fill('Violeta');
