@@ -7,6 +7,7 @@ import { SessionProvider } from '../../SessionContext';
 import { authenticate, authenticatedRequest, AuthError, currentUser } from '../../auth';
 
 jest.mock('axios');
+jest.mock('../CommentLikes', () => ({ CommentLikes: () => null }));
 jest.mock('../../auth', () => ({
   ...jest.requireActual('../../auth'),
   authenticate: jest.fn(),

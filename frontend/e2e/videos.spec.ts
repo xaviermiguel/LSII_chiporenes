@@ -183,4 +183,42 @@ test('publishes a top-level comment as a viewer and finds it once after reload',
   await expect(rendered).toHaveCount(1);
   await expect(rendered.getByRole('link', { name: author })).toBeVisible();
   await expect(rendered.locator('b')).toHaveCount(0);
+test('adds and removes a comment like with the real API and restores it after reload', async ({ page }, testInfo) => {
+  await page.goto('/#register');
+  await page.getByLabel('Nombre de usuario *').fill('Violeta');
+  await page.getByLabel('Email *').fill(`like-${Date.now()}-${testInfo.retry}@example.com`);
+  await page.getByLabel('Contraseña *', { exact: true }).fill('Test-password1!');
+  await page.getByLabel('Confirmar contraseña *').fill('Test-password1!');
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible();
+
+  const video = page.getByRole('button', { name: 'E2E first video' });
+  await video.click();
+  const like = page.getByRole('button', { name: 'Me gusta el comentario de Test commenter' });
+  await expect(like).toBeEnabled();
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+
+  const added = page.waitForResponse(
+    (response) => response.url().endsWith('/likes') && response.request().method() === 'PUT'
+  );
+  await like.press('Enter');
+  const put = await added;
+  expect(put.ok()).toBeTruthy();
+  const { likeCount } = await put.json();
+  await expect(like).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText(`${likeCount} Me gusta`, { exact: true })).toBeVisible();
+
+  await page.reload();
+  await video.click();
+  await expect(like).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText(`${likeCount} Me gusta`, { exact: true })).toBeVisible();
+
+  const removed = page.waitForResponse(
+    (response) => response.url().endsWith('/likes') && response.request().method() === 'DELETE'
+  );
+  await like.press('Space');
+  const deletion = await removed;
+  expect(deletion.ok()).toBeTruthy();
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByText(`${likeCount - 1} Me gusta`, { exact: true })).toBeVisible();
 });
