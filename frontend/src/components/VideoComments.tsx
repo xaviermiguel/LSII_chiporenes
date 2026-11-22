@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { VideoComment } from '../types/Video';
 import { CommentForm } from './CommentForm';
-import { ReplyForm } from './ReplyForm';
 import { CommentLikes } from './CommentLikes';
 
 type CommentListProps = {
