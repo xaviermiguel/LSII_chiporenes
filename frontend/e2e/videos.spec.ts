@@ -197,7 +197,7 @@ test('adds and removes a comment like with the real API and restores it after re
   const video = page.getByRole('button', { name: 'E2E first video' });
   await video.click();
   const like = page.getByRole('button', { name: 'Me gusta el comentario de Test commenter' });
-  const actions = page.locator('.comment-actions').filter({ has: like });
+  const likeGroup = like.locator('xpath=..');
   await expect(like).toBeEnabled();
   await expect(like).toHaveAttribute('aria-pressed', 'false');
 
@@ -209,12 +209,12 @@ test('adds and removes a comment like with the real API and restores it after re
   expect(put.ok()).toBeTruthy();
   const { likeCount } = await put.json();
   await expect(like).toHaveAttribute('aria-pressed', 'true');
-  await expect(actions.getByText(`${likeCount} Me gusta`, { exact: true })).toBeVisible();
+  await expect(likeGroup.getByText(`${likeCount} Me gusta`, { exact: true })).toBeVisible();
 
   await page.reload();
   await video.click();
   await expect(like).toHaveAttribute('aria-pressed', 'true');
-  await expect(actions.getByText(`${likeCount} Me gusta`, { exact: true })).toBeVisible();
+  await expect(likeGroup.getByText(`${likeCount} Me gusta`, { exact: true })).toBeVisible();
 
   const removed = page.waitForResponse(
     (response) => response.url().endsWith('/likes') && response.request().method() === 'DELETE'
@@ -223,5 +223,5 @@ test('adds and removes a comment like with the real API and restores it after re
   const deletion = await removed;
   expect(deletion.ok()).toBeTruthy();
   await expect(like).toHaveAttribute('aria-pressed', 'false');
-  await expect(actions.getByText(`${likeCount - 1} Me gusta`, { exact: true })).toBeVisible();
+  await expect(likeGroup.getByText(`${likeCount - 1} Me gusta`, { exact: true })).toBeVisible();
 });
