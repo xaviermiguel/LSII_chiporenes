@@ -216,14 +216,24 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
             </strong>
           </div>
         )}
-        onReply={(reply) =>
+        onPublished={(saved) =>
           setVideo((current) =>
-            current?.id === video.id && !current.comments.some((comment) => comment.id === reply.id)
-              ? { ...current, comments: [...current.comments, reply] }
+            current?.id === video.id && !current.comments.some((comment) => comment.id === saved.id)
+              ? { ...current, comments: [...current.comments, saved].sort(compareComments) }
               : current
           )
         }
       />
     </section>
   );
+}
+
+// Spring serializes Instant in UTC with optional fractional seconds (up to nanoseconds).
+function sortTimestamp(instant: string) {
+  const [second, fraction = ''] = instant.slice(0, -1).split('.');
+  return second + fraction.padEnd(9, '0');
+}
+
+function compareComments(a: VideoDetailData['comments'][number], b: VideoDetailData['comments'][number]) {
+  return sortTimestamp(a.createdAt).localeCompare(sortTimestamp(b.createdAt)) || a.id - b.id;
 }
