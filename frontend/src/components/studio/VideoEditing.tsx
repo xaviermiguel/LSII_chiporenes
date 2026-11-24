@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useSession } from '../SessionContext';
-import { AuthError } from '../auth';
-import type { Category, VideoDetail } from '../types/Video';
-import { blankMetadata, editingError } from '../videoEditing';
+import { useSession } from '../../SessionContext.tsx';
+import { AuthError } from '../../auth.ts';
+import type { Category, VideoDetail } from '../../types/Video.ts';
+import { blankMetadata, editingError } from '../../videoEditing.ts';
 
 export type EditingDraft = { title: string; description: string; tags: string; categoryId: string };
 type Props = {

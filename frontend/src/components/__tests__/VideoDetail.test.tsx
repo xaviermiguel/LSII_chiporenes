@@ -1,13 +1,13 @@
 import { act, fireEvent, render as renderWithProviders, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import axios from 'axios';
-import { VideoDetail } from '../VideoDetail';
+import { VideoDetail } from '../watch/VideoDetail.tsx';
 import { videoDetailsFixture } from '../../fixtures/videos';
 import { SessionProvider } from '../../SessionContext';
 import { authenticate, authenticatedRequest, AuthError, currentUser } from '../../auth';
 
 jest.mock('axios');
-jest.mock('../CommentLikes', () => ({ CommentLikes: () => null }));
+jest.mock('../watch/CommentLikes.tsx', () => ({ CommentLikes: () => null }));
 jest.mock('../../auth', () => ({
   ...jest.requireActual('../../auth'),
   authenticate: jest.fn(),

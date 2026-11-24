@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { authenticate, AuthError } from '../auth';
-import type { AuthUser, Credentials } from '../auth';
+import { authenticate, AuthError } from '../../auth.ts';
+import type { AuthUser, Credentials } from '../../auth.ts';
 
 type Field = keyof Credentials;
 const labels: Record<Field, string> = {

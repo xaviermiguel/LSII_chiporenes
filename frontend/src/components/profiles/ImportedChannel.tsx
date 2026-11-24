@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { FollowControls } from './FollowControls';
-import { ProfileVideos } from './ProfileVideos';
+import { FollowControls } from './FollowControls.tsx';
+import { ProfileVideos } from './ProfileVideos.tsx';
 
 export function ImportedChannel({ name, onOpen }: { name: string; onOpen: (id: number) => void }) {
   const [importedFollowers, setImportedFollowers] = useState<number | null>(null);

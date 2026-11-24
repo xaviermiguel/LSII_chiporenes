@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { VideoComment } from '../types/Video';
-import { CommentForm } from './CommentForm';
-import { CommentLikes } from './CommentLikes';
+import type { VideoComment } from '../../types/Video.ts';
+import { CommentForm } from './CommentForm.tsx';
+import { CommentLikes } from './CommentLikes.tsx';
 
 type CommentListProps = {
   comments: VideoComment[];

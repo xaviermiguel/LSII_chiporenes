@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { getEnv } from '../utils/Env';
-import { VideoEngagement } from './VideoEngagement';
-import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../userProfile';
-import type { VideoDetail as VideoDetailData } from '../types/Video';
-import { VideoComments } from './VideoComments';
+import { getEnv } from '../../utils/Env.ts';
+import { VideoEngagement } from './VideoEngagement.tsx';
+import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../userProfile.ts';
+import type { VideoDetail as VideoDetailData } from '../../types/Video.ts';
+import { VideoComments } from './VideoComments.tsx';
 
 type VideoDetailProps = {
   videoId: number;

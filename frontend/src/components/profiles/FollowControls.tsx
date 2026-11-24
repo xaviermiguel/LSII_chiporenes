@@ -1,5 +1,5 @@
-import { useSession } from '../SessionContext';
-import { useLocalAccountReactions } from '../useLocalAccountReactions';
+import { useSession } from '../../SessionContext.tsx';
+import { useLocalAccountReactions } from '../../useLocalAccountReactions.ts';
 
 const followerCountFormat = new Intl.NumberFormat('es-ES');
 

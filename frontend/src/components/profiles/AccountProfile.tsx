@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useSession } from '../SessionContext';
-import { AuthError } from '../auth';
-import { AccountAvatar } from './AccountAvatar';
+import { useSession } from '../../SessionContext.tsx';
+import { AuthError } from '../../auth.ts';
+import { AccountAvatar } from './AccountAvatar.tsx';
 
 type Profile = { id: number; displayName: string; email: string; description: string };
 const profileFields = ['displayName', 'email', 'description'] as const;

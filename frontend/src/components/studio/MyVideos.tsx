@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useSession } from '../SessionContext';
-import { AuthError } from '../auth';
-import { getEnv } from '../utils/Env';
-import type { VideoListResponse } from '../types/Video';
+import { useSession } from '../../SessionContext.tsx';
+import { AuthError } from '../../auth.ts';
+import { getEnv } from '../../utils/Env.ts';
+import type { VideoListResponse } from '../../types/Video.ts';
 
 function errorMessage(error: unknown) {
   if (error instanceof AuthError) {
