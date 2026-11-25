@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import axios from 'axios';
-import { ImportedChannel } from '../ImportedChannel';
+import { ImportedChannel } from '../profiles/ImportedChannel.tsx';
 import { useSession } from '../../SessionContext';
 
 jest.mock('axios');

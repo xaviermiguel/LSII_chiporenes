@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { getEnv } from '../utils/Env';
-import { defaultAvatarPath, resolveAvatarURL } from '../userProfile';
-import type { VideoComment, VideoDetail } from '../types/Video';
+import { getEnv } from '../../utils/Env.ts';
+import { defaultAvatarPath, resolveAvatarURL } from '../../userProfile.ts';
+import type { VideoComment, VideoDetail } from '../../types/Video.ts';
 
 type AuthorState = { status: 'loading' | 'missing' | 'error' } | { status: 'ready'; comment: VideoComment };
 

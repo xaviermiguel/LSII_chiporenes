@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useSession } from '../SessionContext';
-import { AuthError } from '../auth';
-import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../userProfile';
+import { useSession } from '../../SessionContext.tsx';
+import { AuthError } from '../../auth.ts';
+import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../userProfile.ts';
 
 const maxAvatarSize = 2 * 1024 * 1024;
 

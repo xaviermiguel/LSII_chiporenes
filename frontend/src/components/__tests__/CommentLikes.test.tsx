@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import fetchMock from 'jest-fetch-mock';
 import { SessionProvider } from '../../SessionContext';
-import { VideoComments } from '../VideoComments';
+import { VideoComments } from '../watch/VideoComments.tsx';
 
 const url = 'other/videos/12/comments/5/likes';
 const account = { id: 8, displayName: 'Pau', email: 'pau@example.com' };

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { getEnv } from '../utils/Env';
-import type { VideoDetail, VideoListResponse, VideoSummary } from '../types/Video';
+import { getEnv } from '../../utils/Env.ts';
+import type { VideoDetail, VideoListResponse, VideoSummary } from '../../types/Video.ts';
 
 type ProfileVideosProps = {
   authorName: string;

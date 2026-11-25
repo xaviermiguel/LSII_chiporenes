@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { AuthError } from '../auth';
-import { useSession } from '../SessionContext';
+import { AuthError } from '../../auth.ts';
+import { useSession } from '../../SessionContext.tsx';
 
 type LikeState = { likeCount: number; likedByMe: boolean };
 

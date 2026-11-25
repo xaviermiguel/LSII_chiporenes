@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useSession } from '../SessionContext';
-import { AuthError } from '../auth';
-import type { VideoComment } from '../types/Video';
-import { AuthForm } from './AuthForm';
+import { useSession } from '../../SessionContext.tsx';
+import { AuthError } from '../../auth.ts';
+import type { VideoComment } from '../../types/Video.ts';
+import { AuthForm } from '../auth/AuthForm.tsx';
 
 const MAX_COMMENT_LENGTH = 300;
 // Character.isWhitespace (Java 21): Unicode separators except non-breaking spaces, plus these controls.

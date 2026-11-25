@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useSession } from '../SessionContext';
-import { FollowControls } from './FollowControls';
-import { ProfileVideos } from './ProfileVideos';
-import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../userProfile';
+import { useSession } from '../../SessionContext.tsx';
+import { FollowControls } from './FollowControls.tsx';
+import { ProfileVideos } from './ProfileVideos.tsx';
+import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../userProfile.ts';
 
 type ProfileState =
   | { status: 'loading' | 'missing' | 'error' }

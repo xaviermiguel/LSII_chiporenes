@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AuthForm } from '../AuthForm';
+import { AuthForm } from '../auth/AuthForm.tsx';
 import { authenticate, AuthError } from '../../auth';
 import type { AuthUser } from '../../auth';
 

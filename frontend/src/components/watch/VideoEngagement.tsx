@@ -1,4 +1,4 @@
-import { useLocalAccountReactions } from '../useLocalAccountReactions';
+import { useLocalAccountReactions } from '../../useLocalAccountReactions.ts';
 
 const countFormat = new Intl.NumberFormat('es-ES');
 

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AccountProfile } from '../AccountProfile';
-import { MyVideos, EditVideo } from '../MyVideos';
+import { AccountProfile } from '../profiles/AccountProfile.tsx';
+import { MyVideos, EditVideo } from '../studio/MyVideos.tsx';
 import { AuthError } from '../../auth';
 import { getPublicProfile } from '../../userProfile';
 jest.mock('../../userProfile', () => ({ ...jest.requireActual('../../userProfile'), getPublicProfile: jest.fn() }));
