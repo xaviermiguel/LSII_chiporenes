@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tecnocampus.LS2.protube_back.repository.VideoImportRepository;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ import static com.tecnocampus.LS2.protube_back.services.ImportFixtures.*;
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Import({VideoImportService.class, VideoGrabberReader.class, ObjectMapper.class})
+@Import({VideoImportService.class, VideoImportRepository.class, VideoGrabberReader.class, ObjectMapper.class})
 @EnabledIfEnvironmentVariable(named = "RUN_CATALOG_POSTGRES_TESTS", matches = "true")
 class PostgresVideoImportTest {
     @TempDir Path store;

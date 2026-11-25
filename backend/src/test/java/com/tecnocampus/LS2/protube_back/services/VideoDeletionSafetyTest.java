@@ -1,6 +1,8 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.model.User;
+import com.tecnocampus.LS2.protube_back.repository.CategoryRepository;
+import com.tecnocampus.LS2.protube_back.storage.LocalVideoStore;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
@@ -25,7 +27,7 @@ class VideoDeletionSafetyTest {
 
     @Test
     void rejectsMissingSessionBeforeAccessingRepositories() {
-        var service = new VideoService(videos, comments, directory.toString());
+        var service = new VideoService(videos, comments, mock(CategoryRepository.class), new LocalVideoStore(directory.toString()));
         assertThrows(AuthenticationRequiredException.class, () -> service.deleteVideo(1L, null));
         verifyNoInteractions(videos, comments);
     }
@@ -34,7 +36,7 @@ class VideoDeletionSafetyTest {
     void rejectsAnotherOwnerWithoutDeletingAnything() {
         var video = video("video.mp4", "cover.webp");
         when(videos.findById(1L)).thenReturn(Optional.of(video));
-        var service = new VideoService(videos, comments, directory.toString());
+        var service = new VideoService(videos, comments, mock(CategoryRepository.class), new LocalVideoStore(directory.toString()));
         assertThrows(VideoAccessDeniedException.class, () -> service.deleteVideo(1L, 2L));
         verify(videos).findById(1L);
         verifyNoMoreInteractions(videos);
@@ -70,7 +72,7 @@ class VideoDeletionSafetyTest {
 
     private void scheduleAndCommit(Path store, Video video) {
         when(videos.findById(1L)).thenReturn(Optional.of(video));
-        var service = new VideoService(videos, comments, store.toString());
+        var service = new VideoService(videos, comments, mock(CategoryRepository.class), new LocalVideoStore(store.toString()));
         // Unit test of callback behavior; real commit and rollback are integration-tested separately.
         TransactionSynchronizationManager.initSynchronization();
         try {

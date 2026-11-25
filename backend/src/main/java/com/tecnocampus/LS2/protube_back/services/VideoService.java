@@ -4,23 +4,16 @@ import com.tecnocampus.LS2.protube_back.dto.video.*;
 import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.model.Category;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.LinkedHashMap;
+import com.tecnocampus.LS2.protube_back.repository.CategoryRepository;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
+import com.tecnocampus.LS2.protube_back.storage.LocalVideoStore;
 import com.tecnocampus.LS2.protube_back.services.exceptions.*;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -30,17 +23,17 @@ import java.util.List;
 
 @Service
 public class VideoService {
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final CategoryRepository categories;
     private final VideoRepository videoRepository;
     private final CommentRepository commentRepository;
-    private final Path store;
+    private final LocalVideoStore store;
 
     public VideoService(VideoRepository videoRepository, CommentRepository commentRepository,
-                       @Value("${pro_tube.store.dir}") String storeDirectory) {
+                       CategoryRepository categories, LocalVideoStore store) {
         this.videoRepository = videoRepository;
         this.commentRepository = commentRepository;
-        this.store = Path.of(storeDirectory).toAbsolutePath().normalize();
+        this.categories = categories;
+        this.store = store;
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +67,9 @@ public class VideoService {
     @Transactional(readOnly = true)
     public VideoDetailResponse getVideoById(Long id) {
         var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
-        requireVideoFile(video.getVideoPath());
+        if (!store.isReadable(video.getVideoPath())) {
+            throw new VideoNotFoundException("El archivo del vídeo no está disponible.");
+        }
         Object sourceTags = video.getSourceMetadata().get("tags");
 
         List<String> tags = sourceTags instanceof List<?> values
@@ -122,21 +117,6 @@ public class VideoService {
         }
         return owner.getDisplayName();
     }
-
-    private void requireVideoFile(String relativePath) {
-        try {
-            Path storedPath = Path.of(relativePath);
-            Path file = store.resolve(storedPath).normalize();
-            if (!storedPath.isAbsolute() && file.startsWith(store) && Files.isRegularFile(file)
-                    && Files.isReadable(file) && file.toRealPath().startsWith(store.toRealPath())) {
-                return;
-            }
-        } catch (IOException | InvalidPathException exception) {
-            // A missing, invalid or inaccessible resource is unavailable to the player.
-        }
-        throw new VideoNotFoundException("El archivo del vídeo no está disponible.");
-    }
-
 
     @Transactional(readOnly = true)
     public VideoPage getMyVideos(Long ownerId, int page, int size) {
@@ -205,7 +185,7 @@ public class VideoService {
 
         Category category = video.getCategory();
         if (request.categorySupplied()) {
-            category = request.categoryId() == null ? null : entityManager.find(Category.class, request.categoryId());
+            category = request.categoryId() == null ? null : categories.findById(request.categoryId()).orElse(null);
             if (request.categoryId() != null && category == null) {
                 throw new VideoUpdateException("La categoría seleccionada no existe.");
             }
@@ -238,8 +218,7 @@ public class VideoService {
 
     @Transactional(readOnly = true)
     public List<CategoryResponse> getCategories() {
-        return entityManager.createQuery("select c from Category c order by c.name, c.id", Category.class)
-                .getResultStream().map(c -> new CategoryResponse(c.getId(), c.getName())).toList();
+        return categories.findAllByOrderByNameAscIdAsc().stream().map(c -> new CategoryResponse(c.getId(), c.getName())).toList();
     }
 
     @Transactional
@@ -277,43 +256,10 @@ public class VideoService {
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        deleteStoredFile(videoPath);
-                        deleteStoredFile(thumbnailPath);
+                        store.delete(videoPath);
+                        store.delete(thumbnailPath);
                     }
                 }
         );
     }
-    private void deleteStoredFile(String relativePath) {
-        try {
-            Path storedPath = Path.of(relativePath);
-            Path file = store.resolve(storedPath).normalize();
-
-            if (storedPath.isAbsolute() || !file.startsWith(store)) {
-                throw new IOException("Ruta fuera del almacén");
-            }
-
-            if (Files.notExists(file)) {
-                return;
-            }
-
-            if (!file.toRealPath().startsWith(store.toRealPath())) {
-                throw new IOException("El archivo apunta fuera del almacén");
-            }
-
-            Files.deleteIfExists(file);
-        } catch (IOException | RuntimeException exception) {
-            log.error(
-                    "No se pudo eliminar el archivo {}. Limpieza pendiente.",
-                    relativePath,
-                    exception
-            );
-        }
-    }
-    private static final Logger log =
-            LoggerFactory.getLogger(VideoService.class);
-
-
-
-
 }
-

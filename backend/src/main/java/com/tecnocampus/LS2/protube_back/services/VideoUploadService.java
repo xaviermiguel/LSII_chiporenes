@@ -1,19 +1,17 @@
 package com.tecnocampus.LS2.protube_back.services;
 
+import com.tecnocampus.LS2.protube_back.dto.video.VideoUploadResponse;
+import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
+import com.tecnocampus.LS2.protube_back.storage.LocalVideoStore;
 import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
 import com.tecnocampus.LS2.protube_back.services.exceptions.VideoUploadException;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.UUID;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,16 +19,16 @@ import java.util.Objects;
 public class VideoUploadService {
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
-    private final Path store; // Que hacia filepath ??
+    private final LocalVideoStore store;
 
-    public VideoUploadService(VideoRepository videoRepository, UserRepository userRepository, @Value("${pro_tube.store.dir}") String storeDirectory ) {
+    public VideoUploadService(VideoRepository videoRepository, UserRepository userRepository, LocalVideoStore store) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
 
-        this.store = Path.of(storeDirectory).toAbsolutePath().normalize();
+        this.store = store;
     }
 
-    public Video uploadVideo (
+    public VideoUploadResponse uploadVideo(
             Long ownerId,
             String title,
             String description,
@@ -38,13 +36,11 @@ public class VideoUploadService {
             MultipartFile video,
             MultipartFile thumbnail ) {
 
-        // TODO: Comprobar que el propietario existe.
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() ->
                         new IllegalArgumentException("El usuario no existe"));
 
 
-        // TODO: Validar los datos y los archivos.
         if (!owner.isEnabled()){
             throw new IllegalArgumentException("Usuario no activado");
         }
@@ -62,17 +58,7 @@ public class VideoUploadService {
             throw new VideoUploadException("Miniatura no valido");
         }
 
-        // TODO: Guardar los archivos con nombres únicos.
-
-        String uploadId = UUID.randomUUID().toString();
-
-        String videoFileName = uploadId + ".mp4";
-        String thumbnailFileName = uploadId + ".webp";
-
-        Path videoDestination = store.resolve(videoFileName);
-        Path thumbDestination = store.resolve(thumbnailFileName);
-
-        // TODO: Guardar el vídeo asociado al propietario.
+        var paths = store.newUploadPaths();
         Video uploadVideo = new Video();
 
         uploadVideo.setOwner(owner);
@@ -81,41 +67,17 @@ public class VideoUploadService {
         uploadVideo.getSourceMetadata().put("tags", tags == null ? List.of()
                 : tags.stream().filter(Objects::nonNull).map(String::trim)
                 .filter(tag -> !tag.isEmpty()).distinct().toList());
-        uploadVideo.setVideoPath(videoFileName);
-        uploadVideo.setThumbnailPath(thumbnailFileName);
+        uploadVideo.setVideoPath(paths.video());
+        uploadVideo.setThumbnailPath(paths.thumbnail());
 
-        //return videoRepository.save(uploadVideo);
-        // TODO: Limpiar los archivos si falla el guardado.
-
+        Video saved;
         try {
-            Files.createDirectories(store);
-
-            video.transferTo(videoDestination);
-            thumbnail.transferTo(thumbDestination);
-
-            return videoRepository.saveAndFlush(uploadVideo);
-        }catch (RuntimeException | IOException e){
-            try{
-                Files.deleteIfExists(videoDestination);
-            } catch (IOException ioe){
-                e.addSuppressed(ioe);
-            }
-            try{
-                Files.deleteIfExists(thumbDestination);
-            }catch (IOException ioe){
-                e.addSuppressed(ioe);
-            }
-            throw new IllegalArgumentException("No se ha podido completar la subida del vídeo", e);
-
+            store.writeUpload(paths, video, thumbnail);
+            saved = videoRepository.saveAndFlush(uploadVideo);
+        } catch (RuntimeException | IOException failure) {
+            store.discardUpload(paths, failure);
+            throw new IllegalArgumentException("No se ha podido completar la subida del vídeo", failure);
         }
-
+        return VideoMapper.toUploadResponse(saved);
     }
-
-
-
-
-
-
-
-
 }

@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tecnocampus.LS2.protube_back.repository.VideoImportRepository;
 import com.tecnocampus.LS2.protube_back.model.Comment;
 import com.tecnocampus.LS2.protube_back.model.User;
 import com.tecnocampus.LS2.protube_back.model.Video;
@@ -28,7 +29,7 @@ import static com.tecnocampus.LS2.protube_back.services.ImportFixtures.*;
 
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=create-drop", "spring.flyway.enabled=false"})
 @ActiveProfiles("test")
-@Import({VideoImportService.class, VideoGrabberReader.class, ObjectMapper.class})
+@Import({VideoImportService.class, VideoImportRepository.class, VideoGrabberReader.class, ObjectMapper.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 public class VideoImportServiceTest {
     @TempDir Path store;

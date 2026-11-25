@@ -1,6 +1,8 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.services.exceptions.VideoNotFoundException;
+import com.tecnocampus.LS2.protube_back.repository.CategoryRepository;
+import com.tecnocampus.LS2.protube_back.storage.LocalVideoStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,7 +33,7 @@ class VideoServiceTest {
 
     @BeforeEach
     void setUp() {
-        videoService = new VideoService(repository, commentRepository,store.toString());
+        videoService = new VideoService(repository, commentRepository, mock(CategoryRepository.class), new LocalVideoStore(store.toString()));
         owner = new User();
         owner.setId(1L);
         owner.setEmail("owner@example.test");
