@@ -13,6 +13,10 @@ import com.tecnocampus.LS2.protube_back.services.exceptions.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -20,6 +24,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.util.UriUtils;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class VideoService {
@@ -82,40 +87,56 @@ public class VideoService {
         List<CommentResponse> comments = commentRepository
                 .findByVideoIdOrderByCreatedAtAscIdAsc(id)
                 .stream()
-                .map(comment -> new CommentResponse(
-                        comment.getId(),
-                        comment.getText(),
-                        comment.getAuthor() == null
-                                ? comment.getExternalAuthor()
-                                : comment.getAuthor().getDisplayName(),
-                        comment.getCreatedAt(),
-                        comment.getParentId()
-                ))
+                .map(VideoMapper::toCommentResponse)
                 .toList();
 
+        var externalAuthor = displayedExternalAuthor(video);
+        var owner = video.getOwner();
+        Map<String, Object> source = externalAuthor == null ? Map.of() : video.getSourceMetadata();
+        var channel = source.get("channel") instanceof String name && !name.isBlank() ? name.strip() : null;
         return new VideoDetailResponse(
                 video.getId(),
                 video.getTitle(),
-                displayedAuthor(video),
+                externalAuthor == null ? owner.getDisplayName() : externalAuthor,
                 video.getDurationSeconds(),
                 mediaUrl(video.getThumbnailPath()),
                 video.getDescription(),
                 mediaUrl(video.getVideoPath()),
                 tags,
                 comments,
-                video.getOwner().getId(),
+                owner.getId(),
+                externalAuthor == null ? owner.getId() : null,
+                importedCount(source.get("view_count")),
+                importedCount(source.get("like_count")),
+                channel,
+                importedCount(source.get("channel_follower_count")),
                 video.getCategory() == null ? null : new CategoryResponse(
                         video.getCategory().getId(), video.getCategory().getName())
         );
     }
+    private Long importedCount(Object value) {
+        if (!(value instanceof Number number)) return null;
+        try {
+            long count = new BigDecimal(number.toString()).longValueExact();
+            return count >= 0 ? count : null;
+        } catch (IllegalArgumentException | ArithmeticException exception) {
+            return null;
+        }
+    }
+
     private String displayedAuthor(Video video) {
+        var externalAuthor = displayedExternalAuthor(video);
+        return externalAuthor == null ? video.getOwner().getDisplayName() : externalAuthor;
+    }
+
+    private String displayedExternalAuthor(Video video) {
         var owner = video.getOwner();
         var externalAuthor = video.getExternalAuthor();
         if ("demo@protube.invalid".equalsIgnoreCase(owner.getEmail())
                 && externalAuthor != null && !externalAuthor.isBlank()) {
             return externalAuthor;
         }
-        return owner.getDisplayName();
+        return null;
     }
 
     @Transactional(readOnly = true)

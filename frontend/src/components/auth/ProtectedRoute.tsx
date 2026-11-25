@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useSession } from '../SessionContext';
+import { useSession } from '../../SessionContext.tsx';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading, sessionError } = useSession();

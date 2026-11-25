@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import fetchMock from 'jest-fetch-mock';
-import { VideoPublication } from '../VideoPublication';
+import { VideoPublication } from '../studio/VideoPublication.tsx';
 import { SessionProvider } from '../../SessionContext';
 import { AuthError } from '../../auth';
 import { createThumbnail, MAX_UPLOAD_BYTES, publicationError, VideoPreviewError } from '../../videoPublication';

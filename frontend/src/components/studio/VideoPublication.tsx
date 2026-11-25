@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useSession } from '../SessionContext';
-import { createThumbnail, MAX_UPLOAD_BYTES, publicationError, VIDEO_ACCEPT } from '../videoPublication';
-import type { Publication, PublicationDraft } from '../videoPublication';
+import { useSession } from '../../SessionContext.tsx';
+import { createThumbnail, MAX_UPLOAD_BYTES, publicationError, VIDEO_ACCEPT } from '../../videoPublication.ts';
+import type { Publication, PublicationDraft } from '../../videoPublication.ts';
 
 type Field = 'video' | 'title' | 'description';
 type Props = {

@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { VideoEditing } from '../VideoEditing';
+import { VideoEditing } from '../studio/VideoEditing.tsx';
 import { blankMetadata, editingError } from '../../videoEditing';
-import type { EditingDraft } from '../VideoEditing';
+import type { EditingDraft } from '../studio/VideoEditing.tsx';
 import { AuthError } from '../../auth';
 
 const mockRequest = jest.fn();

@@ -1,17 +1,20 @@
 import './App.css';
 import { useAllVideos } from './useAllVideos.ts';
 import { useEffect, useState } from 'react';
-import { AuthForm } from './components/AuthForm';
+import { AuthForm } from './components/auth/AuthForm.tsx';
 import { SessionProvider, useSession } from './SessionContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { AccountProfile } from './components/AccountProfile';
-import { MyVideos } from './components/MyVideos';
-import { VideoPublication } from './components/VideoPublication';
-import { VideoEditing } from './components/VideoEditing';
-import type { EditingDraft } from './components/VideoEditing';
+import { ProtectedRoute } from './components/auth/ProtectedRoute.tsx';
+import { AccountProfile } from './components/profiles/AccountProfile.tsx';
+import { PublicProfile } from './components/profiles/PublicProfile.tsx';
+import { ImportedChannel } from './components/profiles/ImportedChannel.tsx';
+import { ImportedCommentProfile } from './components/profiles/ImportedCommentProfile.tsx';
+import { MyVideos } from './components/studio/MyVideos.tsx';
+import { VideoPublication } from './components/studio/VideoPublication.tsx';
+import { VideoEditing } from './components/studio/VideoEditing.tsx';
+import type { EditingDraft } from './components/studio/VideoEditing.tsx';
 import type { PublicationDraft } from './videoPublication';
 import type { AuthUser } from './auth';
-import { VideoDetail } from './components/VideoDetail.tsx';
+import { VideoDetail } from './components/watch/VideoDetail.tsx';
 import { getEnv } from './utils/Env';
 
 function AppContent() {
@@ -27,6 +30,17 @@ function AppContent() {
   });
   const { user, loading, sessionError, loggingOut, authenticated: setAuthenticated, logout } = useSession();
   const editingId = /^#videos\/([^/]+)\/edit$/.exec(page)?.[1];
+  const publicProfileId = /^#users\/([0-9]+)$/.exec(page)?.[1];
+  const commentProfile = /^#videos\/([0-9]+)\/comments\/([0-9]+)\/author$/.exec(page);
+  const importedChannel = /^#channels\/name\/([^/]+)$/.exec(page)?.[1];
+  let channelName = page === '#channels/mark-ronson' ? 'Mark Ronson' : '';
+  if (importedChannel) {
+    try {
+      channelName = decodeURIComponent(importedChannel).trim();
+    } catch {
+      channelName = '';
+    }
+  }
   const draftKey = `${user?.id}:${editingId}`;
 
   function openVideo(id: number) {
@@ -169,6 +183,17 @@ function AppContent() {
               <MyVideos onOpen={openVideo} />
             )}
           </ProtectedRoute>
+        ) : commentProfile ? (
+          <ImportedCommentProfile
+            key={page}
+            videoId={commentProfile[1]}
+            commentId={commentProfile[2]}
+            onBack={() => openVideo(Number(commentProfile[1]))}
+          />
+        ) : channelName ? (
+          <ImportedChannel key={channelName} name={channelName} onOpen={openVideo} />
+        ) : publicProfileId ? (
+          <PublicProfile key={publicProfileId} userId={publicProfileId} onOpen={openVideo} />
         ) : page === '#login' || page === '#register' ? (
           <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
         ) : selectedVideoId === null ? (

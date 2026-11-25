@@ -13,6 +13,11 @@ export type VideoListResponse = {
 };
 export type VideoDetail = VideoSummary & {
   ownerId: number;
+  authorId?: number | null;
+  viewCount?: number | null;
+  likeCount?: number | null;
+  channel?: string | null;
+  channelFollowerCount?: number | null;
   category: Category | null;
   description: string;
   videoUrl: string;
@@ -28,4 +33,5 @@ export type VideoComment = {
   text: string;
   createdAt: string;
   parentId: number | null;
+  authorId?: number | null;
 };
