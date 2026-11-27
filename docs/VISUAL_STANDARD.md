@@ -20,7 +20,11 @@ Los componentes `TestLink`, `TestLinkPro` y `VideoGrid` son ejemplos no montados
 
 ## Paleta semántica
 
-| Uso | Token | Valor |
+El selector **Tema** de la cabecera ofrece **Sistema**, **Claro** y **Oscuro**. Sistema es la opción inicial y sigue los cambios de preferencia del dispositivo. La elección se guarda en el navegador para las visitas posteriores.
+
+Los tokens de `tokens.css` agrupan las variantes clara y oscura con `light-dark()`. Al añadir un color, comprueba ambos valores con `npm run test:contrast` desde `frontend/`.
+
+| Uso | Token | Valor en modo claro |
 | --- | --- | --- |
 | Acción principal y enlaces | `--color-primary` | `#166344` |
 | Hover / pulsado | `--color-primary-hover` / `--color-primary-active` | `#104c34` / `#0b3927` |

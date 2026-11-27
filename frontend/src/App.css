@@ -31,7 +31,8 @@ a:hover {
   color: var(--color-primary-hover);
 }
 
-:where(button, a, input, textarea, select, video, [tabindex]):focus-visible {
+:where(button, a, input, textarea, select, video, [tabindex]):focus-visible,
+.nav-link:focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
@@ -108,6 +109,13 @@ h2 {
   font-size: var(--text-sm);
 }
 
+.theme-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-medium);
+}
+
 .nav-link {
   display: inline-flex;
   min-height: var(--control-min);
@@ -120,6 +128,11 @@ h2 {
   font-weight: var(--weight-medium);
 }
 
+.nav-link:focus-visible {
+  color: var(--color-primary);
+  box-shadow: none;
+}
+
 .nav-link:hover {
   color: var(--color-on-primary);
   background: var(--color-primary-hover);
@@ -127,7 +140,7 @@ h2 {
 
 .header-caption,
 .muted-text {
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
 }
 
 .skip-link {
@@ -176,7 +189,7 @@ h2 {
 .catalog-intro > p:last-child {
   margin-top: var(--space-4);
   max-width: var(--intro-max);
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
   font-size: var(--text-lg);
 }
 
@@ -289,7 +302,7 @@ h2 {
 }
 
 .video-card-author {
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
 }
@@ -333,7 +346,7 @@ h2 {
 .button:disabled {
   background: var(--color-surface-muted);
   border-color: var(--color-control-border);
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
   cursor: wait;
 }
 
@@ -350,7 +363,7 @@ h2 {
   border-left: var(--space-1) solid var(--color-primary);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
 
@@ -395,7 +408,7 @@ h2 {
 }
 
 .detail-heading p {
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
   margin-top: var(--space-3);
 }
 
@@ -471,7 +484,7 @@ h2 {
 }
 
 .video-comments time {
-  color: var(--color-muted-text);
+  color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
@@ -561,8 +574,8 @@ h2 {
 
 .form-field input,
 .form-field select,
-.form-field textarea {
-  width: 100%;
+.form-field textarea,
+.theme-selector select {
   min-width: 0;
   min-height: var(--control-min);
   padding: var(--space-2) var(--space-3);
@@ -570,6 +583,12 @@ h2 {
   border-radius: var(--radius-sm);
   color: var(--color-text);
   background: var(--color-surface);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
 }
 
 .form-field input[aria-invalid='true'],

@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 
 const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
-const tokens = Object.fromEntries(
-  [...css.matchAll(/--(color-[\w-]+):\s*(#[0-9a-f]{6})/gi)].map((match) => [match[1], match[2]])
-);
+const palettes = { light: {}, dark: {} };
+for (const [, token, light, dark] of css.matchAll(/--(color-[\w-]+):\s*light-dark\((#\w{6}),\s*(#\w{6})\)/g)) {
+  palettes.light[token] = light;
+  palettes.dark[token] = dark;
+}
 const pairs = [
   ['color-text', 'color-surface', 4.5],
   ['color-text', 'color-canvas', 4.5],
@@ -14,6 +16,10 @@ const pairs = [
   ['color-on-primary', 'color-primary-hover', 4.5],
   ['color-on-primary', 'color-primary-active', 4.5],
   ['color-primary', 'color-primary-soft', 4.5],
+  ['color-primary', 'color-canvas', 4.5],
+  ['color-primary', 'color-surface', 4.5],
+  ['color-primary-hover', 'color-surface', 4.5],
+  ['color-error', 'color-surface', 4.5],
   ['color-error', 'color-error-soft', 4.5],
   ['color-success', 'color-success-soft', 4.5],
   ['color-warning', 'color-warning-soft', 4.5],
@@ -35,12 +41,17 @@ function luminance(hex) {
   return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }
 let failed = false;
-for (const [foreground, background, minimum] of pairs) {
-  const a = luminance(tokens[foreground]);
-  const b = luminance(tokens[background]);
-  const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-  const pass = ratio >= minimum; // Never round before comparing with the minimum.
-  console.log(`${pass ? 'PASS' : 'FAIL'} ${foreground} / ${background}: ${ratio.toFixed(2)}:1 (minimum ${minimum}:1)`);
-  failed ||= !pass;
+for (const [theme, tokens] of Object.entries(palettes)) {
+  console.log(theme);
+  for (const [foreground, background, minimum] of pairs) {
+    const a = luminance(tokens[foreground]);
+    const b = luminance(tokens[background]);
+    const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    const pass = ratio >= minimum; // Never round before comparing with the minimum.
+    console.log(
+      `${pass ? 'PASS' : 'FAIL'} ${foreground} / ${background}: ${ratio.toFixed(2)}:1 (minimum ${minimum}:1)`
+    );
+    failed ||= !pass;
+  }
 }
 if (failed) process.exitCode = 1;

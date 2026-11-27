@@ -1,27 +1,27 @@
 /* ProTube visual standard. Semantic tokens are the public styling contract. */
 :root {
-  color-scheme: light;
-  --color-primary: #166344;
-  --color-primary-hover: #104c34;
-  --color-primary-active: #0b3927;
-  --color-primary-soft: #e7f3ec;
-  --color-canvas: #f6f8f5;
-  --color-surface: #ffffff;
-  --color-surface-muted: #eef2ed;
-  --color-text: #182a22;
-  --color-text-muted: #52635a;
-  --color-border: #d8e1d9;
-  --color-control-border: #718377;
-  --color-focus: #166344;
-  --color-error: #9f2525;
-  --color-error-soft: #fff0ee;
-  --color-success: #166344;
-  --color-success-soft: #e7f3ec;
-  --color-warning: #795000;
-  --color-warning-soft: #fff6dc;
-  --color-info: #255784;
-  --color-info-soft: #edf4fb;
-  --color-on-primary: #ffffff;
+  color-scheme: light dark;
+  --color-primary: light-dark(#166344, #83d9ae);
+  --color-primary-hover: light-dark(#104c34, #a2e8c5);
+  --color-primary-active: light-dark(#0b3927, #c3f2da);
+  --color-primary-soft: light-dark(#e7f3ec, #213e31);
+  --color-canvas: light-dark(#f6f8f5, #101713);
+  --color-surface: light-dark(#ffffff, #1a241e);
+  --color-surface-muted: light-dark(#eef2ed, #27362d);
+  --color-text: light-dark(#182a22, #eef5ef);
+  --color-text-muted: light-dark(#52635a, #b5c5b9);
+  --color-border: light-dark(#d8e1d9, #3a4a3e);
+  --color-control-border: light-dark(#718377, #879b8c);
+  --color-focus: light-dark(#166344, #9ae6bc);
+  --color-error: light-dark(#9f2525, #ffb4ab);
+  --color-error-soft: light-dark(#fff0ee, #422625);
+  --color-success: light-dark(#166344, #83d9ae);
+  --color-success-soft: light-dark(#e7f3ec, #213e31);
+  --color-warning: light-dark(#795000, #f1cf86);
+  --color-warning-soft: light-dark(#fff6dc, #3b3020);
+  --color-info: light-dark(#255784, #a8d5ff);
+  --color-info-soft: light-dark(#edf4fb, #203448);
+  --color-on-primary: light-dark(#ffffff, #11251a);
   --color-player: #101713;
   --font-body: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --text-xs: 0.75rem;
@@ -62,4 +62,12 @@
   --shadow-card: 0 6px 22px rgb(24 42 34 / 6%);
   --shadow-hover: 0 10px 26px rgb(24 42 34 / 12%);
   --motion-fast: 160ms;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }

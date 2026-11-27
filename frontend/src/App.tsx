@@ -2,6 +2,7 @@ import './App.css';
 import { useAllVideos } from './useAllVideos.ts';
 import { useEffect, useState } from 'react';
 import { AuthForm } from './components/auth/AuthForm.tsx';
+import { ThemeSelector } from './components/ThemeSelector';
 import { SessionProvider, useSession } from './SessionContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.tsx';
 import { AccountProfile } from './components/profiles/AccountProfile.tsx';
@@ -135,6 +136,7 @@ function AppContent() {
                 </a>
               </>
             )}
+            <ThemeSelector />
           </nav>
         </div>
       </header>

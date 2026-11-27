@@ -55,3 +55,11 @@ Use commit-ai-change for this completed change. No push, PR creation or merge wa
 ## Feature acceptance and pull request (2026-10-28)
 
 After viewing the interface in the browser, the user said: "crea la pull request y finaliza esta feature, la damos por buena". Record visual acceptance and publish visual-standard as a non-draft PR against main. This supersedes the earlier no-push/no-PR scope for this feature; no merge is requested. A second teammate/device review is not independently documented and must not be claimed. Preserve the unrelated local vars.py change.
+
+## Selector de tema (2026-11-27)
+
+Se reutiliza el prompt de estándar visual. Solicitud del usuario para esta tarea:
+
+> Implementa en ProTube un selector de tema con tres opciones: **Sistema**, **Claro** y **Oscuro**. La primera vez que alguien visite la web, usa **Sistema**. En ese modo, respeta `prefers-color-scheme` y actualiza el tema sin recargar la página si cambia la preferencia del dispositivo. Si el usuario elige **Claro** u **Oscuro**, mantén ese tema hasta que elija otro. Guarda la opción seleccionada en `localStorage` y recupérala en visitas posteriores.
+>
+> Integra el selector en la interfaz existente. Debe poder usarse con el teclado e indicar qué opción está activa. Aplica el tema a toda la web, conserva el diseño actual y asegúrate de que los textos, controles e indicadores de foco tengan buen contraste en ambos modos. Sigue las instrucciones de `AGENTS.md`, limita los cambios a lo necesario y verifica los tres modos, la persistencia de la selección y el cambio de tema del sistema sin recargar.
