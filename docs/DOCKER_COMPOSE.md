@@ -1,186 +1,89 @@
-# Tarea 11: arranque integrado con Docker Compose
+# Arranque con Docker Compose
 
-## Primer arranque
+## Instalación limpia
 
-Se necesita Docker con contenedores Linux y Docker Compose, acceso a Internet
-para el primer build y varios GiB libres en la unidad donde Docker guarda sus
-imágenes y volúmenes. Java, Maven, Node y PostgreSQL no son necesarios en el host.
-
-La entrega incluye el repositorio y una carpeta `videos/` junto a `compose.yaml`.
-Debe contener las triples JSON/MP4/WebP de la tarea 4: más de 12 vídeos, con
-comentarios. Los archivos originales no se incluyen en la imagen ni se modifican.
-
-Desde la raíz:
+Inicia Docker con contenedores Linux. El primer build requiere Internet y varios
+GiB libres en la unidad de Docker. Desde la raíz del repositorio, ejecuta:
 
 ```sh
 docker compose up --build -d --wait --wait-timeout 300
 ```
 
-Abrir http://localhost:8080. El frontend de producción está incluido en el JAR y
-se sirve desde Spring Boot, junto a la API. No hay un servidor Node en ejecución.
+Abre [http://localhost:8080](http://localhost:8080). Spring Boot sirve el frontend
+y la API desde la misma dirección. El catálogo empieza vacío. Puedes crear una
+cuenta, iniciar sesión y publicar vídeos desde el navegador. Compose prepara
+PostgreSQL y las credenciales, y conserva los vídeos publicados, las miniaturas
+y los avatares en un volumen de Docker.
 
-Para utilizar la carpeta externa de Windows ya entregada:
+## Arranque con el catálogo de la entrega
+
+La carpeta externa de la tarea 4 contiene más de 12 triples JSON/MP4/WebP,
+incluidos vídeos con comentarios. Colócala en `videos/` junto a `compose.yaml`,
+o define `PROTUBE_VIDEO_DIR` con la ruta de la carpeta entregada. Ejemplo en
+PowerShell:
 
 ```powershell
 $env:PROTUBE_VIDEO_DIR = 'C:/ProTube/videos'
-docker compose up --build -d --wait --wait-timeout 300
+docker compose -f compose.yaml -f compose.catalog.yaml up --build -d --wait --wait-timeout 300
 ```
 
-No se necesita editar archivos, preparar SQL a mano ni crear un `.env` obligatorio.
-Una carpeta de vídeos inexistente produce error; Compose no crea una carpeta vacía
-que oculte el problema.
+Usa ambos archivos en cada comando de ese despliegue. El archivo adicional
+reemplaza el volumen de medios por la carpeta externa y activa la importación.
+La carpeta tiene que existir y permitir que el UID 10001 lea los archivos y
+escriba en ella si se van a publicar vídeos o subir avatares. El importador
+conserva los archivos originales y los comentarios persistidos. El valor de
+`PROTUBE_NO_COMMENTS_ID` elige el vídeo cuya lista de comentarios de origen se
+omite durante la importación (por defecto, el 0).
 
-## Preparación automática
+**Si ya usabas la carpeta externa**, conserva el nombre del proyecto, los
+valores de PostgreSQL y la ruta original, y arranca con ambos archivos. Así la
+base de datos existente sigue apuntando a sus medios, incluidas las publicaciones.
 
-1. `init-secrets` genera una contraseña aleatoria de 256 bits en `db_credentials`
-   si no existe. No imprime la contraseña. Si se proporciona `ENV_PROTUBE_DB_PASS`,
-   solo la utiliza para la inicialización; si difiere de la guardada, falla sin
-   cambiarla. Prepara permisos UID 10001 y modo 400.
-2. PostgreSQL 16 inicializa la base y el usuario en `postgres_data`. Su puerto no
-   se publica en el host y no entra en conflicto con PostgreSQL local en 5432.
-3. El backend espera la disponibilidad de PostgreSQL. El entrypoint lee la
-   contraseña del volumen, y Spring arranca con el perfil `prod`: Flyway aplica
-   las migraciones existentes, Hibernate valida el esquema y el importador del
-   equipo carga los datos de la carpeta montada.
-4. El healthcheck espera una respuesta de catálogo con algún ID, visible tras
-   confirmar la importación. `--wait` falla si el incremento no queda listo.
+## Puerto y acceso desde otro equipo
 
-Se reutilizan las entidades, migraciones, repositorios, importador y frontend de
-`origin/main` (`cebd8bc`). Esta tarea no modifica archivos en `backend/` ni
-`frontend/`, ni implementa una segunda persistencia o importación.
-
-El archivo 0 es el caso sin comentarios por defecto; se conserva su JSON original.
-Si una base existente ya tiene comentarios para ese vídeo, elegir otro archivo
-mediante `PROTUBE_NO_COMMENTS_ID`; el importador no borra comentarios existentes.
-
-## Direcciones y opciones
-
-| Variable | Valor por defecto | Uso |
+| Variable | Valor predeterminado | Uso |
 |---|---|---|
-| `PROTUBE_VIDEO_DIR` | `./videos` | Carpeta de archivos entregada |
 | `PROTUBE_HTTP_PORT` | `8080` | Puerto HTTP del host |
-| `PROTUBE_BIND_ADDRESS` | `127.0.0.1` | Interfaz HTTP del host |
-| `PROTUBE_PUBLIC_URL` | `http://localhost:8080` | Origen público para medios, fijado al construir |
-| `PROTUBE_NO_COMMENTS_ID` | `0` | ID del archivo elegido sin comentarios |
+| `PROTUBE_BIND_ADDRESS` | `127.0.0.1` | Interfaz del host |
+| `PROTUBE_SECURE_COOKIES` | `false` | Configurar en `true` cuando los usuarios accedan por HTTPS |
 | `ENV_PROTUBE_DB` | `protube_db` | Base inicial |
 | `ENV_PROTUBE_DB_USER` | `protube_user` | Rol inicial |
 | `ENV_PROTUBE_DB_PASS` | Generada | Contraseña inicial opcional |
 
-La API usa el mismo origen de la página. El reproductor recibido del equipo
-necesita un origen absoluto para resolver las URLs de medios; el Dockerfile lo
-proporciona mediante `VITE_MEDIA_DOMAIN`, sin modificar código del frontend.
-Si cambia la dirección pública o el puerto, actualizar ambas opciones y reconstruir:
+Si el puerto 8080 está ocupado, cambia `PROTUBE_HTTP_PORT` y abre ese puerto en el
+navegador. Para acceso desde otro equipo por una red de confianza, configura
+`PROTUBE_BIND_ADDRESS` con la IP de la interfaz del host que deba atender la
+conexión y abre un navegador en `http://IP_DEL_HOST:PUERTO`. El frontend resuelve
+la API y los medios desde la dirección que abre el navegador. Con un proxy
+HTTPS, termina TLS en el proxy y habilita `PROTUBE_SECURE_COOKIES`. El puerto de
+PostgreSQL se mantiene dentro de Docker.
 
-```powershell
-$env:PROTUBE_HTTP_PORT = '18080'
-$env:PROTUBE_PUBLIC_URL = 'http://127.0.0.1:18080'
-docker compose up --build -d --wait --wait-timeout 300
-```
+## Reinicios y diagnóstico
 
-Para servir a otro equipo, configurar el origen accesible y la interfaz del host
-correspondiente. No usar nombres internos de contenedores como origen del navegador.
-No se añaden credenciales Google ni se modifica la autenticación.
-
-## Reinicio y conservación
+Compose espera que PostgreSQL acepte conexiones y que Spring declare la
+aplicación lista después de aplicar las migraciones y completar la importación,
+si está activada. Un catálogo vacío también es válido.
 
 ```sh
-docker compose restart
+docker compose ps -a
+docker compose logs --tail 100 app db init-secrets
 docker compose down
 docker compose up -d --wait --wait-timeout 300
 ```
 
-`down` sin `-v` conserva `postgres_data` y `db_credentials`. Los archivos sobreviven
-porque permanecen en el host, montados en `/store` en solo lectura. Mantener el
-mismo nombre de proyecto Compose y las mismas variables entre ejecuciones.
-No utilizar `down -v` para reiniciar ni eliminar la carpeta de vídeos.
+`down` conserva `postgres_data`, `db_credentials` y `media_data`. Mantén el
+mismo nombre de proyecto y la misma configuración al recrear contenedores.
+La contraseña y el usuario iniciales pertenecen a la base ya creada. Para adoptar
+tablas anteriores a Flyway, sigue el procedimiento del backend en [VIDEO_IMPORT.md](VIDEO_IMPORT.md).
 
-Flyway y el importador existentes son idempotentes: un nuevo arranque no debe
-repetir vídeos o comentarios. Las opciones de inicialización no cambian roles,
-contraseñas ni bases en un volumen ya inicializado. Para adoptar un volumen
-anterior, conservar su versión PostgreSQL y sus valores originales. No borrar
-sus datos para resolver diferencias. Si ya existen tablas sin historial Flyway,
-seguir el procedimiento de adopción del esquema documentado por el backend;
-no se habilita baseline automático.
-
-## Verificación reproducible del incremento
-
-El verificador opcional necesita Python 3.11 o posterior; el arranque normal no.
-Usa un proyecto de pruebas nuevo, sin tocar el PostgreSQL local ni los volúmenes
-del proyecto normal:
+El verificador opcional usa un proyecto aislado y requiere Python 3.11 o
+posterior. Comprueba el catálogo completo, los medios y la persistencia después
+de recrear los contenedores:
 
 ```powershell
 python deploy/verify_compose.py --video-dir C:/ProTube/videos
 ```
 
-Comprueba el frontend empaquetado y su bundle, todas las páginas del catálogo y
-sus detalles, comentarios y caso vacío, miniatura, HTTP Range de vídeo, PostgreSQL
-y Flyway. Después elimina y recrea los contenedores **sin eliminar volúmenes**,
-compara todas las filas de vídeos/comentarios, la huella de las credenciales y los
-hashes de todos los JSON/MP4/WebP. Deja el proyecto en localhost:18080 e indica su
-nombre y cómo detenerlo conservando los datos. Si se elige otro puerto, el script
-ajusta también el origen público compilado.
-
-Comprueba un margen inicial de 3 GiB en la unidad del proyecto; revisar también
-la unidad de Docker si es distinta. `--skip-build` permite repetir la comprobación
-con una imagen ya construida para ese mismo proyecto, origen y código.
-
-Para comprobar además la interfaz y reproducción real en Chromium, con las
-herramientas de desarrollo del frontend ya instaladas:
-
-```powershell
-# Desde frontend/: npm ci; npx playwright install chromium
-# Después, desde la raíz, con el proyecto de pruebas disponible en 18080:
-node deploy/verify_browser.cjs
-```
-
-`PROTUBE_TEST_URL` permite indicar otro origen. La prueba abre el catálogo, carga
-la página siguiente, reproduce el vídeo y comprueba detalle con y sin comentarios.
-No utiliza los fixtures H2 de las pruebas e2e del frontend.
-
-Diagnóstico:
-
-```sh
-docker compose ps -a
-docker compose logs --tail 100 app db init-secrets
-```
-
-No compartir la configuración renderizada si se ha proporcionado una contraseña
-por entorno. No se eliminan imágenes, cachés ni volúmenes para resolver fallos.
-
-## Estado de la validación (2026-10-25)
-
-Actualización con pull realizada antes de los cambios: `origin/main` en `cebd8bc`,
-merge `5986c06`, sin conflictos pendientes. Backend y frontend coinciden con la
-versión entrante. Resultados del proyecto aislado `protube-check-20261025`:
-
-- Construcción Docker completa: TypeScript/Vite de producción y Maven con Java 21
-  correctos, JAR ejecutable con frontend incluido. El empaquetado usa `-DskipTests`;
-  no se presenta como ejecución de las suites unitarias de las aplicaciones.
-- Primer arranque con volúmenes nuevos, contraseña generada y PostgreSQL 16.15:
-  correcto, sin preparación SQL ni credenciales Google manuales.
-- Flyway y validación del esquema correctos. Importación real: 21 vídeos y
-  154 comentarios; caso sin comentarios disponible. Catálogo paginado, detalles,
-  HTML/bundle, miniatura y HTTP Range comprobados contra la aplicación real.
-- `python -B deploy/verify_compose.py --video-dir C:/ProTube/videos
-  --project protube-check-20261025 --skip-build`: PASS. Recreación completa de
-  contenedores con los mismos registros y huella de credenciales; sin duplicados.
-  Los hashes de los 63 JSON/MP4/WebP originales permanecen iguales.
-- `node deploy/verify_browser.cjs`: PASS en Chromium contra producción. Catálogo,
-  carga de página siguiente, detalle, reproducción real, comentarios y caso vacío,
-  sin errores JavaScript de página.
-- Configuración Compose, sintaxis de los scripts y comprobación de espacios de Git:
-  correctas. Los scripts shell conservan finales de línea LF.
-
-La aplicación de prueba queda en http://127.0.0.1:18080. Para detenerla conservando
-los datos, usar las mismas variables de la prueba y el nombre de proyecto:
-
-```powershell
-$env:PROTUBE_VIDEO_DIR = 'C:/ProTube/videos'
-$env:PROTUBE_HTTP_PORT = '18080'
-$env:PROTUBE_PUBLIC_URL = 'http://127.0.0.1:18080'
-docker compose --project-name protube-check-20261025 down
-```
-
-Los criterios de arranque integrado, preparación automática, acceso a los vídeos
-y conservación tras recrear contenedores están comprobados con el conjunto entregado.
-No se ha utilizado ni modificado la instalación PostgreSQL local del usuario.
+Para probar el frontend y el reproductor empaquetados en Chromium, instala
+Playwright en `frontend/` y ejecuta `node deploy/verify_browser.cjs` desde la raíz
+contra el proyecto de pruebas. `PROTUBE_TEST_URL` permite indicar su URL.

@@ -2,6 +2,13 @@
 
 ## Project
 
+### Run ProTube with Docker
+
+Start Docker with Linux containers, then run `docker compose up --build -d --wait --wait-timeout 300`
+from the repository root and open [http://localhost:8080](http://localhost:8080).
+See the [Docker Compose guide](docs/DOCKER_COMPOSE.md) to load the delivered video
+catalog, change the port, or access the app from another computer.
+
 The project consists of building a web application where the user can watch and comment on videos uploaded by
 themselves and other registered users.
 

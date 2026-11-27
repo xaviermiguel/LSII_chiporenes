@@ -82,7 +82,6 @@ public class VideoImportService {
             }
             var stored = comments.findByVideoIdOrderByCreatedAtAscIdAsc(video.getId());
             if (Boolean.TRUE.equals(source.video().getSourceMetadata().get("test_without_comments"))) {
-                if (!stored.isEmpty()) throw new IllegalStateException("Selected no-comments video already has comments; choose another source ID");
                 emptyId = source.sourceId();
             }
             Set<String> keys = new HashSet<>();

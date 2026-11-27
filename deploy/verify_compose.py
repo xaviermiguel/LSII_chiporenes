@@ -31,10 +31,11 @@ def main():
     assert len(sources) > 12, "Supply the complete task 4 dataset"
     origin = f"http://127.0.0.1:{args.port}"
     env = dict(os.environ, PROTUBE_VIDEO_DIR=str(store), PROTUBE_HTTP_PORT=str(args.port),
-               PROTUBE_PUBLIC_URL=origin, PROTUBE_BIND_ADDRESS="127.0.0.1",
+               PROTUBE_BIND_ADDRESS="127.0.0.1",
                PROTUBE_NO_COMMENTS_ID=str(args.no_comments_id), ENV_PROTUBE_DB_PASS="",
                ENV_PROTUBE_DB="protube_db", ENV_PROTUBE_DB_USER="protube_user")
-    compose = ["docker", "compose", "--project-name", args.project]
+    compose = ["docker", "compose", "-f", "compose.yaml", "-f", "compose.catalog.yaml",
+               "--project-name", args.project]
 
     def run(*arguments, capture=False):
         return subprocess.run(compose + list(arguments), cwd=ROOT, env=env, check=True,
@@ -113,7 +114,8 @@ def main():
     assert credential == run("exec", "-T", "app", "sha256sum", "/run/protube-secrets/db_password", capture=True)
     assert before_files == hashes(), "Original media or metadata changed"
     print(f"PASS: container recreation, unchanged rows/credentials and {len(before_files)} original files. {origin}")
-    print(f"Retained project: {args.project}. Stop with: docker compose --project-name {args.project} down")
+    print(f"Retained project: {args.project}. Stop with: docker compose -f compose.yaml "
+          f"-f compose.catalog.yaml --project-name {args.project} down")
 
 
 if __name__ == "__main__":

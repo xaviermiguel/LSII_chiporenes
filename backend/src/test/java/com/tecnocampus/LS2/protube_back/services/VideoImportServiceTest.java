@@ -142,7 +142,7 @@ public class VideoImportServiceTest {
     }
 
     @Test
-    void conflictingEmptyCaseRollsBackEntireLoadWithoutDeletingExistingComments() throws IOException {
+    void importsSuccessfullyWhenTheSelectedVideoAlreadyHasAComment() throws IOException {
         var existing = new Video();
         existing.setOwner(users.findByEmailIgnoreCase("demo@protube.invalid").orElseThrow());
         existing.setTitle("Existing");
@@ -158,9 +158,12 @@ public class VideoImportServiceTest {
         comment.setExternalAuthor("Existing author");
         comment.setCreatedAt(Instant.parse("2026-10-14T11:00:00Z"));
         comments.saveAndFlush(comment);
-        assertThrows(IllegalStateException.class, () -> importer.importDirectory(store, 2, 2L));
-        assertEquals(1, videos.count());
-        assertEquals(1, comments.count());
+        var result = importer.importDirectory(store, 2, 2L);
+        assertEquals(2, result.addedVideos());
+        assertEquals(2, result.addedComments());
+        assertEquals(3, videos.count());
+        assertEquals(3, comments.count());
+        assertEquals(0, importer.importDirectory(store, 2, 2L).addedComments());
         assertEquals("Keep me", comments.findById(comment.getId()).orElseThrow().getText());
     }
 

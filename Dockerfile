@@ -3,8 +3,7 @@ WORKDIR /build/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
-ARG PUBLIC_MEDIA_ORIGIN=http://localhost:8080
-ENV VITE_API_DOMAIN="" VITE_MEDIA_DOMAIN=${PUBLIC_MEDIA_ORIGIN}
+ENV VITE_API_DOMAIN="" VITE_MEDIA_DOMAIN=""
 RUN npm run build:prod
 
 FROM maven:3.9-eclipse-temurin-21 AS backend
@@ -18,7 +17,8 @@ FROM eclipse-temurin:21-jre-noble AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 protube \
-    && useradd --uid 10001 --gid 10001 --no-create-home protube
+    && useradd --uid 10001 --gid 10001 --no-create-home protube \
+    && install -d -o protube -g protube /store
 WORKDIR /app
 COPY --from=backend /build/backend/target/protube-back-0.0.1-SNAPSHOT.jar protube.jar
 COPY --chmod=755 deploy/app-entrypoint.sh /app/entrypoint.sh
