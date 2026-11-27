@@ -1,6 +1,6 @@
 import './App.css';
 import { useAllVideos } from './useAllVideos.ts';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AuthForm } from './components/auth/AuthForm.tsx';
 import { ThemeSelector } from './components/ThemeSelector';
 import { SessionProvider, useSession } from './SessionContext';
@@ -18,11 +18,20 @@ import type { AuthUser } from './auth';
 import { VideoDetail } from './components/watch/VideoDetail.tsx';
 import { getEnv } from './utils/Env';
 
+const searchRoute = '#buscar?';
+
+function queryFromHash(hash: string) {
+  return hash.startsWith(searchRoute)
+    ? (new URLSearchParams(hash.slice(searchRoute.length)).get('q') ?? '').trim()
+    : '';
+}
+
 function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [accountNotice, setAccountNotice] = useState('');
   const [page, setPage] = useState(window.location.hash);
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchQuery = queryFromHash(page);
+  const [searchInput, setSearchInput] = useState(searchQuery);
   const [editingDrafts, setEditingDrafts] = useState<Record<string, EditingDraft | undefined>>({});
   const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
     title: '',
@@ -44,6 +53,18 @@ function AppContent() {
   }
   const draftKey = `${user?.id}:${editingId}`;
 
+  function search(query: string) {
+    const trimmed = query.trim();
+    const hash = trimmed ? `${searchRoute}${new URLSearchParams({ q: trimmed })}` : '#contenido';
+    setSearchInput(trimmed);
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
+    } else {
+      setSelectedVideoId(null);
+      document.getElementById('contenido')?.focus();
+    }
+  }
+
   function openVideo(id: number) {
     window.history.replaceState(null, '', '#contenido');
     setPage('#contenido');
@@ -54,6 +75,7 @@ function AppContent() {
   useEffect(() => {
     const navigate = () => {
       setPage(window.location.hash);
+      setSearchInput(queryFromHash(window.location.hash));
       setSelectedVideoId(null);
       document.getElementById('contenido')?.focus();
     };
@@ -87,7 +109,11 @@ function AppContent() {
           <a
             className="brand"
             href="#contenido"
-            onClick={() => setSelectedVideoId(null)}
+            onClick={() => {
+              setSelectedVideoId(null);
+              setSearchInput('');
+              document.getElementById('contenido')?.focus();
+            }}
             aria-label="ProTube, ir al catálogo"
           >
             <img src="/protube-logo-removebg-preview.png" alt="logo" width="48" height="48" />
@@ -95,18 +121,32 @@ function AppContent() {
               Pro<span className="brand-accent">Tube</span>
             </span>
           </a>
-          <nav className="header-nav" aria-label="Navegación principal">
-            {user ? (
-              <span className="account-name">Hola, {user.displayName}</span>
-            ) : (
-              <span className="header-caption">Un espacio para descubrir.</span>
-            )}
-            <a className="nav-link" href="#contenido" onClick={() => setSelectedVideoId(null)}>
-              Explorar
-            </a>
-            <a className="nav-link" href="#buscar" onClick={() => setSelectedVideoId(null)}>
+          <form
+            className="video-search"
+            role="search"
+            aria-label="Buscar vídeos"
+            onSubmit={(event) => {
+              event.preventDefault();
+              search(searchInput);
+            }}
+          >
+            <div className="form-field">
+              <label className="visually-hidden" htmlFor="video-query">
+                Título o descripción
+              </label>
+              <input
+                id="video-query"
+                type="search"
+                placeholder="Título o descripción"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+              />
+            </div>
+            <button className="button" type="submit">
               Buscar
-            </a>
+            </button>
+          </form>
+          <nav className="header-nav" aria-label="Navegación principal">
             {user ? (
               <>
                 <a className="nav-link" href="#upload">
@@ -199,11 +239,23 @@ function AppContent() {
         ) : page === '#login' || page === '#register' ? (
           <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
         ) : selectedVideoId === null ? (
-          page === '#buscar' ? (
-            <SearchPage query={searchQuery} onSearch={setSearchQuery} onSelectedVideo={setSelectedVideoId} />
-          ) : (
-            <ContentApp onSelectedVideo={setSelectedVideoId} />
-          )
+          <section aria-labelledby="catalog-title">
+            {searchQuery ? (
+              <div className="section-heading">
+                <h1 id="catalog-title">Resultados para «{searchQuery}»</h1>
+                <button className="button button-secondary" onClick={() => search('')}>
+                  Limpiar búsqueda
+                </button>
+              </div>
+            ) : (
+              <div className="catalog-intro">
+                <p className="eyebrow">Catálogo público</p>
+                <h1 id="catalog-title">Descubre algo nuevo.</h1>
+                <p>Explora los vídeos de la comunidad y encuentra tu próxima inspiración.</p>
+              </div>
+            )}
+            <VideoResults key={searchQuery} query={searchQuery || undefined} onSelectedVideo={setSelectedVideoId} />
+          </section>
         ) : (
           <VideoDetail videoId={selectedVideoId} userId={user?.id} onBack={() => setSelectedVideoId(null)} />
         )}
@@ -211,60 +263,25 @@ function AppContent() {
     </div>
   );
 }
-type ContentAppProps = {
+type VideoResultsProps = {
   onSelectedVideo: (id: number) => void;
+  query?: string;
 };
 
-function SearchPage({
-  query,
-  onSearch,
-  onSelectedVideo,
-}: ContentAppProps & { query: string; onSearch: (query: string) => void }) {
-  const [input, setInput] = useState(query);
-
-  return (
-    <section aria-labelledby="search-title">
-      <div className="catalog-intro">
-        <h1 id="search-title">Buscar vídeos</h1>
-      </div>
-      <form
-        className="video-search"
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const nextQuery = input.trim();
-          if (nextQuery) onSearch(nextQuery);
-        }}
-      >
-        <div className="form-field">
-          <label htmlFor="video-query">Título o descripción</label>
-          <input id="video-query" type="search" value={input} onChange={(event) => setInput(event.target.value)} />
-        </div>
-        <button className="button" type="submit">
-          Buscar
-        </button>
-      </form>
-      {query && <VideoResults key={query} query={query} onSelectedVideo={onSelectedVideo} />}
-    </section>
-  );
-}
-
-function ContentApp({ onSelectedVideo }: ContentAppProps) {
-  return (
-    <section aria-labelledby="catalog-title">
-      <div className="catalog-intro">
-        <p className="eyebrow">Catálogo público</p>
-        <h1 id="catalog-title">Descubre algo nuevo.</h1>
-        <p>Explora los vídeos de la comunidad y encuentra tu próxima inspiración.</p>
-      </div>
-      <VideoResults onSelectedVideo={onSelectedVideo} />
-    </section>
-  );
-}
-
-function VideoResults({ onSelectedVideo, query }: ContentAppProps & { query?: string }) {
+function VideoResults({ onSelectedVideo, query }: VideoResultsProps) {
   const { value: videos, message, loading, hasNext, loadMore } = useAllVideos(query);
   const resultsLabel = query === undefined ? 'Vídeos disponibles' : `Resultados para «${query}»`;
+  const nextButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const button = nextButton.current;
+    if (!button || !hasNext || loading !== 'success' || !window.IntersectionObserver) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void loadMore();
+    });
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [hasNext, loading, loadMore]);
 
   return (
     <>
@@ -288,7 +305,7 @@ function VideoResults({ onSelectedVideo, query }: ContentAppProps & { query?: st
       ) : (
         <>
           <div className="section-heading">
-            <h2>{resultsLabel}:</h2>
+            {query === undefined && <h2>{resultsLabel}:</h2>}
             <span className="catalog-count">{videos.length} en esta selección</span>
           </div>
           <ul className="video-catalog" aria-label={resultsLabel}>
@@ -322,7 +339,12 @@ function VideoResults({ onSelectedVideo, query }: ContentAppProps & { query?: st
               </p>
             )}
             {hasNext && (
-              <button className="button" disabled={loading === 'loading'} onClick={() => void loadMore()}>
+              <button
+                ref={nextButton}
+                className="button"
+                disabled={loading === 'loading'}
+                onClick={() => void loadMore()}
+              >
                 {loading === 'loading' ? 'Cargando más vídeos...' : loading === 'error' ? 'Reintentar' : 'Cargar más'}
               </button>
             )}

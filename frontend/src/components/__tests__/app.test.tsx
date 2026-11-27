@@ -258,7 +258,8 @@ it.each([
 describe('Public video search', () => {
   beforeEach(() => {
     jest.resetAllMocks();
-    window.history.replaceState(null, '', '#buscar');
+    window.history.replaceState(null, '', '/');
+    get.mockReturnValueOnce(pendingPage().promise);
   });
 
   afterEach(() => window.history.replaceState(null, '', '/'));
@@ -268,21 +269,21 @@ describe('Public video search', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
   }
 
-  it('does not request an empty query and leaves existing results visible', async () => {
-    get.mockResolvedValueOnce({ data: videoListFixture });
+  it('searches from the header and restores the catalog when the query is cleared', async () => {
+    get.mockResolvedValue({ data: videoListFixture });
     render(<App />);
-    expect(screen.getByRole('link', { name: 'Buscar' })).toHaveAttribute('href', '#buscar');
-    search('   ');
-    expect(get).not.toHaveBeenCalled();
+    expect(within(screen.getByRole('banner')).getByRole('searchbox')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^(Buscar|Explorar)$/ })).not.toBeInTheDocument();
     search('  video & café  ');
+    await screen.findByRole('heading', { name: 'Resultados para «video & café»' });
     expect(get).toHaveBeenCalledWith('other/videos/search', {
       params: { q: 'video & café', page: 0, size: 12 },
       signal: expect.any(AbortSignal),
     });
     await screen.findByRole('button', { name: 'First video' });
     search('');
-    expect(screen.getByRole('button', { name: 'First video' })).toBeInTheDocument();
-    expect(get).toHaveBeenCalledTimes(1);
+    await screen.findByRole('heading', { name: 'Vídeos disponibles:' });
+    expect(get).toHaveBeenLastCalledWith('other/videos', expect.objectContaining({ params: { page: 0, size: 12 } }));
   });
 
   it('shows loading, no matches, and errors with a retry', async () => {
@@ -290,12 +291,12 @@ describe('Public video search', () => {
     get.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ data: { ...videoListFixture, items: [] } });
     render(<App />);
     search('ausente');
-    expect(screen.getByRole('status')).toHaveTextContent('Buscando vídeos');
+    expect(await screen.findByText('Buscando vídeos...')).toBeInTheDocument();
     await act(async () => pending.reject(new Error('Offline')));
     expect(screen.getByRole('alert')).toHaveTextContent('No se pudo realizar la búsqueda');
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('No se encontraron vídeos para «ausente».')).toBeInTheDocument();
-    expect(get.mock.calls.map(([, config]) => config?.params)).toEqual([
+    expect(get.mock.calls.slice(1).map(([, config]) => config?.params)).toEqual([
       { q: 'ausente', page: 0, size: 12 },
       { q: 'ausente', page: 0, size: 12 },
     ]);
@@ -311,12 +312,12 @@ describe('Public video search', () => {
     search('primera');
     fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
     search('segunda');
-    expect(screen.queryByRole('button', { name: 'First video' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Second video' })).toBeInTheDocument();
-    expect(get.mock.calls[1][1]?.signal?.aborted).toBe(true);
+    expect(screen.queryByRole('button', { name: 'First video' })).not.toBeInTheDocument();
+    expect(get.mock.calls[2][1]?.signal?.aborted).toBe(true);
     await act(async () => oldPage.resolve({ data: { ...videoListFixture, page: 1 } }));
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
-    expect(get.mock.calls.map(([, config]) => config?.params)).toEqual([
+    expect(get.mock.calls.slice(1).map(([, config]) => config?.params)).toEqual([
       { q: 'primera', page: 0, size: 12 },
       { q: 'primera', page: 1, size: 12 },
       { q: 'segunda', page: 0, size: 12 },

@@ -24,7 +24,7 @@ for (const width of [320, 1440]) {
     await page.getByLabel('Contraseña *', { exact: true }).fill('Password1!');
     await page.getByLabel('Confirmar contraseña *').fill('Password1!');
     await page.getByRole('button', { name: 'Crear cuenta' }).click();
-    await expect(page.getByText('Hola, Publisher')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Mi cuenta' })).toBeVisible();
     // Generate an actual MP4 using Chromium's existing media APIs; no mocked media responses.
     const bytes = await page.evaluate(async () => {
       const canvas = document.createElement('canvas');

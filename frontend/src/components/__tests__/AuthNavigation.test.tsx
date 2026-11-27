@@ -43,7 +43,7 @@ test('edit route loads owner form and preserves draft through expiry and login',
   fireEvent.change(screen.getByLabelText('Email *'), { target: { value: user.email } });
   fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Password1!' } });
   fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
-  await screen.findByText('Hola, Anna');
+  await screen.findByRole('link', { name: 'Mi cuenta' });
   await act(async () => {
     window.location.hash = 'videos/15/edit';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -74,7 +74,7 @@ test.each(['login', 'register'])('%s navigates home and updates header after acc
   if (mode === 'register')
     fireEvent.change(screen.getByLabelText('Confirmar contraseña *'), { target: { value: 'Password1!' } });
   fireEvent.click(screen.getByRole('button', { name: mode === 'register' ? 'Crear cuenta' : 'Entrar' }));
-  expect(await screen.findByText('Hola, Anna')).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeInTheDocument();
   expect(window.location.hash).toBe('#contenido');
   expect(screen.getByRole('main')).toHaveFocus();
@@ -100,7 +100,7 @@ test('restores session, handles logout error and retries', async () => {
   jest.mocked(currentUser).mockResolvedValue(user);
   jest.mocked(signOut).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce();
   render(<App />);
-  expect(await screen.findByText('Hola, Anna')).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('No se ha podido cerrar');
   fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
@@ -110,9 +110,9 @@ test('restores session, handles logout error and retries', async () => {
 test('focus detects expired sessions', async () => {
   jest.mocked(currentUser).mockResolvedValueOnce(user).mockResolvedValueOnce(null);
   render(<App />);
-  await screen.findByText('Hola, Anna');
+  await screen.findByRole('link', { name: 'Mi cuenta' });
   fireEvent(window, new Event('focus'));
-  await waitFor(() => expect(screen.queryByText('Hola, Anna')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByRole('link', { name: 'Mi cuenta' })).not.toBeInTheDocument());
 });
 
 test('a late anonymous session response cannot overwrite successful login', async () => {
@@ -131,9 +131,9 @@ test('a late anonymous session response cannot overwrite successful login', asyn
   fireEvent.change(screen.getByLabelText('Email *'), { target: { value: user.email } });
   fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Password1!' } });
   fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
-  await screen.findByText('Hola, Anna');
+  await screen.findByRole('link', { name: 'Mi cuenta' });
   await act(async () => finish(null));
-  expect(screen.getByText('Hola, Anna')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument();
 });
 
 test.each(['profile', 'upload', 'videos/15/edit'])('redirects anonymous visitors from %s', async (path) => {
@@ -160,7 +160,7 @@ test('waits for recovery before showing a protected screen and preserves session
     window.location.hash = 'contenido';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   });
-  expect(screen.getByText('Hola, Anna')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeInTheDocument();
 });
 
@@ -181,7 +181,7 @@ test('recovery failure keeps public catalog accessible and retries on focus', as
   expect(await screen.findByRole('alert')).toHaveTextContent('comprobar la sesión');
   expect(screen.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeInTheDocument();
   fireEvent(window, new Event('focus'));
-  expect(await screen.findByText('Hola, Anna')).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument();
 });
 
 test('expired upload redirects to login and preserves draft when returning after authentication', async () => {
@@ -207,7 +207,7 @@ test('expired upload redirects to login and preserves draft when returning after
   fireEvent.change(screen.getByLabelText('Email *'), { target: { value: user.email } });
   fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Password1!' } });
   fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
-  await screen.findByText('Hola, Anna');
+  await screen.findByRole('link', { name: 'Mi cuenta' });
   await act(async () => {
     window.location.hash = 'upload';
     window.dispatchEvent(new HashChangeEvent('hashchange'));

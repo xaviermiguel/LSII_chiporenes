@@ -20,11 +20,11 @@ for (const width of [320, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     await page.screenshot({ path: testInfo.outputPath(`register-${width}.png`), fullPage: true });
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Hola, Anna')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Mi cuenta' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeVisible();
     await expect(page).toHaveURL(/#contenido$/);
     await page.reload();
-    await expect(page.getByText('Hola, Anna')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Mi cuenta' })).toBeVisible();
     const storage = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }));
     expect(storage).not.toContain(password);
     await page.getByRole('button', { name: 'Cerrar sesión' }).click();
@@ -49,7 +49,7 @@ for (const width of [320, 1440]) {
     await page.getByLabel('Contraseña *', { exact: true }).fill(password);
     await page.screenshot({ path: testInfo.outputPath(`login-${width}.png`), fullPage: true });
     await page.getByLabel('Contraseña *', { exact: true }).press('Enter');
-    await expect(page.getByText('Hola, Anna')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Mi cuenta' })).toBeVisible();
     await expect(page).toHaveURL(/#contenido$/);
   });
 }
@@ -87,7 +87,7 @@ test('protected navigation recovers session, survives reload and detects server 
   await page.getByLabel('Contraseña *', { exact: true }).fill('Password1!');
   await page.getByLabel('Confirmar contraseña *').fill('Password1!');
   await page.getByRole('button', { name: 'Crear cuenta' }).click();
-  await expect(page.getByText('Hola, Session')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mi cuenta' })).toBeVisible();
   await page.getByRole('link', { name: 'Mi cuenta' }).click();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Mi cuenta' })).toBeVisible();
@@ -100,6 +100,6 @@ test('protected navigation recovers session, survives reload and detects server 
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Mi cuenta' })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Explorar' }).click();
+  await page.getByRole('link', { name: 'ProTube, ir al catálogo' }).click();
   await expect(page.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeVisible();
 });

@@ -22,7 +22,7 @@ for (const width of [320, 1440]) {
     });
     expect(registered.status()).toBe(201);
     await page.reload();
-    await expect(page.getByText('Hola, Editor')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Mi cuenta' })).toBeVisible();
     const csrf = await (await page.request.get(`${api}/auth/csrf`)).json();
     const uploaded = await page.request.post(`${api}/videos`, {
       headers: { [csrf.headerName]: csrf.token },

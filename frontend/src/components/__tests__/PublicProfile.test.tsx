@@ -87,7 +87,7 @@ test('hides the edit control from another signed-in user', async () => {
   get.mockResolvedValue({ data: { ...profile, avatarURL: '/assets/avatar-default.png' } });
   render(<App />);
 
-  await screen.findByText('Hola, Ana');
+  await screen.findByRole('link', { name: 'Mi cuenta' });
   await screen.findByRole('heading', { name: 'XaviB' });
   expect(screen.queryByRole('link', { name: 'Editar mi perfil' })).not.toBeInTheDocument();
   expect(authenticatedRequest).not.toHaveBeenCalled();

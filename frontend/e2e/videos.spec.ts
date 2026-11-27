@@ -55,30 +55,42 @@ test('anonymous browser displays the real catalog and opens the persisted detail
   await expect(page.getByRole('heading', { name: 'E2E first video' })).toBeVisible();
 });
 
-test('browser appends real API pages and stops at the end', async ({ page }) => {
-  // Three isolated fixtures: request two per page without changing application
-  // defaults or backend data. Every response still comes from the real API.
-  const pages: string[] = [];
-  await page.route('**/api/videos?*', async (route) => {
-    const url = new URL(route.request().url());
-    pages.push(url.searchParams.get('page')!);
-    url.searchParams.set('size', '2');
-    await route.continue({ url: url.href });
+for (const query of ['', 'E2E']) {
+  test(`scrolling appends real API pages and stops at the end of the ${query ? 'search' : 'catalog'}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 600 });
+    // Three isolated fixtures: request two per page without changing application
+    // defaults or backend data. Every response still comes from the real API.
+    const pages: string[] = [];
+    await page.route(query ? '**/api/videos/search?*' : '**/api/videos?*', async (route) => {
+      const url = new URL(route.request().url());
+      if (query) expect(url.searchParams.get('q')).toBe(query);
+      pages.push(url.searchParams.get('page')!);
+      url.searchParams.set('size', '2');
+      await route.continue({ url: url.href });
+    });
+    await page.goto('/');
+    if (query) {
+      const input = page.getByRole('searchbox');
+      await input.fill(query);
+      await input.press('Enter');
+      await expect(page.getByRole('list', { name: 'Resultados para «E2E»' })).toBeVisible();
+    }
+    await expect(page.locator('.video-card-title')).toHaveText(['E2E first video', 'E2E second video']);
+    await page.getByRole('button', { name: 'Cargar más' }).scrollIntoViewIfNeeded();
+    await expect(page.locator('.video-card-title')).toHaveText([
+      'E2E first video',
+      'E2E second video',
+      'E2E unavailable file',
+    ]);
+    await expect(page.getByRole('status')).toHaveText('No hay más vídeos.');
+    await expect(page.getByRole('button', { name: 'Cargar más' })).toHaveCount(0);
+    // StrictMode can restart the initial request; subsequent pages are requested once.
+    expect(pages.filter((number) => number === '1')).toHaveLength(1);
+    expect(pages.every((number) => number === '0' || number === '1')).toBeTruthy();
   });
-  await page.goto('/');
-  await expect(page.locator('.video-card-title')).toHaveText(['E2E first video', 'E2E second video']);
-  await page.getByRole('button', { name: 'Cargar más' }).click();
-  await expect(page.locator('.video-card-title')).toHaveText([
-    'E2E first video',
-    'E2E second video',
-    'E2E unavailable file',
-  ]);
-  await expect(page.getByRole('status')).toHaveText('No hay más vídeos.');
-  await expect(page.getByRole('button', { name: 'Cargar más' })).toHaveCount(0);
-  // StrictMode can restart the initial request; subsequent pages are requested once.
-  expect(pages.filter((number) => number === '1')).toHaveLength(1);
-  expect(pages.every((number) => number === '0' || number === '1')).toBeTruthy();
-});
+}
 
 test('browser displays a controlled request failure (mock API)', async ({ page }) => {
   await page.route('**/api/videos?*', (route) => route.fulfill({ status: 503, json: { message: 'Unavailable' } }));
@@ -90,8 +102,7 @@ test('browser displays a controlled request failure (mock API)', async ({ page }
 test('anonymous visitor searches the real API by keyboard and opens the player at mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 });
   await page.goto('/');
-  await page.getByRole('navigation').getByRole('link', { name: 'Buscar' }).click();
-  const query = page.getByRole('searchbox', { name: 'Título o descripción' });
+  const query = page.getByRole('banner').getByRole('searchbox', { name: 'Título o descripción' });
   await query.fill('first video');
   const search = page.waitForResponse((response) => response.url().includes('/api/videos/search?') && response.ok());
   await query.press('Enter');
@@ -104,6 +115,31 @@ test('anonymous visitor searches the real API by keyboard and opens the player a
   await result.press('Enter');
   await expect(page.getByRole('heading', { name: 'E2E first video' })).toBeVisible();
   await expect(page.locator('video')).toHaveAttribute('src', `${api}/media/fixture.mp4`);
+  await page.getByRole('button', { name: 'Volver al catálogo' }).click();
+  await expect(result).toBeVisible();
+  await page.getByRole('button', { name: 'Limpiar búsqueda' }).press('Enter');
+  await expect(query).toHaveValue('');
+  await expect(page.locator('.video-card-title')).toHaveCount(3);
+});
+
+test('signed-in desktop search works from another screen and the logo restores the catalog', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#register');
+  await page.getByLabel('Nombre de usuario *').fill('Lector');
+  await page.getByLabel('Email *').fill(`search-${Date.now()}@example.com`);
+  await page.getByLabel('Contraseña *', { exact: true }).fill('Test-password1!');
+  await page.getByLabel('Confirmar contraseña *').fill('Test-password1!');
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await page.getByRole('link', { name: 'Mis vídeos' }).click();
+  const query = page.getByRole('banner').getByRole('searchbox');
+  await query.fill('second video');
+  await query.press('Enter');
+  await expect(page.getByRole('list', { name: 'Resultados para «second video»' }).getByRole('button')).toHaveText(
+    /E2E second video/
+  );
+  await page.getByRole('link', { name: 'ProTube, ir al catálogo' }).click();
+  await expect(query).toHaveValue('');
+  await expect(page.getByRole('list', { name: 'Vídeos disponibles' }).getByRole('button')).toHaveCount(3);
 });
 
 test('signs in to reply with the keyboard and sees the saved reply after reload', async ({ page }, testInfo) => {
