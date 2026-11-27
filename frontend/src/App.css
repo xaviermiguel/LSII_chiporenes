@@ -110,10 +110,66 @@ h2 {
 }
 
 .theme-selector {
-  display: inline-flex;
+  position: relative;
+  margin-inline-start: auto;
+}
+
+.theme-trigger {
+  display: grid;
+  place-items: center;
+  width: var(--control-min);
+  height: var(--control-min);
+  padding: 0;
+  border: var(--border-width) solid var(--color-control-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.theme-menu {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  width: 10rem;
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-hover);
+}
+
+.theme-menu button {
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-min);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.theme-trigger:hover,
+.theme-trigger[aria-expanded='true'],
+.theme-menu button:hover,
+.theme-menu button:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+.theme-menu button:focus-visible {
+  outline-offset: -3px;
+}
+
+.theme-menu [aria-checked='true'] {
   font-weight: var(--weight-medium);
+}
+
+.theme-check {
+  margin-inline-start: auto;
+  color: var(--color-primary);
 }
 
 .nav-link {
@@ -568,8 +624,7 @@ h2 {
 
 .form-field input,
 .form-field select,
-.form-field textarea,
-.theme-selector select {
+.form-field textarea {
   min-width: 0;
   min-height: var(--control-min);
   padding: var(--space-2) var(--space-3);
