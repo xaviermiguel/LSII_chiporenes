@@ -5,11 +5,12 @@
 Inicia Docker con contenedores Linux. El primer build requiere Internet y varios
 GiB libres en la unidad de Docker. Desde la raíz del repositorio, ejecuta:
 
-```sh
+```powershell
+$env:PROTUBE_HTTP_PORT = '8081'
 docker compose up --build -d --wait --wait-timeout 300
 ```
 
-Abre [http://localhost:8080](http://localhost:8080). Spring Boot sirve el frontend
+Abre [http://localhost:8081/](http://localhost:8081/). Spring Boot sirve el frontend
 y la API desde la misma dirección. El catálogo empieza vacío. Puedes crear una
 cuenta, iniciar sesión y publicar vídeos desde el navegador. Compose prepara
 PostgreSQL y las credenciales, y conserva los vídeos publicados, las miniaturas
@@ -23,11 +24,15 @@ o define `PROTUBE_VIDEO_DIR` con la ruta de la carpeta entregada. Ejemplo en
 PowerShell:
 
 ```powershell
+$env:PROTUBE_HTTP_PORT = '8081'
 $env:PROTUBE_VIDEO_DIR = 'C:/ProTube/videos'
 docker compose -f compose.yaml -f compose.catalog.yaml up --build -d --wait --wait-timeout 300
 ```
 
-Usa ambos archivos en cada comando de ese despliegue. El archivo adicional
+Abre [http://localhost:8081/](http://localhost:8081/). Usa ambos archivos en
+cada comando de ese despliegue. Si prefieres ejecutar solo `docker compose`,
+guarda `COMPOSE_FILE=compose.yaml;compose.catalog.yaml` en el `.env` local de
+Windows (en Linux y macOS, usa `:` como separador). El archivo adicional
 reemplaza el volumen de medios por la carpeta externa y activa la importación.
 La carpeta tiene que existir y permitir que el UID 10001 lea los archivos y
 escriba en ella si se van a publicar vídeos o subir avatares. El importador
@@ -50,8 +55,9 @@ base de datos existente sigue apuntando a sus medios, incluidas las publicacione
 | `ENV_PROTUBE_DB_USER` | `protube_user` | Rol inicial |
 | `ENV_PROTUBE_DB_PASS` | Generada | Contraseña inicial opcional |
 
-Si el puerto 8080 está ocupado, cambia `PROTUBE_HTTP_PORT` y abre ese puerto en el
-navegador. Para acceso desde otro equipo por una red de confianza, configura
+El puerto predeterminado de Compose es 8080. Los ejemplos de esta guía lo
+cambian a 8081 mediante `PROTUBE_HTTP_PORT`. Puedes consultar el puerto publicado
+con `docker compose port app 8080`. Para acceso desde otro equipo por una red de confianza, configura
 `PROTUBE_BIND_ADDRESS` con la IP de la interfaz del host que deba atender la
 conexión y abre un navegador en `http://IP_DEL_HOST:PUERTO`. El frontend resuelve
 la API y los medios desde la dirección que abre el navegador. Con un proxy
