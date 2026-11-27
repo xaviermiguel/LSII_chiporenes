@@ -89,10 +89,10 @@ for (const width of [320, 1440]) {
     await expect(page.getByText('viajes', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Volver al catálogo' }).click();
     const card = page.getByRole('button', { name: title, exact: true });
-    while (!(await card.count()) && (await page.getByRole('button', { name: 'Cargar más' }).count())) {
-      await page.getByRole('button', { name: 'Cargar más' }).click();
-      await expect(page.getByRole('button', { name: 'Cargando más vídeos...' })).toHaveCount(0);
-    }
+    await expect(async () => {
+      if (!(await card.count())) await page.locator('.catalog-footer').scrollIntoViewIfNeeded();
+      await expect(card).toBeAttached({ timeout: 500 });
+    }).toPass({ timeout: 10000 });
     await expect(card).toBeVisible();
     await expect
       .poll(() => card.locator('img').evaluate((image) => (image as HTMLImageElement).naturalWidth))

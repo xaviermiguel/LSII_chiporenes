@@ -78,7 +78,7 @@ for (const query of ['', 'E2E']) {
       await expect(page.getByRole('list', { name: 'Resultados para «E2E»' })).toBeVisible();
     }
     await expect(page.locator('.video-card-title')).toHaveText(['E2E first video', 'E2E second video']);
-    await page.getByRole('button', { name: 'Cargar más' }).scrollIntoViewIfNeeded();
+    await page.locator('.video-card').last().scrollIntoViewIfNeeded();
     await expect(page.locator('.video-card-title')).toHaveText([
       'E2E first video',
       'E2E second video',

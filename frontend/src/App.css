@@ -406,6 +406,8 @@ h2 {
 }
 
 .catalog-footer {
+  min-height: var(--control-min);
+  overflow-anchor: none;
   display: grid;
   justify-items: center;
   gap: var(--space-4);
@@ -715,14 +717,6 @@ h2 {
 }
 .account-panel > p {
   margin-top: var(--space-3);
-}
-.account-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  flex-wrap: wrap;
 }
 .owned-video {
   display: grid;

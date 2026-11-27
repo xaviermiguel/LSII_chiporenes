@@ -5,6 +5,10 @@ import App from '../../App';
 import { videoListFixture, videoDetailsFixture } from '../../fixtures/videos';
 import type { VideoListResponse } from '../../types/Video';
 
+import { mockListScroll } from './mockListScroll';
+
+const reachEnd = mockListScroll();
+
 jest.mock('axios');
 jest.mock('../../auth', () => ({ ...jest.requireActual('../../auth'), currentUser: () => new Promise(() => {}) }));
 jest.mock('../../utils/Env', () => ({
@@ -72,10 +76,8 @@ describe('Public video catalog', () => {
     const pending = pendingPage();
     get.mockResolvedValueOnce({ data: { ...videoListFixture, hasNext: true } }).mockReturnValueOnce(pending.promise);
     render(<App />);
-    const loadMore = await screen.findByRole('button', { name: 'Cargar más' });
-    fireEvent.click(loadMore);
-    fireEvent.click(loadMore);
-    expect(screen.getByRole('button', { name: 'Cargando más vídeos...' })).toBeDisabled();
+    await reachEnd();
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando más vídeos...');
     expect(screen.getByRole('button', { name: 'First video' })).toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(2);
     expect(get).toHaveBeenLastCalledWith('other/videos', expect.objectContaining({ params: { page: 1, size: 12 } }));
@@ -104,11 +106,11 @@ describe('Public video catalog', () => {
       .mockRejectedValueOnce(new Error('Offline'))
       .mockResolvedValueOnce({ data: { ...videoListFixture, page: 1, items: [] } });
     render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
+    await reachEnd();
     expect(await screen.findByRole('alert')).toHaveTextContent('Error al cargar los vídeos');
     expect(screen.getByRole('button', { name: 'First video' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('No hay más vídeos.');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('No hay más vídeos.'));
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(get).toHaveBeenCalledTimes(3);
     expect(get).toHaveBeenLastCalledWith('other/videos', expect.objectContaining({ params: { page: 1, size: 12 } }));
@@ -149,7 +151,7 @@ describe('Public video catalog', () => {
       .mockReturnValueOnce(pending.promise)
       .mockResolvedValueOnce({ data: videoDetailsFixture[0] });
     render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
+    await reachEnd();
     fireEvent.click(screen.getByRole('button', { name: 'First video' }));
     expect(await screen.findByRole('heading', { name: 'First video' })).toBeInTheDocument();
     await act(async () => pending.reject(new Error('Cancelled')));
@@ -310,7 +312,7 @@ describe('Public video search', () => {
       .mockResolvedValueOnce({ data: { ...videoListFixture, items: [videoListFixture.items[1]] } });
     render(<App />);
     search('primera');
-    fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
+    await reachEnd();
     search('segunda');
     expect(await screen.findByRole('button', { name: 'Second video' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'First video' })).not.toBeInTheDocument();
@@ -331,7 +333,7 @@ describe('Public video search', () => {
       .mockResolvedValueOnce({ data: { ...videoListFixture, items: [videoListFixture.items[0]], page: 1 } });
     render(<App />);
     search('video');
-    fireEvent.click(await screen.findByRole('button', { name: 'Cargar más' }));
+    await reachEnd();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Second video' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));

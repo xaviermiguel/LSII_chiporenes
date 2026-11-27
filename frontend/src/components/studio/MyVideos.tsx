@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useSession } from '../../SessionContext.tsx';
 import { AuthError } from '../../auth.ts';
 import { getEnv } from '../../utils/Env.ts';
 import type { VideoListResponse } from '../../types/Video.ts';
+
+import { useVideoPages } from '../../useVideoPages';
+import { VideoListFooter } from '../VideoListFooter';
 
 function errorMessage(error: unknown) {
   if (error instanceof AuthError) {
@@ -17,24 +20,14 @@ function errorMessage(error: unknown) {
 
 export function MyVideos({ onOpen }: { onOpen: (id: number) => void }) {
   const { request } = useSession();
-  const [page, setPage] = useState(0);
-  const [videos, setVideos] = useState<VideoListResponse | null>(null);
-  const [error, setError] = useState('');
-  const [retry, setRetry] = useState(0);
-  useEffect(() => {
-    const controller = new AbortController();
-    setVideos(null);
-    setError('');
-    void request(`/videos/me?page=${page}&size=12`, { signal: controller.signal })
-      .then((response) => response.json())
-      .then((value: VideoListResponse) => {
-        if (!controller.signal.aborted) setVideos(value);
-      })
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) setError(errorMessage(cause));
-      });
-    return () => controller.abort();
-  }, [request, page, retry]);
+  const fetchPage = useCallback(
+    async (page: number, signal: AbortSignal): Promise<VideoListResponse> => {
+      const response = await request(`/videos/me?page=${page}&size=12`, { signal });
+      return response.json();
+    },
+    [request]
+  );
+  const { value: videos, loading, hasNext, loadMore, error } = useVideoPages(fetchPage);
   return (
     <section aria-labelledby="my-videos-title">
       <div className="section-heading">
@@ -47,62 +40,41 @@ export function MyVideos({ onOpen }: { onOpen: (id: number) => void }) {
         </a>
       </div>
       <p>Consulta y actualiza los vídeos que has publicado.</p>
-      {error ? (
-        <div>
-          <p className="status-message status-error" role="alert">
-            {error}
-          </p>
-          <button className="button" onClick={() => setRetry((value) => value + 1)}>
-            Reintentar
-          </button>
-        </div>
-      ) : !videos ? (
-        <p role="status">Cargando tus vídeos…</p>
-      ) : (
-        <>
-          {videos.items.length === 0 ? (
-            <p className="status-message">
-              {page === 0 ? 'Todavía no has publicado ningún vídeo.' : 'No hay vídeos en esta página.'}
-            </p>
-          ) : (
-            <ul className="video-catalog" aria-label="Tus vídeos">
-              {videos.items.map((video) => (
-                <li key={video.id} className="owned-video">
-                  <button className="video-card" onClick={() => onOpen(video.id)} aria-label={`Ver ${video.title}`}>
-                    <span className="video-card-media">
-                      <img
-                        alt=""
-                        src={
-                          new URL(video.thumbnailUrl, new URL(`${getEnv().MEDIA_BASE_URL}/`, window.location.href)).href
-                        }
-                      />
-                    </span>
-                    <span className="video-card-body">
-                      <span className="video-card-title">{video.title}</span>
-                    </span>
-                  </button>
-                  <a
-                    className="button button-secondary"
-                    href={`#videos/${video.id}/edit`}
-                    aria-label={`Editar ${video.title}`}
-                  >
-                    Editar vídeo
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="account-pagination" aria-label="Paginación de mis vídeos">
-            <button className="button button-secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>
-              Anterior
-            </button>
-            <span>Página {page + 1}</span>
-            <button className="button button-secondary" disabled={!videos.hasNext} onClick={() => setPage(page + 1)}>
-              Siguiente
-            </button>
-          </div>
-        </>
+      {videos.length > 0 && (
+        <ul className="video-catalog" aria-label="Tus vídeos">
+          {videos.map((video) => (
+            <li key={video.id} className="owned-video">
+              <button className="video-card" onClick={() => onOpen(video.id)} aria-label={`Ver ${video.title}`}>
+                <span className="video-card-media">
+                  <img
+                    alt=""
+                    src={new URL(video.thumbnailUrl, new URL(`${getEnv().MEDIA_BASE_URL}/`, window.location.href)).href}
+                  />
+                </span>
+                <span className="video-card-body">
+                  <span className="video-card-title">{video.title}</span>
+                </span>
+              </button>
+              <a
+                className="button button-secondary"
+                href={`#videos/${video.id}/edit`}
+                aria-label={`Editar ${video.title}`}
+              >
+                Editar vídeo
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
+      <VideoListFooter
+        loading={loading}
+        hasNext={hasNext}
+        loadMore={loadMore}
+        message={errorMessage(error)}
+        empty={videos.length === 0}
+        loadingMessage="Cargando tus vídeos…"
+        emptyMessage="Todavía no has publicado ningún vídeo."
+      />
     </section>
   );
 }

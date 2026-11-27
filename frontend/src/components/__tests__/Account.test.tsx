@@ -3,6 +3,10 @@ import { AccountProfile } from '../profiles/AccountProfile.tsx';
 import { MyVideos, EditVideo } from '../studio/MyVideos.tsx';
 import { AuthError } from '../../auth';
 import { getPublicProfile } from '../../userProfile';
+import { mockListScroll } from './mockListScroll';
+
+const reachEnd = mockListScroll();
+
 jest.mock('../../userProfile', () => ({ ...jest.requireActual('../../userProfile'), getPublicProfile: jest.fn() }));
 
 const mockRequest = jest.fn();
@@ -97,18 +101,29 @@ const page = { items: [video], page: 0, size: 12, hasNext: true };
 test('own catalog paginates and opens playback and edit links', async () => {
   mockRequest
     .mockResolvedValueOnce(response(page))
-    .mockResolvedValueOnce(response({ ...page, items: [], page: 1, hasNext: false }));
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce(
+      response({ ...page, items: [video, { ...video, id: 13, title: 'Segundo' }], page: 1, hasNext: true })
+    )
+    .mockResolvedValueOnce(
+      response({ ...page, items: [{ ...video, id: 14, title: 'Último' }], page: 2, hasNext: false })
+    );
   const open = jest.fn();
   render(<MyVideos onOpen={open} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Ver Mi clip' }));
   expect(open).toHaveBeenCalledWith(12);
   expect(screen.getByRole('link', { name: 'Editar Mi clip' })).toHaveAttribute('href', '#videos/12/edit');
-  fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
-  expect(await screen.findByText('No hay vídeos en esta página.')).toBeInTheDocument();
-  expect(mockRequest).toHaveBeenLastCalledWith(
-    '/videos/me?page=1&size=12',
-    expect.objectContaining({ signal: expect.any(AbortSignal) })
-  );
+  await reachEnd();
+  await screen.findByRole('alert');
+  expect(screen.getByRole('button', { name: 'Ver Mi clip' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+  await screen.findByRole('button', { name: 'Ver Segundo' });
+  await reachEnd();
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('No hay más vídeos.'));
+  expect(
+    screen.getAllByRole('listitem').map((item) => item.querySelector('button')?.getAttribute('aria-label'))
+  ).toEqual(['Ver Mi clip', 'Ver Segundo', 'Ver Último']);
+  expect(mockRequest.mock.calls.map(([path]) => path)).toEqual([0, 1, 1, 2].map((p) => `/videos/me?page=${p}&size=12`));
 });
 
 test('own catalog retries network errors and displays the empty state', async () => {

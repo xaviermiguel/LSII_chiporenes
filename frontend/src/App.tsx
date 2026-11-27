@@ -1,6 +1,7 @@
 import './App.css';
+import { VideoListFooter } from './components/VideoListFooter';
 import { useAllVideos } from './useAllVideos.ts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthForm } from './components/auth/AuthForm.tsx';
 import { ThemeSelector } from './components/ThemeSelector';
 import { SessionProvider, useSession } from './SessionContext';
@@ -222,7 +223,7 @@ function AppContent() {
                 }}
               />
             ) : (
-              <MyVideos onOpen={openVideo} />
+              <MyVideos key={user?.id} onOpen={openVideo} />
             )}
           </ProtectedRoute>
         ) : commentProfile ? (
@@ -271,38 +272,9 @@ type VideoResultsProps = {
 function VideoResults({ onSelectedVideo, query }: VideoResultsProps) {
   const { value: videos, message, loading, hasNext, loadMore } = useAllVideos(query);
   const resultsLabel = query === undefined ? 'Vídeos disponibles' : `Resultados para «${query}»`;
-  const nextButton = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const button = nextButton.current;
-    if (!button || !hasNext || loading !== 'success' || !window.IntersectionObserver) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) void loadMore();
-    });
-    observer.observe(button);
-    return () => observer.disconnect();
-  }, [hasNext, loading, loadMore]);
-
   return (
     <>
-      {loading === 'loading' && videos.length === 0 ? (
-        <p className="status-message" role="status">
-          {query === undefined ? 'Cargando vídeos...' : 'Buscando vídeos...'}
-        </p>
-      ) : loading === 'error' && videos.length === 0 ? (
-        <div className="state-panel">
-          <p className="status-message status-error" role="alert">
-            {message}
-          </p>
-          <button className="button" onClick={() => void loadMore()}>
-            Reintentar
-          </button>
-        </div>
-      ) : videos.length === 0 ? (
-        <p className="status-message" role={query === undefined ? undefined : 'status'}>
-          {query === undefined ? 'No hay vídeos disponibles.' : `No se encontraron vídeos para «${query}».`}
-        </p>
-      ) : (
+      {videos.length > 0 && (
         <>
           <div className="section-heading">
             {query === undefined && <h2>{resultsLabel}:</h2>}
@@ -332,30 +304,17 @@ function VideoResults({ onSelectedVideo, query }: VideoResultsProps) {
               </li>
             ))}
           </ul>
-          <div className="catalog-footer">
-            {loading === 'error' && (
-              <p className="status-message status-error" role="alert">
-                {message}
-              </p>
-            )}
-            {hasNext && (
-              <button
-                ref={nextButton}
-                className="button"
-                disabled={loading === 'loading'}
-                onClick={() => void loadMore()}
-              >
-                {loading === 'loading' ? 'Cargando más vídeos...' : loading === 'error' ? 'Reintentar' : 'Cargar más'}
-              </button>
-            )}
-            {!hasNext && (
-              <p className="status-message" role="status">
-                No hay más vídeos.
-              </p>
-            )}
-          </div>
         </>
       )}
+      <VideoListFooter
+        loading={loading}
+        hasNext={hasNext}
+        loadMore={loadMore}
+        message={message}
+        empty={videos.length === 0}
+        loadingMessage={query === undefined ? 'Cargando vídeos...' : 'Buscando vídeos...'}
+        emptyMessage={query === undefined ? 'No hay vídeos disponibles.' : `No se encontraron vídeos para «${query}».`}
+      />
     </>
   );
 }

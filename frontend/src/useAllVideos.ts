@@ -1,70 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import axios from 'axios';
 import { getEnv } from './utils/Env';
-import type { VideoSummary, VideoListResponse } from './types/Video';
-
-type LoadingState = 'loading' | 'success' | 'error';
+import type { VideoListResponse } from './types/Video';
+import { useVideoPages } from './useVideoPages';
 
 export function useAllVideos(query?: string) {
-  const [value, setValue] = useState<VideoSummary[]>([]);
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState<LoadingState>('loading');
-  const [hasNext, setHasNext] = useState(false);
-  const nextPage = useRef(0);
-  const moreAvailable = useRef(true);
-  const request = useRef<AbortController | null>(null);
-
-  const loadMore = useCallback(async () => {
-    // Lock immediately, before React renders the disabled button.
-    if (request.current || !moreAvailable.current) return;
-    const controller = new AbortController();
-    request.current = controller;
-    setLoading('loading');
-    setMessage('');
-
-    try {
+  const fetchPage = useCallback(
+    async (page: number, signal: AbortSignal) => {
       const path = query === undefined ? '/videos' : '/videos/search';
-      const pagination = { page: nextPage.current, size: 12 };
       const response = await axios.get<VideoListResponse>(`${getEnv().API_BASE_URL}${path}`, {
-        params: query === undefined ? pagination : { ...pagination, q: query },
-        signal: controller.signal,
+        params: query === undefined ? { page, size: 12 } : { page, size: 12, q: query },
+        signal,
       });
-
-      if (controller.signal.aborted) return;
-
-      setValue((previous) => {
-        const videos = new Map(previous.map((video) => [video.id, video]));
-        response.data.items.forEach((video) => videos.set(video.id, video));
-        return [...videos.values()];
-      });
-      nextPage.current = response.data.page + 1;
-      moreAvailable.current = response.data.hasNext;
-      setHasNext(response.data.hasNext);
-      setLoading('success');
-    } catch (error: unknown) {
-      if (controller.signal.aborted) return;
-
-      setMessage(
-        query !== undefined
-          ? 'No se pudo realizar la búsqueda. Inténtalo de nuevo.'
-          : axios.isAxiosError(error)
-            ? `Error al cargar los vídeos: ${error.message}`
-            : 'Error al cargar los vídeos'
-      );
-      setLoading('error');
-    } finally {
-      if (request.current === controller) request.current = null;
-    }
-  }, [query]);
-
-  useEffect(() => {
-    void loadMore();
-
-    return () => {
-      request.current?.abort();
-      request.current = null;
-    };
-  }, [loadMore]);
-
-  return { value, message, loading, hasNext, loadMore };
+      return response.data;
+    },
+    [query]
+  );
+  const pages = useVideoPages(fetchPage);
+  let message = '';
+  if (pages.loading === 'error') {
+    message =
+      query !== undefined
+        ? 'No se pudo realizar la búsqueda. Inténtalo de nuevo.'
+        : axios.isAxiosError(pages.error)
+          ? `Error al cargar los vídeos: ${pages.error.message}`
+          : 'Error al cargar los vídeos';
+  }
+  return { ...pages, message };
 }
