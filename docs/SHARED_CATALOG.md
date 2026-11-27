@@ -4,7 +4,7 @@
 Utilizar el mismo catálogo en los cuatro equipos y cargar sus datos en PostgreSQL
 de forma reproducible, conservando los datos existentes.
 
-Esta guía utiliza el Docker Compose de la tarea 11.
+Esta guía utiliza la [configuración de Docker Compose para el catálogo](DOCKER_COMPOSE.md).
 Más información: [importación](VIDEO_IMPORT.md) y [persistencia](CATALOG_PERSISTENCE.md).
 
 ## Catálogo
@@ -69,7 +69,6 @@ ENV_PROTUBE_DB=protube_db
 ENV_PROTUBE_DB_USER=protube_user
 PROTUBE_HTTP_PORT=8081
 PROTUBE_VIDEO_DIR=C:/Protube/catalogo-compartido-30
-PROTUBE_PUBLIC_URL=http://localhost:8081
 PROTUBE_NO_COMMENTS_ID=0
 ```
 
@@ -83,8 +82,8 @@ Comprobar que `docker info` muestra la sección `Server`.
 Si el entorno anterior ocupa el puerto 8081, detenerlo con `docker compose stop`.
 
 ```powershell
-docker compose -p protube30 up -d --build
-docker compose -p protube30 ps -a
+docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 up --build -d --wait --wait-timeout 300
+docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 ps -a
 ```
 
 `db` y `app` deben terminar saludables; `init-secrets` termina con código 0.
@@ -97,7 +96,7 @@ Los archivos permanecen en disco; PostgreSQL guarda datos y rutas relativas.
 Consultar los logs:
 
 ```powershell
-docker compose -p protube30 logs app --no-color |
+docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 logs app --no-color |
     Select-String -Pattern 'Video import committed|ERROR'
 ```
 
@@ -105,7 +104,7 @@ En una base nueva: **30 vídeos y 240 comentarios añadidos**.
 Consultar las cantidades directamente:
 
 ```powershell
-docker compose -p protube30 exec db psql -U protube_user -d protube_db -c "SELECT (SELECT count(*) FROM public.videos) AS videos, (SELECT count(*) FROM public.comments) AS comments;"
+docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 exec db psql -U protube_user -d protube_db -c "SELECT (SELECT count(*) FROM public.videos) AS videos, (SELECT count(*) FROM public.comments) AS comments;"
 ```
 
 Abrir http://localhost:8081 y comprobar:
@@ -120,7 +119,7 @@ El ID de PostgreSQL puede ser distinto del identificador del archivo.
 Reiniciar la aplicación:
 
 ```powershell
-docker compose -p protube30 restart app
+docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 restart app
 ```
 
 Tras el arranque, revisar los logs: se esperan **0 vídeos añadidos,
@@ -129,7 +128,7 @@ Tras el arranque, revisar los logs: se esperan **0 vídeos añadidos,
 Reiniciar PostgreSQL:
 
 ```powershell
-docker compose -p protube30 restart db
+docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 restart db
 ```
 
 Esperar unos segundos y repetir la consulta del apartado 6.
@@ -137,9 +136,9 @@ Deben mantenerse **30 vídeos y 240 comentarios**, salvo cambios manuales.
 Cambiar la carpeta no elimina registros previamente importados.
 
 ## 8. Gestión y validación
-Detener: `docker compose -p protube30 stop`.
-Iniciar contenedores existentes: `docker compose -p protube30 start`.
-Tras modificar `.env`, aplicar con `docker compose -p protube30 up -d --build`.
+Detener: `docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 stop`.
+Iniciar contenedores existentes: `docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 start`.
+Tras modificar `.env`, aplicar con `docker compose -f compose.yaml -f compose.catalog.yaml -p protube30 up --build -d --wait --wait-timeout 300`.
 No usar `down -v`: elimina los volúmenes del proyecto.
 
 Registrar nombres y fechas junto con los resultados de cada equipo:

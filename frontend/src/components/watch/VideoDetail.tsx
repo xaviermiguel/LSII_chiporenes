@@ -102,7 +102,7 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
   }
 
   const defaultAvatar = resolveAvatarURL(defaultAvatarPath);
-  const videoSrc = new URL(video.videoUrl, `${getEnv().MEDIA_BASE_URL}/`).href;
+  const videoSrc = new URL(video.videoUrl, new URL(`${getEnv().MEDIA_BASE_URL}/`, window.location.href)).href;
   const channelRoute =
     video.user === 'Mark Ronson' ? '#channels/mark-ronson' : `#channels/name/${encodeURIComponent(video.user)}`;
 

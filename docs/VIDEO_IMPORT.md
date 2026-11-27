@@ -100,11 +100,10 @@ importar, conservando intacto el JSON original. El ID elegido aparece en el log 
 se marca en los metadatos de la creación del registro. Mantener las mismas opciones
 para repetir exactamente el conjunto de prueba.
 
-Si el vídeo seleccionado ya tiene comentarios en la base, la carga aborta y
-revierte sus inserciones: no borra comentarios para forzar el caso vacío. Elegir
-otro ID mediante `--pro_tube.import.no-comments-id=...` que no tenga comentarios
-persistidos. Los marcadores JSON de importaciones anteriores son informativos;
-la consulta SQL de comentarios es la comprobación del estado actual.
+Si el vídeo seleccionado ya tiene comentarios en la base, la carga los conserva
+y continúa importando los demás vídeos. Para preparar un caso vacío, elegir con
+`--pro_tube.import.no-comments-id=...` un ID que aún carezca de comentarios
+persistidos. Los marcadores JSON de importaciones anteriores son informativos.
 
 El identificador de grupo usado al descargar no puede deducirse de estos archivos:
 videoGrabber lo usa como semilla y numera los archivos desde cero. Confirmarlo con

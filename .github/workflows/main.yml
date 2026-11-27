@@ -9,6 +9,24 @@ on:
       - main
 
 jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start with an empty media volume
+        run: docker compose up --build -d --wait --wait-timeout 300
+      - name: Verify the packaged application and media storage
+        run: |
+          curl -fsS http://127.0.0.1:8080/ | grep -F 'id="root"'
+          curl -fsS http://127.0.0.1:8080/api/videos | jq -e '.items == []'
+          docker compose exec -T app test -w /store
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --tail 100
+      - name: Stop Compose services
+        if: always()
+        run: docker compose down
+
   build-and-test:
     runs-on: ubuntu-latest
 

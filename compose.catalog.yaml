@@ -1,0 +1,11 @@
+services:
+  app:
+    environment:
+      ENV_PROTUBE_IMPORT_ENABLED: "true"
+    command: ["--pro_tube.import.no-comments-id=${PROTUBE_NO_COMMENTS_ID:-0}"]
+    volumes:
+      - type: bind
+        source: ${PROTUBE_VIDEO_DIR:-./videos}
+        target: /store
+        bind:
+          create_host_path: false
