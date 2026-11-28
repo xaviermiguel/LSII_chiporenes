@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { authenticatedRequest } from '../../auth.ts';
+import { getEnv } from '../../utils/Env';
 import './VideoAnalytics.css';
 
 type Metrics = { views: number; comments: number };
-type Analytics = Metrics & { videos: (Metrics & { id: number; title: string })[] };
+type Analytics = Metrics & { videos: (Metrics & { id: number; title: string; thumbnailUrl: string })[] };
 
 const labels = { views: 'Reproducciones', comments: 'Comentarios' };
 const metrics = ['views', 'comments'] as const;
@@ -30,7 +31,24 @@ function VideoComparison({ analytics }: { analytics: Analytics }) {
           {videos.map((video) => (
             <li key={video.id}>
               <div className="analytics-label">
-                <span>{video.title}</span>
+                {metric === 'views' ? (
+                  <a className="analytics-video-link" href={`#videos/${video.id}`}>
+                    {video.thumbnailUrl && (
+                      <img
+                        src={
+                          new URL(video.thumbnailUrl, new URL(`${getEnv().MEDIA_BASE_URL}/`, window.location.href)).href
+                        }
+                        alt=""
+                        width="64"
+                        height="36"
+                        loading="lazy"
+                      />
+                    )}
+                    <span>{video.title}</span>
+                  </a>
+                ) : (
+                  <span>{video.title}</span>
+                )}
                 <strong>{number.format(video[metric])}</strong>
               </div>
               <div className="analytics-track" aria-hidden="true">

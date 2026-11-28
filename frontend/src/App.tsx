@@ -22,6 +22,8 @@ function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [accountNotice, setAccountNotice] = useState('');
   const [page, setPage] = useState(window.location.hash);
+  const linkedVideoId = Number(/^#videos\/([1-9]\d*)$/.exec(page)?.[1]);
+  const detailId = Number.isSafeInteger(linkedVideoId) ? linkedVideoId : selectedVideoId;
   const [searchQuery, setSearchQuery] = useState('');
   const [editingDrafts, setEditingDrafts] = useState<Record<string, EditingDraft | undefined>>({});
   const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
@@ -203,14 +205,22 @@ function AppContent() {
           <PublicProfile key={publicProfileId} userId={publicProfileId} onOpen={openVideo} />
         ) : page === '#login' || page === '#register' ? (
           <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
-        ) : selectedVideoId === null ? (
+        ) : detailId === null ? (
           page === '#buscar' ? (
             <SearchPage query={searchQuery} onSearch={setSearchQuery} onSelectedVideo={setSelectedVideoId} />
           ) : (
             <ContentApp onSelectedVideo={setSelectedVideoId} />
           )
         ) : (
-          <VideoDetail videoId={selectedVideoId} userId={user?.id} onBack={() => setSelectedVideoId(null)} />
+          <VideoDetail
+            key={detailId}
+            videoId={detailId}
+            userId={user?.id}
+            onBack={() => {
+              setSelectedVideoId(null);
+              if (Number.isSafeInteger(linkedVideoId)) window.location.hash = 'contenido';
+            }}
+          />
         )}
       </main>
     </div>

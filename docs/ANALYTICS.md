@@ -6,7 +6,7 @@
 {
   "views": 2,
   "comments": 3,
-  "videos": [{ "id": 42, "title": "Mi vídeo", "views": 2, "comments": 3 }]
+  "videos": [{ "id": 42, "title": "Mi vídeo", "thumbnailUrl": "/media/portada.webp", "views": 2, "comments": 3 }]
 }
 ```
 

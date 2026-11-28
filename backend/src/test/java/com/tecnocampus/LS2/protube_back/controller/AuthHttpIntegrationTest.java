@@ -844,8 +844,8 @@ class AuthHttpIntegrationTest {
         var before = creator.get(path);
         assertEquals(200, before.statusCode(), before.body());
         var expected = Map.of("views", 2, "comments", 1, "videos", List.of(
-                Map.of("id", emptyId, "title", "No activity", "views", 0, "comments", 0),
-                Map.of("id", ownId, "title", "Own video", "views", 2, "comments", 1)));
+                Map.of("id", emptyId, "title", "No activity", "thumbnailUrl", "/media/No%20activity.webp", "views", 0, "comments", 0),
+                Map.of("id", ownId, "title", "Own video", "thumbnailUrl", "/media/Own%20video.webp", "views", 2, "comments", 1)));
         assertEquals(mapper.readTree(mapper.writeValueAsString(expected)), json(before));
         assertEquals(json(before), json(creator.get(path)));
         assertEquals(json(before), json(creator.get(path + "?ownerId=" +
@@ -864,7 +864,7 @@ class AuthHttpIntegrationTest {
         video.setTitle(title);
         video.setDescription("");
         video.setVideoPath(UUID.randomUUID() + ".mp4");
-        video.setThumbnailPath("fixture.webp");
+        video.setThumbnailPath(title + ".webp");
         return videos.saveAndFlush(video).getId();
     }
 

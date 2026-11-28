@@ -12,12 +12,13 @@ public interface VideoAnalyticsRepository extends Repository<VideoView, Long> {
     interface Metrics {
         Long getId();
         String getTitle();
+        String getThumbnailPath();
         long getViews();
         long getComments();
     }
 
     @Query(value = """
-        SELECT v.id, v.title,
+        SELECT v.id, v.title, v.thumbnail_path AS "thumbnailPath",
                (SELECT COUNT(*) FROM public.video_views w WHERE w.video_id = v.id) AS views,
                (SELECT COUNT(*) FROM public.comments c WHERE c.video_id = v.id) AS comments
         FROM public.videos v

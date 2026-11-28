@@ -51,10 +51,26 @@
 
 .analytics-label {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+}
+
+.analytics-video-link {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-3);
+  font-weight: var(--weight-medium);
+}
+
+.analytics-video-link img {
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
 }
 
 .analytics-track,

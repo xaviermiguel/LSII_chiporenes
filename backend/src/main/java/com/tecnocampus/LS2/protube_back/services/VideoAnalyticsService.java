@@ -14,13 +14,14 @@ public class VideoAnalyticsService {
         this.repository = repository;
     }
 
-    public record VideoMetrics(long id, String title, long views, long comments) {}
+    public record VideoMetrics(long id, String title, String thumbnailUrl, long views, long comments) {}
     public record Analytics(long views, long comments, List<VideoMetrics> videos) {}
 
     @Transactional(readOnly = true)
     public Analytics forOwner(long ownerId) {
         var videos = repository.findForOwner(ownerId).stream()
-                .map(row -> new VideoMetrics(row.getId(), row.getTitle(), row.getViews(), row.getComments()))
+                .map(row -> new VideoMetrics(row.getId(), row.getTitle(), VideoService.mediaUrl(row.getThumbnailPath()),
+                        row.getViews(), row.getComments()))
                 .toList();
         return new Analytics(
                 videos.stream().mapToLong(VideoMetrics::views).sum(),
