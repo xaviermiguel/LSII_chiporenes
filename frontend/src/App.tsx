@@ -18,6 +18,7 @@ import type { PublicationDraft } from './videoPublication';
 import type { AuthUser } from './auth';
 import { VideoDetail } from './components/watch/VideoDetail.tsx';
 import { getEnv } from './utils/Env';
+import type { VideoReturn } from './videoLogin';
 
 const searchRoute = '#buscar?';
 
@@ -28,7 +29,8 @@ function queryFromHash(hash: string) {
 }
 
 function AppContent() {
-  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(() => window.history.state?.videoId ?? null);
+  const [videoReturn, setVideoReturn] = useState<VideoReturn | undefined>(() => window.history.state?.videoReturn);
   const [accountNotice, setAccountNotice] = useState('');
   const [page, setPage] = useState(window.location.hash);
   const searchQuery = queryFromHash(page);
@@ -54,6 +56,13 @@ function AppContent() {
   }
   const draftKey = `${user?.id}:${editingId}`;
 
+  function closeVideo() {
+    window.history.replaceState(null, '');
+    setSelectedVideoId(null);
+    setVideoReturn(undefined);
+    document.getElementById('contenido')?.focus();
+  }
+
   function search(query: string) {
     const trimmed = query.trim();
     const hash = trimmed ? `${searchRoute}${new URLSearchParams({ q: trimmed })}` : '#contenido';
@@ -61,8 +70,7 @@ function AppContent() {
     if (window.location.hash !== hash) {
       window.location.hash = hash;
     } else {
-      setSelectedVideoId(null);
-      document.getElementById('contenido')?.focus();
+      closeVideo();
     }
   }
 
@@ -75,18 +83,39 @@ function AppContent() {
 
   useEffect(() => {
     const navigate = () => {
-      setPage(window.location.hash);
-      setSearchInput(queryFromHash(window.location.hash));
-      setSelectedVideoId(null);
+      const hash = window.location.hash;
+      const state = window.history.state;
+      const authPage = hash === '#login' || hash === '#register';
+      const previousAuthPage = page === '#login' || page === '#register';
+      const journey = state?.videoReturn ?? (previousAuthPage ? videoReturn : undefined);
+      if (authPage && journey) window.history.replaceState({ videoReturn: journey }, '');
+      const returning = previousAuthPage && journey && state?.videoId === journey.videoId;
+      setVideoReturn(authPage || returning ? journey : undefined);
+      setPage(hash);
+      setSearchInput(queryFromHash(hash));
+      setSelectedVideoId(state?.videoId ?? null);
       document.getElementById('contenido')?.focus();
     };
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
-  }, []);
+  }, [page, videoReturn]);
+
+  function returnToVideo(journey: VideoReturn) {
+    const hash = journey.origin || '#contenido';
+    window.history.replaceState(null, '', hash);
+    setPage(hash);
+    setSearchInput(queryFromHash(hash));
+    setSelectedVideoId(journey.videoId);
+    document.getElementById('contenido')?.focus();
+  }
 
   function authenticated(value: AuthUser) {
     setAuthenticated(value);
     setAccountNotice('');
+    if (videoReturn) {
+      returnToVideo(videoReturn);
+      return;
+    }
     setSelectedVideoId(null);
     setPage('#contenido');
     window.location.hash = 'contenido';
@@ -111,9 +140,8 @@ function AppContent() {
             className="brand"
             href="#contenido"
             onClick={() => {
-              setSelectedVideoId(null);
+              closeVideo();
               setSearchInput('');
-              document.getElementById('contenido')?.focus();
             }}
             aria-label="ProTube, ir al catálogo"
           >
@@ -238,7 +266,18 @@ function AppContent() {
         ) : publicProfileId ? (
           <PublicProfile key={publicProfileId} userId={publicProfileId} onOpen={openVideo} />
         ) : page === '#login' || page === '#register' ? (
-          <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
+          <AuthForm
+            key={page}
+            mode={page === '#register' ? 'register' : 'login'}
+            onSuccess={authenticated}
+            videoNotice={
+              videoReturn &&
+              (videoReturn.expired
+                ? 'Tu sesión ha caducado. Inicia sesión para continuar en el vídeo.'
+                : 'Inicia sesión para comentar o dar Me gusta. Después volverás al vídeo.')
+            }
+            onCancel={videoReturn && (() => returnToVideo(videoReturn))}
+          />
         ) : selectedVideoId === null ? (
           <section aria-labelledby="catalog-title">
             {searchQuery ? (
@@ -259,13 +298,12 @@ function AppContent() {
           </section>
         ) : (
           <VideoDetail
+            key={selectedVideoId}
+            initialDraft={videoReturn?.videoId === selectedVideoId ? videoReturn.draft : undefined}
             videoId={selectedVideoId}
             userId={user?.id}
             backLabel={searchQuery ? 'Volver a los resultados' : undefined}
-            onBack={() => {
-              setSelectedVideoId(null);
-              document.getElementById('contenido')?.focus();
-            }}
+            onBack={closeVideo}
           />
         )}
       </main>

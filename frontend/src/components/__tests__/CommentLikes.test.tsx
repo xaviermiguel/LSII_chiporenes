@@ -2,19 +2,23 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import fetchMock from 'jest-fetch-mock';
 import { SessionProvider } from '../../SessionContext';
 import { VideoComments } from '../watch/VideoComments.tsx';
+import { emptyCommentDraft } from '../../videoLogin';
 
 const url = 'other/videos/12/comments/5/likes';
 const account = { id: 8, displayName: 'Pau', email: 'pau@example.com' };
 const comment = { id: 5, user: 'Ana', text: 'Buen vídeo', parentId: null, createdAt: '2026-11-17T10:00:00Z' };
 const csrf = { token: 'fresh', headerName: 'X-CSRF-TOKEN' };
 
-function showComments() {
+function showComments(onLogin = jest.fn()) {
   return render(
     <SessionProvider>
       <VideoComments
         videoId={12}
         comments={[comment, { ...comment, id: 6, user: 'Pau', text: 'Gracias', parentId: 5 }]}
-        onReply={jest.fn()}
+        onPublished={jest.fn()}
+        draft={emptyCommentDraft}
+        onDraft={jest.fn()}
+        onLogin={onLogin}
       />
     </SessionProvider>
   );
@@ -86,11 +90,11 @@ test('loads the persisted reaction on a fresh mount', async () => {
 test('invites visitors to sign in and makes no write', async () => {
   fetchMock.mockResponseOnce('{}', { status: 401 });
   queueLikes(2, false);
-  showComments();
+  const login = jest.fn();
+  showComments(login);
   await screen.findByText('2 Me gusta');
   fireEvent.click(button());
-  expect(screen.getByRole('alert')).toHaveTextContent('Inicia sesión para dar me gusta');
-  expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toHaveAttribute('href', '#login');
+  expect(login).toHaveBeenCalledTimes(1);
   expect(likesRequests()).toHaveLength(1);
 });
 
@@ -111,14 +115,15 @@ test('keeps the last confirmed count and active state when removing a like fails
 test('explains an expired session and clears the signed-in reaction', async () => {
   fetchMock.mockResponseOnce(JSON.stringify(account));
   queueLikes(4, true);
-  showComments();
+  const login = jest.fn();
+  showComments(login);
   await screen.findByText('4 Me gusta');
   fetchMock.mockResponseOnce(JSON.stringify(csrf));
   fetchMock.mockResponseOnce('{}', { status: 401 });
   queueLikes(4, false);
   fireEvent.click(button());
-  expect(await screen.findByRole('alert')).toHaveTextContent('Tu sesión ha caducado');
-  expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toBeVisible();
+  await act(async () => {});
+  expect(login).toHaveBeenCalledWith(true);
   expect(screen.getByText('4 Me gusta')).toBeVisible();
   expect(button()).toHaveAttribute('aria-pressed', 'false');
 });

@@ -2,11 +2,15 @@ import { act, fireEvent, render as renderWithProviders, screen, waitFor, within 
 import type { ReactElement } from 'react';
 import axios from 'axios';
 import { VideoDetail } from '../watch/VideoDetail.tsx';
+import App from '../../App';
 import { videoDetailsFixture } from '../../fixtures/videos';
 import { SessionProvider } from '../../SessionContext';
 import { authenticate, authenticatedRequest, AuthError, currentUser } from '../../auth';
 
 jest.mock('axios');
+jest.mock('../../useAllVideos', () => ({
+  useAllVideos: () => ({ value: jest.requireActual('../../fixtures/videos').videoListFixture.items, hasNext: false }),
+}));
 jest.mock('../watch/CommentLikes.tsx', () => ({ CommentLikes: () => null }));
 jest.mock('../../auth', () => ({
   ...jest.requireActual('../../auth'),
@@ -22,9 +26,15 @@ const detail = videoDetailsFixture[0];
 const render = (element: ReactElement) => renderWithProviders(element, { wrapper: SessionProvider });
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/');
   jest.resetAllMocks();
   jest.mocked(currentUser).mockResolvedValue(null);
 });
+
+async function visitVideo() {
+  renderWithProviders(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: detail.title }));
+}
 
 describe('Video detail under the shared visual standard', () => {
   it.each([1, 2, undefined])('only owner sees editing link (viewer %s)', async (userId) => {
@@ -264,8 +274,11 @@ describe('Replying from the video detail', () => {
 
   it('asks anonymous viewers to sign in before showing the editor', async () => {
     jest.mocked(currentUser).mockResolvedValue(null);
-    await openReply();
+    await visitVideo();
+    fireEvent.click(await screen.findByRole('button', { name: 'Responder a Ana' }));
     expect(await screen.findByRole('heading', { name: 'Inicia sesión' })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#login');
+    expect(screen.queryByLabelText('Comentarios')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Responder a Ana' })).not.toBeInTheDocument();
     expect(request).not.toHaveBeenCalled();
   });
@@ -288,12 +301,13 @@ describe('Replying from the video detail', () => {
   it('restores the draft after signing in again on an expired session', async () => {
     jest.mocked(authenticate).mockResolvedValue(account);
     request.mockRejectedValueOnce(new AuthError('AUTHENTICATION_REQUIRED', 401));
-    await openReply();
+    await visitVideo();
+    fireEvent.click(await screen.findByRole('button', { name: 'Responder a Ana' }));
     fireEvent.change(await screen.findByRole('textbox', { name: 'Responder a Ana' }), {
       target: { value: 'Borrador conservado' },
     });
     send();
-    expect(await screen.findByText(/Tu sesión ha caducado/)).toHaveFocus();
+    expect(await screen.findByText(/Tu sesión ha caducado/)).toBeVisible();
     fireEvent.change(screen.getByLabelText('Email *'), { target: { value: account.email } });
     fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Test-password1!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
@@ -427,11 +441,12 @@ describe('Publicar un comentario de primer nivel', () => {
   it('mantiene el borrador ante una sesión caducada y deja que el usuario reanude el envío', async () => {
     request.mockRejectedValueOnce(new AuthError('AUTHENTICATION_REQUIRED', 401));
     jest.mocked(authenticate).mockResolvedValue(account);
-    const input = await editor();
+    await visitVideo();
+    const input = await screen.findByRole('textbox', { name: 'Escribe un comentario' });
     const text = 'Pendiente de publicar';
     fireEvent.change(input, { target: { value: text } });
     fireEvent.click(button());
-    expect(await screen.findByText(/Tu sesión ha caducado/)).toHaveFocus();
+    expect(await screen.findByText(/Tu sesión ha caducado/)).toBeVisible();
     fireEvent.change(screen.getByLabelText('Email *'), { target: { value: account.email } });
     fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'Test-password1!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));

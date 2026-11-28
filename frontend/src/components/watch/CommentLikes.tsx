@@ -4,9 +4,9 @@ import { useSession } from '../../SessionContext.tsx';
 
 type LikeState = { likeCount: number; likedByMe: boolean };
 
-type CommentLikesProps = { videoId: number; commentId: number; author: string };
+type CommentLikesProps = { videoId: number; commentId: number; author: string; onLogin: (expired?: boolean) => void };
 
-export function CommentLikes({ videoId, commentId, author }: CommentLikesProps) {
+export function CommentLikes({ videoId, commentId, author, onLogin }: CommentLikesProps) {
   const { user, loading, loggingOut, request } = useSession();
   const viewer = user?.id ?? null;
   const path = `/videos/${videoId}/comments/${commentId}/likes`;
@@ -14,7 +14,6 @@ export function CommentLikes({ videoId, commentId, author }: CommentLikesProps) 
   const [attempt, setAttempt] = useState(0);
   const [loadError, setLoadError] = useState(false);
   const [actionError, setActionError] = useState('');
-  const [prompt, setPrompt] = useState('');
   const [pending, setPending] = useState(false);
   const scope = useRef<AbortController>(null);
   const sending = useRef(false);
@@ -48,7 +47,7 @@ export function CommentLikes({ videoId, commentId, author }: CommentLikesProps) 
   async function toggle() {
     if (disabled || sending.current) return;
     if (viewer === null) {
-      setPrompt('Inicia sesión para dar me gusta a este comentario.');
+      onLogin();
       return;
     }
 
@@ -56,7 +55,6 @@ export function CommentLikes({ videoId, commentId, author }: CommentLikesProps) 
     if (!signal || signal.aborted) return;
     sending.current = true;
     setPending(true);
-    setPrompt('');
     setActionError('');
     try {
       const response = await request(path, { method: liked ? 'DELETE' : 'PUT', signal });
@@ -65,7 +63,7 @@ export function CommentLikes({ videoId, commentId, author }: CommentLikesProps) 
     } catch (error) {
       if (signal.aborted) return;
       if (error instanceof AuthError && error.status === 401) {
-        setPrompt('Tu sesión ha caducado. Inicia sesión para volver a reaccionar.');
+        onLogin(true);
       } else {
         setActionError('No se pudo actualizar el me gusta. Inténtalo de nuevo.');
       }
@@ -101,12 +99,6 @@ export function CommentLikes({ videoId, commentId, author }: CommentLikesProps) 
         </div>
       )}
       {actionError && <p role="alert">{actionError}</p>}
-      {prompt && (
-        <div>
-          <p role="alert">{prompt}</p>
-          <a href="#login">Iniciar sesión</a>
-        </div>
-      )}
     </div>
   );
 }

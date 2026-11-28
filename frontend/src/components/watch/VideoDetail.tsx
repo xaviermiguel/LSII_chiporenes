@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { getEnv } from '../../utils/Env.ts';
 import { VideoEngagement } from './VideoEngagement.tsx';
@@ -6,15 +6,28 @@ import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../use
 import type { VideoDetail as VideoDetailData } from '../../types/Video.ts';
 import { VideoComments } from './VideoComments.tsx';
 import { CatalogBack } from '../CatalogBack';
+import { emptyCommentDraft, requestVideoLogin } from '../../videoLogin';
+import type { CommentDraft } from '../../videoLogin';
 
 type VideoDetailProps = {
   videoId: number;
   onBack: () => void;
   backLabel?: string;
   userId?: number;
+  initialDraft?: CommentDraft;
 };
 
-export function VideoDetail({ videoId, onBack, backLabel, userId }: VideoDetailProps) {
+export function VideoDetail({ videoId, onBack, backLabel, userId, initialDraft }: VideoDetailProps) {
+  const [draft, setDraft] = useState(initialDraft ?? emptyCommentDraft);
+  const latestDraft = useRef(draft);
+  useLayoutEffect(() => {
+    latestDraft.current = draft;
+  }, [draft]);
+
+  function login(expired = false, replyTo?: number) {
+    const current = latestDraft.current;
+    requestVideoLogin(videoId, replyTo === undefined ? current : { ...current, replyTo }, expired);
+  }
   const [video, setVideo] = useState<VideoDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -144,6 +157,7 @@ export function VideoDetail({ videoId, onBack, backLabel, userId }: VideoDetailP
       </video>
 
       <VideoEngagement
+        onLogin={login}
         key={`engagement-${video.id}`}
         videoId={video.id}
         userId={userId}
@@ -181,6 +195,9 @@ export function VideoDetail({ videoId, onBack, backLabel, userId }: VideoDetailP
         )}
       </section>
       <VideoComments
+        draft={draft}
+        onDraft={setDraft}
+        onLogin={login}
         key={`comments-${video.id}`}
         videoId={video.id}
         comments={video.comments}

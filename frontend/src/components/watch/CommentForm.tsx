@@ -3,7 +3,6 @@ import type { FormEvent } from 'react';
 import { useSession } from '../../SessionContext.tsx';
 import { AuthError } from '../../auth.ts';
 import type { VideoComment } from '../../types/Video.ts';
-import { AuthForm } from '../auth/AuthForm.tsx';
 
 const MAX_COMMENT_LENGTH = 300;
 // Character.isWhitespace (Java 21): Unicode separators except non-breaking spaces, plus these controls.
@@ -15,27 +14,26 @@ type CommentFormProps = {
   parent?: VideoComment;
   onPublished: (comment: VideoComment) => void;
   onCancel?: () => void;
+  text: string;
+  onText: (text: string) => void;
+  onLogin: (expired?: boolean) => void;
 };
 
-export function CommentForm({ videoId, parent, onPublished, onCancel }: CommentFormProps) {
-  const { user, loading, authenticated, request } = useSession();
-  const [text, setText] = useState('');
+export function CommentForm({ videoId, parent, onPublished, onCancel, text, onText, onLogin }: CommentFormProps) {
+  const { user, loading, request } = useSession();
   const [fieldError, setFieldError] = useState('');
   const [error, setError] = useState('');
-  const [resumeDraft, setResumeDraft] = useState(false);
+  const resumeDraft = useRef(Boolean(text));
   const [pending, setPending] = useState(false);
   const inputId = useId();
   const input = useRef<HTMLTextAreaElement>(null);
-  const loginPrompt = useRef<HTMLParagraphElement>(null);
   const inFlight = useRef<AbortController | null>(null);
   const needsLogin = !loading && !user;
   const sending = parent ? 'Enviando respuesta…' : 'Publicando…';
 
   useEffect(() => {
-    if (!parent && !resumeDraft) return;
-    if (needsLogin) loginPrompt.current?.focus();
-    else if (!loading) input.current?.focus();
-  }, [loading, needsLogin, parent, resumeDraft]);
+    if ((parent || resumeDraft.current) && !loading && !needsLogin) input.current?.focus();
+  }, [loading, needsLogin, parent]);
 
   useEffect(() => () => inFlight.current?.abort(), []);
 
@@ -71,18 +69,12 @@ export function CommentForm({ videoId, parent, onPublished, onCancel }: CommentF
       const saved: VideoComment = await response.json();
       if (!controller.signal.aborted) {
         onPublished(saved);
-        setText('');
-        setResumeDraft(false);
+        onText('');
       }
     } catch (failure) {
       if (controller.signal.aborted) return;
       if (failure instanceof AuthError && failure.status === 401) {
-        setResumeDraft(true);
-        setError(
-          parent
-            ? 'Tu sesión ha caducado. Inicia sesión para enviar tu respuesta.'
-            : 'Tu sesión ha caducado. Inicia sesión para publicar tu comentario.'
-        );
+        onLogin(true);
       } else if (failure instanceof AuthError && failure.code === 'VIDEO_NOT_FOUND') {
         setError('El vídeo ya no está disponible.');
       } else if (failure instanceof AuthError && failure.code === 'COMMENT_NOT_FOUND') {
@@ -104,22 +96,16 @@ export function CommentForm({ videoId, parent, onPublished, onCancel }: CommentF
     <div className="reply-composer">
       {loading ? (
         <p role="status">Comprobando sesión…</p>
-      ) : needsLogin && !parent && !resumeDraft && !text ? (
-        <a href="#login">Inicia sesión para comentar</a>
       ) : needsLogin ? (
-        <>
-          <p ref={loginPrompt} tabIndex={-1} role={error ? 'alert' : undefined}>
-            {error || (parent ? 'Inicia sesión para responder a este comentario.' : 'Inicia sesión para comentar.')}
-          </p>
-          <AuthForm
-            mode="login"
-            embedded
-            onSuccess={(account) => {
-              authenticated(account);
-              setError('');
-            }}
-          />
-        </>
+        <a
+          href="#login"
+          onClick={(event) => {
+            event.preventDefault();
+            onLogin();
+          }}
+        >
+          Inicia sesión para comentar
+        </a>
       ) : (
         <form onSubmit={(event) => void submit(event)} noValidate aria-busy={pending}>
           <div className="form-field">
@@ -134,7 +120,7 @@ export function CommentForm({ videoId, parent, onPublished, onCancel }: CommentF
               aria-invalid={!!fieldError}
               aria-describedby={fieldError ? `${inputId}-error` : `${inputId}-help`}
               onChange={(event) => {
-                setText(event.target.value);
+                onText(event.target.value);
                 setFieldError('');
               }}
             />

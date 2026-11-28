@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import type { VideoComment } from '../../types/Video.ts';
 import { CommentForm } from './CommentForm.tsx';
 import { CommentLikes } from './CommentLikes.tsx';
+import { useSession } from '../../SessionContext';
+import type { CommentDraft } from '../../videoLogin';
+import type { Dispatch, SetStateAction } from 'react';
 
 type CommentListProps = {
   comments: VideoComment[];
@@ -43,15 +46,27 @@ type VideoCommentsProps = {
   comments: VideoComment[];
   renderAuthor?: (comment: VideoComment) => ReactNode;
   onPublished: (comment: VideoComment) => void;
+  draft: CommentDraft;
+  onDraft: Dispatch<SetStateAction<CommentDraft>>;
+  onLogin: (expired?: boolean, replyTo?: number) => void;
 };
 
-export function VideoComments({ videoId, comments, onPublished, renderAuthor }: VideoCommentsProps) {
-  const [replyTo, setReplyTo] = useState<number | null>(null);
+export function VideoComments({
+  videoId,
+  comments,
+  onPublished,
+  renderAuthor,
+  draft,
+  onDraft,
+  onLogin,
+}: VideoCommentsProps) {
+  const { user, loading } = useSession();
+  const replyTo = comments.some((comment) => comment.id === draft.replyTo) ? draft.replyTo : null;
   const [announcement, setAnnouncement] = useState('');
   const trigger = useRef<HTMLButtonElement>(null);
 
   function closeReply() {
-    setReplyTo(null);
+    onDraft((previous) => ({ ...previous, replyTo: null, reply: '' }));
     trigger.current?.focus();
   }
 
@@ -74,6 +89,9 @@ export function VideoComments({ videoId, comments, onPublished, renderAuthor }: 
     <section className="detail-section" aria-label="Comentarios">
       <h2>Comentarios ({comments.length})</h2>
       <CommentForm
+        text={draft.comment}
+        onText={(comment) => onDraft((previous) => ({ ...previous, comment }))}
+        onLogin={onLogin}
         videoId={videoId}
         onPublished={(comment) => {
           onPublished(comment);
@@ -89,24 +107,31 @@ export function VideoComments({ videoId, comments, onPublished, renderAuthor }: 
           repliesByParent={repliesByParent}
           renderAction={(comment) => (
             <div className="comment-actions">
-              <CommentLikes videoId={videoId} commentId={comment.id} author={comment.user} />
+              <CommentLikes videoId={videoId} commentId={comment.id} author={comment.user} onLogin={onLogin} />
               <button
                 className="button button-secondary"
                 type="button"
+                ref={replyTo === comment.id ? trigger : undefined}
                 aria-label={`Responder a ${comment.user}`}
-                aria-expanded={replyTo === comment.id}
-                disabled={replyTo !== null && replyTo !== comment.id}
-                onClick={(event) => {
+                aria-expanded={!!user && replyTo === comment.id}
+                disabled={loading || ((!!user || !!draft.reply) && replyTo !== null && replyTo !== comment.id)}
+                onClick={() => {
+                  if (!user) {
+                    onLogin(false, comment.id);
+                    return;
+                  }
                   if (replyTo === comment.id) return;
-                  trigger.current = event.currentTarget;
                   setAnnouncement('');
-                  setReplyTo(comment.id);
+                  onDraft((previous) => ({ ...previous, replyTo: comment.id, reply: '' }));
                 }}
               >
                 Responder
               </button>
-              {replyTo === comment.id && (
+              {user && replyTo === comment.id && (
                 <CommentForm
+                  text={draft.reply}
+                  onText={(reply) => onDraft((previous) => ({ ...previous, reply }))}
+                  onLogin={onLogin}
                   videoId={videoId}
                   parent={comment}
                   onCancel={closeReply}

@@ -7,9 +7,10 @@ type VideoEngagementProps = {
   userId?: number;
   viewCount?: number | null;
   likeCount?: number | null;
+  onLogin: () => void;
 };
 
-export function VideoEngagement({ videoId, userId, viewCount, likeCount }: VideoEngagementProps) {
+export function VideoEngagement({ videoId, userId, viewCount, likeCount, onLogin }: VideoEngagementProps) {
   const { accounts, saveError, toggle } = useLocalAccountReactions(`protube:videos/${videoId}:likes`);
   const liked = userId !== undefined && accounts.includes(userId);
 
@@ -23,7 +24,14 @@ export function VideoEngagement({ videoId, userId, viewCount, likeCount }: Video
           </span>
         )}
         {userId === undefined ? (
-          <a className="button button-secondary" href="#login">
+          <a
+            className="button button-secondary"
+            href="#login"
+            onClick={(event) => {
+              event.preventDefault();
+              onLogin();
+            }}
+          >
             Iniciar sesión para dar Me gusta
           </a>
         ) : (

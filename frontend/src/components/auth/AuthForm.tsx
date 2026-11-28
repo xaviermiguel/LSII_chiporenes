@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { authenticate, AuthError } from '../../auth.ts';
 import type { AuthUser, Credentials } from '../../auth.ts';
@@ -23,16 +23,15 @@ const emailPattern =
 export function AuthForm({
   mode,
   onSuccess,
-  embedded = false,
+  videoNotice,
+  onCancel,
 }: {
   mode: 'login' | 'register';
   onSuccess: (user: AuthUser) => void;
-  embedded?: boolean;
+  videoNotice?: string;
+  onCancel?: () => void;
 }) {
   const registering = mode === 'register';
-  const instanceId = useId();
-  const prefix = embedded ? `${instanceId}-` : '';
-  const Heading = embedded ? 'h3' : 'h1';
   const fields: Field[] = registering ? ['displayName', 'email', 'password', 'confirmPassword'] : ['email', 'password'];
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [message, setMessage] = useState('');
@@ -77,7 +76,8 @@ export function AuthForm({
     setPending(true);
     try {
       const user = await authenticate(mode, values);
-      form.current?.reset();
+      if (!form.current) return;
+      form.current.reset();
       onSuccess(user);
     } catch (error) {
       const text =
@@ -101,18 +101,19 @@ export function AuthForm({
   }
 
   return (
-    <section className="auth-panel" aria-labelledby={`${prefix}auth-title`}>
-      {!embedded && <p className="eyebrow">Comunidad ProTube</p>}
-      <Heading id={`${prefix}auth-title`}>{registering ? 'Crea tu cuenta' : 'Inicia sesión'}</Heading>
+    <section className="auth-panel" aria-labelledby="auth-title">
+      <p className="eyebrow">Comunidad ProTube</p>
+      <h1 id="auth-title">{registering ? 'Crea tu cuenta' : 'Inicia sesión'}</h1>
+      {videoNotice && <p>{videoNotice}</p>}
       <p>Todos los campos son obligatorios (*).</p>
       <form ref={form} onSubmit={(event) => void submit(event)} noValidate aria-busy={pending}>
         <fieldset disabled={pending}>
           <legend className="visually-hidden">{registering ? 'Datos de registro' : 'Datos de acceso'}</legend>
           {fields.map((field) => (
             <div className="form-field" key={field}>
-              <label htmlFor={prefix + field}>{labels[field]} *</label>
+              <label htmlFor={field}>{labels[field]} *</label>
               <input
-                id={prefix + field}
+                id={field}
                 name={field}
                 required
                 type={field.includes('assword') ? 'password' : field === 'email' ? 'email' : 'text'}
@@ -130,22 +131,19 @@ export function AuthForm({
                 onChange={() => setErrors((previous) => ({ ...previous, [field]: undefined }))}
                 aria-invalid={!!errors[field]}
                 aria-describedby={
-                  [
-                    field === 'password' && registering ? prefix + 'password-help' : '',
-                    errors[field] ? `${prefix}${field}-error` : '',
-                  ]
+                  [field === 'password' && registering ? 'password-help' : '', errors[field] ? `${field}-error` : '']
                     .filter(Boolean)
                     .join(' ') || undefined
                 }
               />
               {field === 'password' && registering && (
-                <p id={prefix + 'password-help'} className="muted-text">
+                <p id="password-help" className="muted-text">
                   Entre 8 y 72 caracteres ASCII imprimibles (letras sin acentos, números y símbolos), sin espacios al
                   principio ni al final.
                 </p>
               )}
               {errors[field] && (
-                <p className="field-error" id={`${prefix}${field}-error`}>
+                <p className="field-error" id={`${field}-error`}>
                   {errors[field]}
                 </p>
               )}
@@ -169,6 +167,11 @@ export function AuthForm({
         {registering ? '¿Ya tienes cuenta?' : '¿Todavía no tienes cuenta?'}{' '}
         <a href={registering ? '#login' : '#register'}>{registering ? 'Iniciar sesión' : 'Registrarse'}</a>
       </p>
+      {onCancel && (
+        <button type="button" className="button button-secondary" onClick={onCancel} disabled={pending}>
+          Volver al vídeo
+        </button>
+      )}
     </section>
   );
 }

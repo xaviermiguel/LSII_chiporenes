@@ -162,7 +162,9 @@ test('signs in to reply with the keyboard and sees the saved reply after reload'
   await video.click();
   const reply = page.getByRole('button', { name: 'Responder a Test commenter' });
   await reply.press('Enter');
-  await expect(page.getByText('Inicia sesión para responder a este comentario.')).toBeFocused();
+  await expect(page).toHaveURL(/#login$/);
+  await expect(page.getByRole('heading', { name: 'Inicia sesión' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Comentarios' })).toHaveCount(0);
   await page.getByLabel('Email *').fill(email);
   await page.getByLabel('Contraseña *', { exact: true }).fill(password);
   await page.getByLabel('Contraseña *', { exact: true }).press('Enter');
@@ -184,6 +186,89 @@ test('signs in to reply with the keyboard and sees the saved reply after reload'
   await page.reload();
   await video.click();
   await expect(saved).toContainText(author);
+});
+
+test('comments and both likes share login and return to the search result without replaying an action', async ({
+  page,
+}) => {
+  await page.goto('/#buscar?q=first');
+  await page.getByRole('button', { name: 'E2E first video' }).click();
+  const notice = page.getByText('Inicia sesión para comentar o dar Me gusta. Después volverás al vídeo.');
+  const title = page.getByRole('heading', { name: 'E2E first video' });
+  await page.getByRole('link', { name: 'Inicia sesión para comentar' }).click();
+  await expect(notice).toBeVisible();
+  await page.getByRole('button', { name: 'Volver al vídeo' }).click();
+  await expect(title).toBeVisible();
+  await page.getByRole('link', { name: 'Iniciar sesión para dar Me gusta' }).click();
+  await expect(notice).toBeVisible();
+  await page.goBack();
+  await expect(title).toBeVisible();
+
+  const writes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/videos/') && request.method() !== 'GET') writes.push(request.method());
+  });
+  const like = page.getByRole('button', { name: 'Me gusta el comentario de Test commenter' });
+  await like.press('Enter');
+  await expect(notice).toBeVisible();
+  await page.getByLabel('Email *').fill('unknown@example.com');
+  await page.getByLabel('Contraseña *', { exact: true }).fill('Incorrect-password1!');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByRole('alert')).toContainText('Email o contraseña incorrectos');
+  await page.reload();
+  await expect(notice).toBeVisible();
+  await page.getByRole('main').getByRole('link', { name: 'Registrarse' }).click();
+  await page.getByLabel('Nombre de usuario *').fill('Visitante');
+  await page.getByLabel('Email *').fill(`visitor-${Date.now()}@example.com`);
+  await page.getByLabel('Contraseña *', { exact: true }).fill('Test-password1!');
+  await page.getByLabel('Confirmar contraseña *').fill('Test-password1!');
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await expect(title).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Escribe un comentario' })).toBeVisible();
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Me gusta', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  expect(writes).toEqual([]);
+  await page.getByRole('button', { name: 'Volver a los resultados' }).click();
+  await expect(page.getByRole('heading', { name: 'Resultados para «first»' })).toBeVisible();
+});
+
+test('an expired comment like returns both drafts after login and never retries the like', async ({
+  page,
+  context,
+}) => {
+  const email = `expired-like-${Date.now()}@example.com`;
+  const password = 'Test-password1!';
+  await page.goto('/#register');
+  await page.getByLabel('Nombre de usuario *').fill('Lector');
+  await page.getByLabel('Email *').fill(email);
+  await page.getByLabel('Contraseña *', { exact: true }).fill(password);
+  await page.getByLabel('Confirmar contraseña *').fill(password);
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await page.getByRole('button', { name: 'E2E first video' }).click();
+  const comment = page.getByRole('textbox', { name: 'Escribe un comentario' });
+  const reply = page.getByRole('textbox', { name: 'Responder a Test commenter' });
+  await comment.fill('Comentario pendiente');
+  await page.getByRole('button', { name: 'Responder a Test commenter' }).click();
+  await reply.fill('Respuesta pendiente');
+  const csrf = await (await context.request.get(`${api}/api/auth/csrf`)).json();
+  const logout = await context.request.post(`${api}/api/auth/logout`, { headers: { [csrf.headerName]: csrf.token } });
+  expect(logout.ok()).toBeTruthy();
+  const like = page.getByRole('button', { name: 'Me gusta el comentario de Test commenter' });
+  await like.click();
+  await expect(page.getByText(/Tu sesión ha caducado/)).toBeVisible();
+  await page.reload();
+  const writes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/videos/') && request.method() !== 'GET') writes.push(request.method());
+  });
+  await page.getByLabel('Email *').fill(email);
+  await page.getByLabel('Contraseña *', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(comment).toHaveValue('Comentario pendiente');
+  await expect(reply).toHaveValue('Respuesta pendiente');
+  await expect(like).toHaveAttribute('aria-disabled', 'false');
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  expect(writes).toEqual([]);
 });
 
 test('publishes a top-level comment as a viewer and finds it once after reload', async ({ page }) => {
