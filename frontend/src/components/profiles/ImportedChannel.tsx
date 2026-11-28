@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FollowControls } from './FollowControls.tsx';
 import { ProfileVideos } from './ProfileVideos.tsx';
+import { CatalogBack } from '../CatalogBack';
 
 export function ImportedChannel({ name, onOpen }: { name: string; onOpen: (id: number) => void }) {
   const [importedFollowers, setImportedFollowers] = useState<number | null>(null);
@@ -18,6 +19,7 @@ export function ImportedChannel({ name, onOpen }: { name: string; onOpen: (id: n
 
   return (
     <section className="account-panel" aria-labelledby="channel-title">
+      <CatalogBack />
       <span className="profile-avatar channel-avatar" role="img" aria-label={`Avatar de ${name}`}>
         {initials}
       </span>
@@ -29,9 +31,6 @@ export function ImportedChannel({ name, onOpen }: { name: string; onOpen: (id: n
       </p>
       <FollowControls storageKey={storageKey} initialCount={importedFollowers} />
       <ProfileVideos authorName={name} authorId={null} onOpen={onOpen} onImportedFollowers={setImportedFollowers} />
-      <a className="button button-secondary" href="#contenido">
-        Volver al catálogo
-      </a>
     </section>
   );
 }

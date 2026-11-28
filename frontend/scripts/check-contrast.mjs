@@ -9,6 +9,11 @@ for (const [, token, light, dark] of css.matchAll(/--(color-[\w-]+):\s*light-dar
 const pairs = [
   ['color-text', 'color-surface', 4.5],
   ['color-text', 'color-canvas', 4.5],
+  ['color-text', 'color-header', 4.5],
+  ['color-primary', 'color-header', 4.5],
+  ['color-primary-hover', 'color-header', 4.5],
+  ['color-focus', 'color-header', 3],
+  ['color-control-border', 'color-header', 3],
   ['color-text-muted', 'color-surface', 4.5],
   ['color-text-muted', 'color-canvas', 4.5],
   ['color-text-muted', 'color-surface-muted', 4.5],

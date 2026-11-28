@@ -69,7 +69,7 @@ h2 {
 
 .site-header {
   border-bottom: var(--border-width) solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-header);
 }
 
 .header-content,
@@ -396,6 +396,20 @@ h2 {
 .button-secondary {
   background: var(--color-surface);
   color: var(--color-primary);
+}
+
+.catalog-back {
+  width: var(--control-min);
+  padding: 0;
+  border-radius: 50%;
+}
+
+.catalog-back + .button {
+  margin-inline-start: var(--space-2);
+}
+
+.account-panel > .catalog-back {
+  margin-block-end: var(--space-4);
 }
 
 .button:disabled {

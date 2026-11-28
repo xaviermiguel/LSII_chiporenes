@@ -60,14 +60,12 @@ El estilo se comparte mediante clases reutilizables; mantener elementos HTML nat
 <button className="button" disabled={loading} onClick={loadMore}>
   {loading ? 'Cargando más vídeos...' : 'Cargar más'}
 </button>
-<button className="button button-secondary" onClick={onBack}>
-  Volver al catálogo
-</button>
+<CatalogBack onBack={onBack} />
 <p className="status-message" role="status">Cargando vídeos...</p>
 <p className="status-message status-error" role="alert">No se pudo cargar el vídeo.</p>
 ```
 
-- Cabecera `.site-header`, identidad `.brand`, navegación `.header-nav` y enlace `.nav-link`. Sin controles de búsqueda ni sesión ficticios.
+- La cabecera compartida usa `--color-header` en ambos temas. El logo abre el catálogo completo. La flecha `CatalogBack` vuelve al catálogo desde perfiles y canales, y recupera los resultados al salir de un vídeo abierto desde una búsqueda.
 - Tarjetas `.video-card`: un único botón accesible por título, imagen decorativa `alt=""`, título y autor reales, indicación de reproducción. No anidar enlaces o botones dentro de otro botón.
 - Paneles `.detail-section`, descripción `.video-description`, etiquetas `.video-tags` / `.tag` y comentarios `.video-comments`.
 - Mensajes `.status-message`: variantes `.status-error`, `.status-success`, `.status-warning` y `.status-info`. Acompañar el color de texto explícito; un cambio de color por sí solo no comunica el estado.

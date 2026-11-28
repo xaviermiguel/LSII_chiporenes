@@ -5,14 +5,16 @@ import { VideoEngagement } from './VideoEngagement.tsx';
 import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../userProfile.ts';
 import type { VideoDetail as VideoDetailData } from '../../types/Video.ts';
 import { VideoComments } from './VideoComments.tsx';
+import { CatalogBack } from '../CatalogBack';
 
 type VideoDetailProps = {
   videoId: number;
   onBack: () => void;
+  backLabel?: string;
   userId?: number;
 };
 
-export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
+export function VideoDetail({ videoId, onBack, backLabel, userId }: VideoDetailProps) {
   const [video, setVideo] = useState<VideoDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -75,15 +77,15 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
     return () => controller.abort();
   }, [video]);
 
+  const back = <CatalogBack onBack={onBack} label={backLabel} />;
+
   if (loading) {
     return (
       <section className="video-detail state-panel">
+        {back}
         <p className="status-message" role="status">
           Cargando vídeo...
         </p>
-        <button className="button button-secondary" onClick={onBack}>
-          Volver al catálogo
-        </button>
       </section>
     );
   }
@@ -91,12 +93,10 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
   if (error || !video) {
     return (
       <section className="video-detail state-panel">
+        {back}
         <p className="status-message status-error" role="alert">
           {error || 'Vídeo no disponible.'}
         </p>
-        <button className="button button-secondary" onClick={onBack}>
-          Volver al catálogo
-        </button>
       </section>
     );
   }
@@ -108,9 +108,7 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
 
   return (
     <section className="video-detail">
-      <button className="button button-secondary" onClick={onBack}>
-        Volver al catálogo
-      </button>
+      {back}
 
       {userId !== undefined && userId === video.ownerId && (
         <a className="button" href={`#videos/${video.id}/edit`}>

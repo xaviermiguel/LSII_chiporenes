@@ -3,6 +3,8 @@ import { test, expect } from '@playwright/test';
 for (const width of [320, 390, 768, 1440]) {
   test(`visual standard at ${width}px: catalog, focus, detail and comments`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
+    const dark = width === 390 || width === 1440;
+    await page.emulateMedia({ colorScheme: dark ? 'dark' : 'light' });
     // Synthetic preview: the HTTP fixtures are byte samples, not decodable images.
     await page.route('**/media/*.webp', (route) =>
       route.fulfill({
@@ -13,7 +15,9 @@ for (const width of [320, 390, 768, 1440]) {
     await page.goto('/');
     const first = page.getByRole('button', { name: 'E2E first video', exact: true });
     await expect(first).toBeVisible();
-    await expect(page.getByRole('banner')).toBeVisible();
+    const header = page.getByRole('banner');
+    await expect(header).toHaveCount(1);
+    await expect(header).toHaveCSS('background-color', dark ? 'rgb(21, 46, 36)' : 'rgb(224, 238, 231)');
     await expect(page.getByRole('main')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
     await page.keyboard.press('Tab');
@@ -34,12 +38,35 @@ for (const width of [320, 390, 768, 1440]) {
     expect(player!.width).toBeLessThanOrEqual(width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
     await page.screenshot({ path: testInfo.outputPath(`detail-${width}.png`), fullPage: true });
-    await page.getByRole('button', { name: 'Volver al catálogo' }).click();
+    const back = page.getByRole('button', { name: 'Volver al catálogo' });
+    await expect(back).toHaveText('');
+    await expect(back.locator('svg')).toBeVisible();
+    await page.getByRole('main').focus();
+    await page.keyboard.press('Tab');
+    await expect(back).toBeFocused();
+    await expect(back).toHaveCSS('outline-style', 'solid');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('main')).toBeFocused();
     await expect(first).toBeVisible();
     await page.getByRole('button', { name: 'E2E second video', exact: true }).click();
     await expect(page.getByText('Este vídeo todavía no tiene comentarios.')).toBeVisible();
   });
 }
+
+test('public profiles and channels share one header and a keyboard link back to the catalog', async ({ page }) => {
+  for (const route of ['#users/1', '#channels/name/Test%20channel']) {
+    await page.goto('/' + route);
+    await expect(page.getByRole('banner')).toHaveCount(1);
+    const back = page.getByRole('link', { name: 'Volver al catálogo' });
+    await expect(back).toHaveAttribute('href', '#contenido');
+    await expect(back.locator('svg')).toBeVisible();
+    await page.getByRole('main').focus();
+    await page.keyboard.press('Tab');
+    await expect(back).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'Descubre algo nuevo.' })).toBeVisible();
+  }
+});
 
 test('mobile request error and long content stay inside the shared layout', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });

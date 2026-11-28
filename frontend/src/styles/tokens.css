@@ -7,6 +7,7 @@
   --color-primary-soft: light-dark(#e7f3ec, #213e31);
   --color-canvas: light-dark(#f6f8f5, #101713);
   --color-surface: light-dark(#ffffff, #1a241e);
+  --color-header: light-dark(#e0eee7, #152e24);
   --color-surface-muted: light-dark(#eef2ed, #27362d);
   --color-text: light-dark(#182a22, #eef5ef);
   --color-text-muted: light-dark(#52635a, #b5c5b9);

@@ -115,7 +115,8 @@ test('anonymous visitor searches the real API by keyboard and opens the player a
   await result.press('Enter');
   await expect(page.getByRole('heading', { name: 'E2E first video' })).toBeVisible();
   await expect(page.locator('video')).toHaveAttribute('src', `${api}/media/fixture.mp4`);
-  await page.getByRole('button', { name: 'Volver al catálogo' }).click();
+  await page.getByRole('button', { name: 'Volver a los resultados' }).press('Enter');
+  await expect(page.getByRole('main')).toBeFocused();
   await expect(result).toBeVisible();
   await page.getByRole('button', { name: 'Limpiar búsqueda' }).press('Enter');
   await expect(query).toHaveValue('');
@@ -137,7 +138,7 @@ test('signed-in desktop search works from another screen and the logo restores t
   await expect(page.getByRole('list', { name: 'Resultados para «second video»' }).getByRole('button')).toHaveText(
     /E2E second video/
   );
-  await page.getByRole('link', { name: 'ProTube, ir al catálogo' }).click();
+  await page.getByRole('link', { name: 'ProTube, ir al catálogo' }).press('Enter');
   await expect(query).toHaveValue('');
   await expect(page.getByRole('list', { name: 'Vídeos disponibles' }).getByRole('button')).toHaveCount(3);
 });

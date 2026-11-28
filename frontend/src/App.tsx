@@ -258,7 +258,15 @@ function AppContent() {
             <VideoResults key={searchQuery} query={searchQuery || undefined} onSelectedVideo={setSelectedVideoId} />
           </section>
         ) : (
-          <VideoDetail videoId={selectedVideoId} userId={user?.id} onBack={() => setSelectedVideoId(null)} />
+          <VideoDetail
+            videoId={selectedVideoId}
+            userId={user?.id}
+            backLabel={searchQuery ? 'Volver a los resultados' : undefined}
+            onBack={() => {
+              setSelectedVideoId(null);
+              document.getElementById('contenido')?.focus();
+            }}
+          />
         )}
       </main>
     </div>

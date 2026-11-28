@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useSession } from '../../SessionContext.tsx';
 import { FollowControls } from './FollowControls.tsx';
+import { CatalogBack } from '../CatalogBack';
 import { ProfileVideos } from './ProfileVideos.tsx';
 import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../userProfile.ts';
 
@@ -30,6 +31,7 @@ export function PublicProfile({ userId, onOpen }: { userId: string; onOpen: (id:
 
   return (
     <section className="account-panel" aria-label="Perfil público">
+      <CatalogBack />
       {state.status === 'loading' && (
         <p className="status-message" role="status">
           Cargando perfil…
@@ -81,9 +83,6 @@ export function PublicProfile({ userId, onOpen }: { userId: string; onOpen: (id:
           <ProfileVideos authorName={state.profile.displayName} authorId={state.profile.id} onOpen={onOpen} />
         </>
       )}
-      <a className="button button-secondary" href="#contenido">
-        Volver al catálogo
-      </a>
     </section>
   );
 }
