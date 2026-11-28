@@ -8,6 +8,7 @@ import { AccountProfile } from './components/profiles/AccountProfile.tsx';
 import { PublicProfile } from './components/profiles/PublicProfile.tsx';
 import { ImportedChannel } from './components/profiles/ImportedChannel.tsx';
 import { ImportedCommentProfile } from './components/profiles/ImportedCommentProfile.tsx';
+import { VideoAnalytics } from './components/studio/VideoAnalytics.tsx';
 import { MyVideos } from './components/studio/MyVideos.tsx';
 import { VideoPublication } from './components/studio/VideoPublication.tsx';
 import { VideoEditing } from './components/studio/VideoEditing.tsx';
@@ -114,6 +115,9 @@ function AppContent() {
                 <a className="nav-link" href="#my-videos">
                   Mis vídeos
                 </a>
+                <a className="nav-link" href="#analytics">
+                  Estadísticas
+                </a>
                 <a className="nav-link" href="#profile">
                   Mi cuenta
                 </a>
@@ -149,7 +153,11 @@ function AppContent() {
             {sessionError}
           </p>
         )}
-        {page === '#profile' || page === '#my-videos' || page === '#upload' || /^#videos\/[^/]+\/edit$/.test(page) ? (
+        {page === '#profile' ||
+        page === '#analytics' ||
+        page === '#my-videos' ||
+        page === '#upload' ||
+        /^#videos\/[^/]+\/edit$/.test(page) ? (
           <ProtectedRoute>
             {page === '#upload' ? (
               <VideoPublication
@@ -170,6 +178,8 @@ function AppContent() {
                 onDraft={(value) => setEditingDrafts((previous) => ({ ...previous, [draftKey]: value }))}
                 onBack={openVideo}
               />
+            ) : page === '#analytics' ? (
+              <VideoAnalytics key={user?.id} />
             ) : page === '#profile' ? (
               <AccountProfile
                 onPasswordChanged={() => {

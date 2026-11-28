@@ -814,6 +814,60 @@ class AuthHttpIntegrationTest {
 
     private record Csrf(String headerName, String token) { }
 
+    @Test
+    void countsActivityWithoutChangingCountersAndIsolatesCreators() throws Exception {
+        String path = "/api/videos/me/analytics";
+        var anonymous = new Browser();
+        assertEquals(401, anonymous.get(path).statusCode());
+
+        var creator = new Browser();
+        String creatorEmail = UUID.randomUUID() + "@example.com";
+        creator.register(creatorEmail);
+        var other = new Browser();
+        String otherEmail = UUID.randomUUID() + "@example.com";
+        other.register(otherEmail);
+        assertEquals(mapper.readTree("{\"views\":0,\"comments\":0,\"videos\":[]}"), json(other.get(path)));
+
+        long ownId = analyticsVideo(creatorEmail, "Own video");
+        long emptyId = analyticsVideo(creatorEmail, "No activity");
+        long otherId = analyticsVideo(otherEmail, "Other video");
+        String ownViews = "/api/videos/" + ownId + "/views";
+        assertEquals(401, anonymous.post(ownViews, null, anonymous.csrf()).statusCode());
+        assertEquals(403, other.post(ownViews, null, null).statusCode());
+        assertEquals(404, other.post("/api/videos/" + Long.MAX_VALUE + "/views", null, other.csrf()).statusCode());
+        assertEquals(204, other.post(ownViews, null, other.csrf()).statusCode());
+        assertEquals(204, creator.post(ownViews, null, creator.csrf()).statusCode());
+        assertEquals(204, creator.post("/api/videos/" + otherId + "/views", null, creator.csrf()).statusCode());
+        assertEquals(201, other.post("/api/videos/" + ownId + "/comments",
+                Map.of("text", "Known comment"), other.csrf()).statusCode());
+
+        var before = creator.get(path);
+        assertEquals(200, before.statusCode(), before.body());
+        var expected = Map.of("views", 2, "comments", 1, "videos", List.of(
+                Map.of("id", emptyId, "title", "No activity", "views", 0, "comments", 0),
+                Map.of("id", ownId, "title", "Own video", "views", 2, "comments", 1)));
+        assertEquals(mapper.readTree(mapper.writeValueAsString(expected)), json(before));
+        assertEquals(json(before), json(creator.get(path)));
+        assertEquals(json(before), json(creator.get(path + "?ownerId=" +
+                users.findByEmailIgnoreCase(otherEmail).orElseThrow().getId())));
+
+        var otherStats = json(other.get(path));
+        assertEquals(1, otherStats.path("views").asInt());
+        assertEquals(0, otherStats.path("comments").asInt());
+        assertEquals(1, otherStats.path("videos").size());
+        assertEquals(otherId, otherStats.path("videos").get(0).path("id").asLong());
+    }
+
+    private long analyticsVideo(String email, String title) {
+        var video = new Video();
+        video.setOwner(users.findByEmailIgnoreCase(email).orElseThrow());
+        video.setTitle(title);
+        video.setDescription("");
+        video.setVideoPath(UUID.randomUUID() + ".mp4");
+        video.setThumbnailPath("fixture.webp");
+        return videos.saveAndFlush(video).getId();
+    }
+
     private final class Browser {
         private final CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         private final HttpClient client = HttpClient.newBuilder().cookieHandler(cookies).build();
