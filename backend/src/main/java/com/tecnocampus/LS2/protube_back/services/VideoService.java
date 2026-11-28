@@ -65,7 +65,7 @@ public class VideoService {
         return new VideoPage(items, page, size, videos.hasNext());
     }
 
-    private String mediaUrl(String relativePath) {
+    static String mediaUrl(String relativePath) {
         // Encode the stored filename as a URL path, never derive it from the database ID.
         return UriUtils.encodePath("/media/" + relativePath.replace('\\', '/'), StandardCharsets.UTF_8);
     }

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CatalogPostgresTest extends CatalogRepositoryTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired UserRepository users;
+    @Autowired VideoAnalyticsRepository analytics;
 
     @Test
     void usesPostgresJsonbAndTheMigratedSchema() {
@@ -68,6 +69,31 @@ class CatalogPostgresTest extends CatalogRepositoryTest {
     @Test
     void databaseRejectsDuplicateEmailIgnoringCase() {
         assertDuplicateEmail(defaultOwner.getEmail().toUpperCase(java.util.Locale.ROOT));
+    }
+
+    @Test
+    void countsRecordedViewsAndCommentsInMigratedSchema() {
+        var ownerId = defaultOwner.getId();
+        var watched = videos.saveAndFlush(video("analytics-watched.mp4", defaultOwner));
+        var empty = videos.saveAndFlush(video("analytics-empty.mp4", defaultOwner));
+        var oldComment = comment(watched, "Stored comment");
+        oldComment.setCreatedAt(java.time.Instant.now().minusSeconds(3 * 86400));
+        comments.saveAndFlush(oldComment);
+        assertEquals(1, analytics.recordView(watched.getId(), ownerId));
+        assertEquals(1, analytics.recordView(watched.getId(), ownerId));
+        assertEquals(0, analytics.recordView(Long.MAX_VALUE, ownerId));
+
+        var end = java.time.Instant.now();
+        var start = end.minusSeconds(86400);
+        var rows = analytics.findForOwner(ownerId, false, start, end);
+        assertEquals(2, rows.size());
+        assertEquals(empty.getId(), rows.get(0).getId());
+        assertEquals(0, rows.get(0).getViews());
+        assertEquals(watched.getId(), rows.get(1).getId());
+        assertEquals(2, rows.get(1).getViews());
+        assertEquals(0, rows.get(1).getComments());
+        assertEquals(1, analytics.findForOwner(ownerId, true, start, end).get(1).getComments());
+        assertTrue(analytics.findForOwner(Long.MAX_VALUE, true, start, end).isEmpty());
     }
 
     private void assertDuplicateEmail(String email) {

@@ -36,6 +36,22 @@ describe('Video detail under the shared visual standard', () => {
     else expect(screen.queryByRole('link', { name: 'Editar vídeo' })).not.toBeInTheDocument();
   });
 
+  it.each([2, undefined])('reports actual playback once per visit for viewer %s', async (userId) => {
+    get.mockResolvedValue({ data: detail });
+    const request = jest.mocked(authenticatedRequest);
+    request.mockResolvedValue(new Response(null, { status: 204 }));
+
+    render(<VideoDetail videoId={detail.id} userId={userId} onBack={jest.fn()} />);
+    const player = await screen.findByLabelText(`Reproductor: ${detail.title}`);
+    const viewCalls = () => request.mock.calls.filter(([path]) => path === `/videos/${detail.id}/views`);
+
+    expect(viewCalls()).toHaveLength(0);
+    fireEvent.playing(player);
+    fireEvent.pause(player);
+    fireEvent.playing(player);
+
+    expect(viewCalls()).toEqual(userId ? [[`/videos/${detail.id}/views`, { method: 'POST' }]] : []);
+  });
   it('announces loading and keeps the back control available', () => {
     get.mockReturnValue(new Promise(() => {}));
     const back = jest.fn();

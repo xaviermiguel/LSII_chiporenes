@@ -8,6 +8,7 @@ import { AccountProfile } from './components/profiles/AccountProfile.tsx';
 import { PublicProfile } from './components/profiles/PublicProfile.tsx';
 import { ImportedChannel } from './components/profiles/ImportedChannel.tsx';
 import { ImportedCommentProfile } from './components/profiles/ImportedCommentProfile.tsx';
+import { VideoAnalytics } from './components/studio/VideoAnalytics.tsx';
 import { MyVideos } from './components/studio/MyVideos.tsx';
 import { VideoPublication } from './components/studio/VideoPublication.tsx';
 import { VideoEditing } from './components/studio/VideoEditing.tsx';
@@ -21,6 +22,8 @@ function AppContent() {
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [accountNotice, setAccountNotice] = useState('');
   const [page, setPage] = useState(window.location.hash);
+  const linkedVideoId = Number(/^#videos\/([1-9]\d*)$/.exec(page)?.[1]);
+  const detailId = Number.isSafeInteger(linkedVideoId) ? linkedVideoId : selectedVideoId;
   const [searchQuery, setSearchQuery] = useState('');
   const [editingDrafts, setEditingDrafts] = useState<Record<string, EditingDraft | undefined>>({});
   const [publicationDraft, setPublicationDraft] = useState<PublicationDraft>({
@@ -149,7 +152,11 @@ function AppContent() {
             {sessionError}
           </p>
         )}
-        {page === '#profile' || page === '#my-videos' || page === '#upload' || /^#videos\/[^/]+\/edit$/.test(page) ? (
+        {page === '#profile' ||
+        page === '#analytics' ||
+        page === '#my-videos' ||
+        page === '#upload' ||
+        /^#videos\/[^/]+\/edit$/.test(page) ? (
           <ProtectedRoute>
             {page === '#upload' ? (
               <VideoPublication
@@ -170,6 +177,8 @@ function AppContent() {
                 onDraft={(value) => setEditingDrafts((previous) => ({ ...previous, [draftKey]: value }))}
                 onBack={openVideo}
               />
+            ) : page === '#analytics' ? (
+              <VideoAnalytics key={user?.id} />
             ) : page === '#profile' ? (
               <AccountProfile
                 onPasswordChanged={() => {
@@ -196,14 +205,22 @@ function AppContent() {
           <PublicProfile key={publicProfileId} userId={publicProfileId} onOpen={openVideo} />
         ) : page === '#login' || page === '#register' ? (
           <AuthForm key={page} mode={page === '#register' ? 'register' : 'login'} onSuccess={authenticated} />
-        ) : selectedVideoId === null ? (
+        ) : detailId === null ? (
           page === '#buscar' ? (
             <SearchPage query={searchQuery} onSearch={setSearchQuery} onSelectedVideo={setSelectedVideoId} />
           ) : (
             <ContentApp onSelectedVideo={setSelectedVideoId} />
           )
         ) : (
-          <VideoDetail videoId={selectedVideoId} userId={user?.id} onBack={() => setSelectedVideoId(null)} />
+          <VideoDetail
+            key={detailId}
+            videoId={detailId}
+            userId={user?.id}
+            onBack={() => {
+              setSelectedVideoId(null);
+              if (Number.isSafeInteger(linkedVideoId)) window.location.hash = 'contenido';
+            }}
+          />
         )}
       </main>
     </div>

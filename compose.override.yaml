@@ -1,0 +1,4 @@
+services:
+  app:
+    environment:
+      ENV_PROTUBE_IMPORT_ENABLED: 'false'

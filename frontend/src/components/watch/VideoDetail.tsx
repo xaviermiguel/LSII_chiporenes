@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { authenticatedRequest } from '../../auth.ts';
 import { getEnv } from '../../utils/Env.ts';
 import { VideoEngagement } from './VideoEngagement.tsx';
 import { defaultAvatarPath, getPublicProfile, resolveAvatarURL } from '../../userProfile.ts';
@@ -19,7 +20,10 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
   const [playbackError, setPlaybackError] = useState(false);
   const [commentAvatars, setCommentAvatars] = useState<Record<number, string>>({});
 
+  const reportedView = useRef(false);
+
   useEffect(() => {
+    reportedView.current = false;
     const controller = new AbortController();
 
     setLoading(true);
@@ -138,6 +142,13 @@ export function VideoDetail({ videoId, onBack, userId }: VideoDetailProps) {
         src={videoSrc}
         controls
         preload="metadata"
+        onPlaying={() => {
+          if (userId == null || reportedView.current) return;
+          reportedView.current = true;
+          void authenticatedRequest(`/videos/${video.id}/views`, { method: 'POST' }).catch(() => {
+            // Playback remains available when analytics cannot be recorded.
+          });
+        }}
         onError={() => setPlaybackError(true)}
         className="video-player"
         aria-label={`Reproductor: ${video.title}`}

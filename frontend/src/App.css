@@ -186,6 +186,12 @@ h2 {
   margin-bottom: var(--space-5);
 }
 
+.account-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 .section-heading h2 {
   font-size: var(--text-lg);
 }

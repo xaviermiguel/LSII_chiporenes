@@ -118,9 +118,14 @@ export function AccountProfile({ onPasswordChanged }: { onPasswordChanged: () =>
           <p className="eyebrow">Tu espacio</p>
           <h1 id="account-title">Mi cuenta</h1>
         </div>
-        <a className="button button-secondary" href="#my-videos">
-          Mis vídeos
-        </a>
+        <nav className="account-links" aria-label="Contenido de mi cuenta">
+          <a className="button button-secondary" href="#my-videos">
+            Mis vídeos
+          </a>
+          <a className="button button-secondary" href="#analytics">
+            Estadísticas
+          </a>
+        </nav>
       </div>
       <p>Actualiza tus datos y la seguridad de tu cuenta. Los campos con * son obligatorios.</p>
       <p>

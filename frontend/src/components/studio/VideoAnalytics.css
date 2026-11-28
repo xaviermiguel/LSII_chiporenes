@@ -1,0 +1,121 @@
+.analytics-period {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.analytics-period button {
+  flex: auto;
+  min-height: var(--control-min);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.analytics-period button:hover {
+  background: var(--color-primary-soft);
+}
+
+.analytics-period button[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.analytics-totals,
+.analytics-chart {
+  max-width: var(--reading-max);
+  margin-top: var(--space-5);
+}
+
+.analytics-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-3);
+}
+
+.analytics-totals button,
+.analytics-chart {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.analytics-totals button {
+  display: grid;
+  gap: var(--space-2);
+  text-align: start;
+  cursor: pointer;
+}
+
+.analytics-totals button:hover {
+  border-color: var(--color-primary);
+}
+
+.analytics-totals button[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.analytics-totals strong {
+  font-size: var(--text-title);
+  line-height: var(--line-heading);
+  overflow-wrap: anywhere;
+}
+
+.analytics-chart ol {
+  display: grid;
+  gap: var(--space-5);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analytics-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-video-link {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-3);
+  font-weight: var(--weight-medium);
+}
+
+.analytics-video-link img {
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+.analytics-track,
+.analytics-track > div {
+  height: var(--space-2);
+  border-radius: var(--radius-pill);
+}
+
+.analytics-track {
+  margin-top: var(--space-2);
+  background: var(--color-surface-muted);
+}
+
+.analytics-track > div {
+  background: var(--color-primary);
+}
