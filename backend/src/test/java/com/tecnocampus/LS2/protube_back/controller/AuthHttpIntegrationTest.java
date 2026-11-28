@@ -74,6 +74,7 @@ class AuthHttpIntegrationTest {
     @Autowired PasswordEncoder encoder;
     @Autowired VideoRepository videos;
     @Autowired CommentRepository comments;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test
     void registersNormalizesPersistsHashAndAuthenticatesAcrossRealHttpRequests() throws Exception {
@@ -856,6 +857,26 @@ class AuthHttpIntegrationTest {
         assertEquals(0, otherStats.path("comments").asInt());
         assertEquals(1, otherStats.path("videos").size());
         assertEquals(otherId, otherStats.path("videos").get(0).path("id").asLong());
+
+        long viewerId = users.findByEmailIgnoreCase(otherEmail).orElseThrow().getId();
+        for (int days : List.of(2, 12, 40)) {
+            var date = java.sql.Timestamp.from(java.time.Instant.now().minus(days, java.time.temporal.ChronoUnit.DAYS));
+            jdbc.update("insert into public.video_views(video_id, user_id, viewed_at) values (?, ?, ?)", ownId, viewerId, date);
+        }
+        jdbc.update("update public.comments set created_at = ? where video_id = ?",
+                java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(2 * 86400)), ownId);
+        var periods = List.of("DAY", "WEEK", "MONTH", "ALL");
+        for (int i = 0; i < periods.size(); i++) {
+            var response = creator.get(path + "?period=" + periods.get(i));
+            assertEquals(200, response.statusCode(), response.body());
+            var stats = json(response);
+            assertEquals(2 + i, stats.get("views").asInt());
+            assertEquals(i == 0 ? 0 : 1, stats.get("comments").asInt());
+            assertEquals(0, stats.at("/videos/0/views").asInt());
+            assertEquals(stats.get("views"), stats.at("/videos/1/views"));
+            assertEquals(stats.get("comments"), stats.at("/videos/1/comments"));
+        }
+        assertEquals(400, creator.get(path + "?period=invalid").statusCode());
     }
 
     private long analyticsVideo(String email, String title) {

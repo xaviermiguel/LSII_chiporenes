@@ -7,6 +7,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.time.Instant;
 
 public interface VideoAnalyticsRepository extends Repository<VideoView, Long> {
     interface Metrics {
@@ -19,13 +20,15 @@ public interface VideoAnalyticsRepository extends Repository<VideoView, Long> {
 
     @Query(value = """
         SELECT v.id, v.title, v.thumbnail_path AS "thumbnailPath",
-               (SELECT COUNT(*) FROM public.video_views w WHERE w.video_id = v.id) AS views,
-               (SELECT COUNT(*) FROM public.comments c WHERE c.video_id = v.id) AS comments
+               (SELECT COUNT(*) FROM public.video_views w WHERE w.video_id = v.id
+                AND (:allTime OR w.viewed_at BETWEEN :start AND :endTime)) AS views,
+               (SELECT COUNT(*) FROM public.comments c WHERE c.video_id = v.id
+                AND (:allTime OR c.created_at BETWEEN :start AND :endTime)) AS comments
         FROM public.videos v
         WHERE v.owner_id = :ownerId
         ORDER BY v.id DESC
         """, nativeQuery = true)
-    List<Metrics> findForOwner(@Param("ownerId") long ownerId);
+    List<Metrics> findForOwner(long ownerId, boolean allTime, Instant start, Instant endTime);
 
     @Modifying
     @Query(value = """

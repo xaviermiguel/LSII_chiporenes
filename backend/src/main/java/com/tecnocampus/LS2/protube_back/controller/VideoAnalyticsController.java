@@ -17,8 +17,9 @@ public class VideoAnalyticsController {
     }
 
     @GetMapping("/me/analytics")
-    public ResponseEntity<VideoAnalyticsService.Analytics> ownAnalytics(@AuthenticationPrincipal Long ownerId) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(analytics.forOwner(ownerId));
+    public ResponseEntity<VideoAnalyticsService.Analytics> ownAnalytics(@AuthenticationPrincipal Long ownerId,
+            @RequestParam(defaultValue = "ALL") VideoAnalyticsService.Period period) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(analytics.forOwner(ownerId, period));
     }
 
     @PostMapping("/{id}/views")
