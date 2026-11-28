@@ -1,6 +1,7 @@
 package com.tecnocampus.LS2.protube_back.services;
 
 import com.tecnocampus.LS2.protube_back.model.User;
+import com.tecnocampus.LS2.protube_back.storage.LocalVideoStore;
 import com.tecnocampus.LS2.protube_back.model.Video;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
@@ -31,7 +32,7 @@ class VideoUploadServiceTest {
         owner.setId(1L);
         owner.setDisplayName("Usuario de prueba");
         when(users.findById(1L)).thenReturn(Optional.of(owner));
-        service = new VideoUploadService(videos, users, store.toString());
+        service = new VideoUploadService(videos, users, new LocalVideoStore(store.toString()));
     }
 
     private MockMultipartFile video() {
@@ -70,7 +71,14 @@ class VideoUploadServiceTest {
             return saved;
         });
 
-        Video result = service.uploadVideo(1L, "Mi primer video", "Descripcion", null, video(), thumbnail());
+        var response = service.uploadVideo(1L, "Mi primer video", "Descripcion", null, video(), thumbnail());
+        var saved = org.mockito.ArgumentCaptor.forClass(Video.class);
+        verify(videos).saveAndFlush(saved.capture());
+        Video result = saved.getValue();
+
+        assertEquals(10L, response.id());
+        assertEquals("Mi primer video", response.title());
+        assertEquals("Descripcion", response.description());
 
         assertEquals(10L, result.getId());
         assertSame(owner, result.getOwner());
@@ -85,15 +93,16 @@ class VideoUploadServiceTest {
         assertNotEquals("example.webp", result.getThumbnailPath());
         assertArrayEquals(video().getBytes(), Files.readAllBytes(store.resolve(result.getVideoPath())));
         assertArrayEquals(thumbnail().getBytes(), Files.readAllBytes(store.resolve(result.getThumbnailPath())));
-        verify(videos).saveAndFlush(same(result));
     }
 
     @Test
     void normalizesTagsBeforeSaving() {
         when(videos.saveAndFlush(any(Video.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        Video result = service.uploadVideo(1L, "Title", "Description",
+        service.uploadVideo(1L, "Title", "Description",
                 java.util.Arrays.asList(" Java ", "", "Java", null, "travel"), video(), thumbnail());
-        assertEquals(java.util.List.of("Java", "travel"), result.getSourceMetadata().get("tags"));
+        var saved = org.mockito.ArgumentCaptor.forClass(Video.class);
+        verify(videos).saveAndFlush(saved.capture());
+        assertEquals(java.util.List.of("Java", "travel"), saved.getValue().getSourceMetadata().get("tags"));
     }
 
     @Test

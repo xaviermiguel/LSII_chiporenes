@@ -1,13 +1,10 @@
 package com.tecnocampus.LS2.protube_back.controller;
 
 import com.tecnocampus.LS2.protube_back.dto.video.*;
-import com.tecnocampus.LS2.protube_back.mapper.VideoMapper;
 import com.tecnocampus.LS2.protube_back.services.VideoService;
 import com.tecnocampus.LS2.protube_back.services.VideoUploadService;
 import com.tecnocampus.LS2.protube_back.services.exceptions.*;
 import com.tecnocampus.LS2.protube_back.dto.ApiError;
-import org.apache.coyote.Response;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -85,8 +82,7 @@ public class VideosController {
             @AuthenticationPrincipal Long ownerId,
             @ModelAttribute VideoUploadRequest request
     ) {
-        // Llamaremos al servicio y construiremos la respuesta.
-        var video = videoUploadService.uploadVideo(
+        var response = videoUploadService.uploadVideo(
                 ownerId,
                 request.title(),
                 request.description(),
@@ -94,8 +90,7 @@ public class VideosController {
                 request.video(),
                 request.thumbnail()
         );
-        var response =VideoMapper.toUploadResponse(video);
-        return  ResponseEntity.created(URI.create("/api/videos/" + video.getId())).body(response);
+        return ResponseEntity.created(URI.create("/api/videos/" + response.id())).body(response);
     }
     @ExceptionHandler(VideoUploadException.class)
     public ResponseEntity<ApiError> invalidVideoUpload(

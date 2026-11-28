@@ -6,8 +6,7 @@ import com.tecnocampus.LS2.protube_back.model.Comment;
 import com.tecnocampus.LS2.protube_back.repository.CommentRepository;
 import com.tecnocampus.LS2.protube_back.repository.UserRepository;
 import com.tecnocampus.LS2.protube_back.repository.VideoRepository;
-import org.springframework.jdbc.core.ConnectionCallback;
-import org.springframework.jdbc.core.JdbcTemplate;
+import com.tecnocampus.LS2.protube_back.repository.VideoImportRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,37 +26,28 @@ public class VideoImportService {
     private final VideoRepository videos;
     private final CommentRepository comments;
     private final UserRepository users;
-    private final JdbcTemplate jdbc;
+    private final VideoImportRepository importRepository;
     private final ObjectMapper mapper;
 
     public VideoImportService(VideoGrabberReader reader, VideoRepository videos, CommentRepository comments,
-                              UserRepository users, JdbcTemplate jdbc, ObjectMapper mapper) {
+                              UserRepository users, VideoImportRepository importRepository, ObjectMapper mapper) {
         this.reader = reader;
         this.videos = videos;
         this.comments = comments;
         this.users = users;
-        this.jdbc = jdbc;
+        this.importRepository = importRepository;
         this.mapper = mapper;
     }
 
     public boolean usesPostgres() {
-        return Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection ->
-                connection.getMetaData().getDatabaseProductName().equals("PostgreSQL")));
+        return importRepository.usesPostgres();
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Result importDirectory(Path directory, int pageSize, Long noCommentsId) throws IOException {
         // Parse/validate the complete input before the first database write.
         var sources = reader.read(directory, pageSize, noCommentsId);
-        jdbc.execute((ConnectionCallback<Void>) connection -> {
-            if (connection.getMetaData().getDatabaseProductName().equals("PostgreSQL")) {
-                // Same transaction/connection as JPA; serializes cooperating importers until commit.
-                try (var statement = connection.createStatement()) {
-                    statement.execute("select pg_advisory_xact_lock(7361829401)");
-                }
-            }
-            return null;
-        });
+        importRepository.lockForImport();
         var demoOwner = users.findByEmailIgnoreCase("demo@protube.invalid")
                 .orElseThrow(() -> new IllegalStateException(
                         "ProTube Demo account is missing; apply the owner migration before importing videos."));
