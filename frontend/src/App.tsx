@@ -115,9 +115,6 @@ function AppContent() {
                 <a className="nav-link" href="#my-videos">
                   Mis vídeos
                 </a>
-                <a className="nav-link" href="#analytics">
-                  Estadísticas
-                </a>
                 <a className="nav-link" href="#profile">
                   Mi cuenta
                 </a>

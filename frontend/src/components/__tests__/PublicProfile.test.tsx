@@ -79,6 +79,7 @@ test('links the owner to the protected editor and loads the current values', asy
   fireEvent.click(edit);
   expect(await screen.findByLabelText('Nombre de usuario *')).toHaveValue(profile.displayName);
   expect(screen.getByRole('link', { name: 'Ver mi perfil público' })).toHaveAttribute('href', '#users/5');
+  expect(screen.getByRole('link', { name: 'Estadísticas' })).toHaveAttribute('href', '#analytics');
   expect(authenticatedRequest).toHaveBeenCalledWith('/auth/profile', expect.any(Object));
 });
 
